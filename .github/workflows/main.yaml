@@ -14,41 +14,41 @@ jobs:
     - uses: actions/checkout@v3
       with:
         fetch-depth: 0
-    
+
     - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
         node-version: '18'
         cache: 'npm'
         cache-dependency-path: '**/package-lock.json'
-        
+
     - name: Install Frontend Dependencies
       working-directory: ./frontend
       run: npm ci
-        
+
     - name: TypeScript Check
       working-directory: ./frontend
       run: npm run type-check
-        
+
     - name: Lint Frontend
       working-directory: ./frontend
       run: |
         npm run lint
         npm run prettier:check
-        
+
     - name: Setup Python
       uses: actions/setup-python@v3
       with:
         python-version: '3.10'
         cache: 'pip'
-        
+
     - name: Install Backend Dependencies
       working-directory: ./backend
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install -r requirements-dev.txt
-        
+
     - name: Lint Backend
       working-directory: ./backend
       run: |
@@ -67,38 +67,38 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
         node-version: '18'
         cache: 'npm'
         cache-dependency-path: '**/package-lock.json'
-        
+
     - name: Install Frontend Dependencies
       working-directory: ./frontend
       run: npm ci
-        
+
     - name: Run Frontend Tests
       working-directory: ./frontend
       run: |
         npm run test -- --coverage --coverageReporters=lcov --coverageReporters=text-summary
-        
+
     - name: Check Frontend Coverage
       working-directory: ./frontend
       run: |
         npm run test:coverage-check
-        
+
     - name: Build Frontend
       working-directory: ./frontend
       run: npm run build
-    
+
     - name: Setup Python
       uses: actions/setup-python@v3
       with:
         python-version: '3.10'
         cache: 'pip'
-        
+
     - name: Install Backend Dependencies
       working-directory: ./backend
       run: |
@@ -129,24 +129,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
         node-version: '18'
         cache: 'npm'
         cache-dependency-path: '**/package-lock.json'
-        
+
     - name: Install Dependencies
       working-directory: ./frontend
       run: |
         npm ci
         npm install -g pa11y-ci
-        
+
     - name: Build Frontend
       working-directory: ./frontend
       run: npm run build
-        
+
     - name: Run Accessibility Tests
       working-directory: ./frontend
       run: pa11y-ci ./build/**/*.html
@@ -156,7 +156,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: Run Security Scan
       uses: snyk/actions/node@master
       env:
@@ -168,23 +168,23 @@ jobs:
     needs: [tests, accessibility, security]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
-        
+
     - name: Build and Push Docker Images
       run: |
         docker build -t app-frontend ./frontend
         docker build -t app-backend ./backend
         # Add docker push commands here
-        
+
     - name: Deploy to ECS
       run: |
         aws ecs update-service --cluster prod --service app-service --force-new-deployment
