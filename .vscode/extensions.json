@@ -1,0 +1,33 @@
+{
+  "recommendations": [
+    // Python
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+
+    // JavaScript/TypeScript
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+
+    // Testing
+    "ryanluker.vscode-coverage-gutters",
+
+    // Git
+    "eamodio.gitlens",
+    "github.vscode-pull-request-github",
+
+    // Docker
+    "ms-azuretools.vscode-docker",
+
+    // General
+    "streetsidesoftware.code-spell-checker",
+    "editorconfig.editorconfig",
+    "visualstudioexptteam.vscodeintellicode",
+    "christian-kohler.path-intellisense",
+
+    // Themes and Icons
+    "pkief.material-icon-theme",
+
+    // Collaboration
+    "ms-vsliveshare.vsliveshare"
+  ]
+}
