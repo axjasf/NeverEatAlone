@@ -35,7 +35,7 @@
       "template": "Create an API endpoint that: {{requirements}}"
     },
     "database": {
-      "prefix": "You are working with SQLAlchemy and PostgreSQL for a contact management application. Follow these guidelines:",
+      "prefix": "You are working with SQLAlchemy and SQLite for a contact management application. Follow these guidelines:",
       "rules": [
         "Follow the established schema design",
         "Implement proper indexing",

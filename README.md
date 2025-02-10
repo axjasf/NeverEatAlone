@@ -21,7 +21,7 @@ A contact management and note-taking application with AI capabilities.
 
 - **Frontend**: React, TypeScript, Material-UI
 - **Backend**: Python, FastAPI, SQLAlchemy
-- **Database**: SQLite (Development), PostgreSQL (Production)
+- **Database**: SQLite
 - **AI**: OpenAI Whisper API
 - **Testing**: Jest, React Testing Library, Pytest
 - **CI/CD**: GitHub Actions, SonarCloud
