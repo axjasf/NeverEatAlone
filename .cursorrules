@@ -1,0 +1,76 @@
+{
+  "promptTemplates": {
+    "component": {
+      "prefix": "You are helping develop a contact management and note-taking application. Follow these guidelines:",
+      "rules": [
+        "Use TypeScript for all components",
+        "Implement TDD with Jest and React Testing Library",
+        "Use only built-in React hooks unless specified",
+        "Follow WCAG 2.1 accessibility standards",
+        "Include proper error handling and loading states",
+        "Include comprehensive JSDoc documentation"
+      ],
+      "template": "Create a React component that implements these requirements: {{requirements}}"
+    },
+    "test": {
+      "prefix": "You are writing tests for a contact management and note-taking application. Follow these guidelines:",
+      "rules": [
+        "Write tests before implementation",
+        "Cover edge cases and error states",
+        "Mock external dependencies",
+        "Maintain test isolation",
+        "Use meaningful test descriptions"
+      ],
+      "template": "Generate test cases for: {{component}}"
+    },
+    "api": {
+      "prefix": "You are developing FastAPI endpoints for a contact management application. Follow these guidelines:",
+      "rules": [
+        "Implement proper input validation",
+        "Include error handling",
+        "Follow REST principles",
+        "Include OpenAPI documentation",
+        "Write pytest test cases"
+      ],
+      "template": "Create an API endpoint that: {{requirements}}"
+    },
+    "database": {
+      "prefix": "You are working with SQLAlchemy and PostgreSQL for a contact management application. Follow these guidelines:",
+      "rules": [
+        "Follow the established schema design",
+        "Implement proper indexing",
+        "Handle all edge cases",
+        "Include error handling",
+        "Use efficient joins"
+      ],
+      "template": "Generate SQLAlchemy queries for: {{functionality}}"
+    }
+  },
+  "codeRules": {
+    "typescript": {
+      "enforceTypes": true,
+      "noAny": true,
+      "requireJsDoc": true
+    },
+    "react": {
+      "enforceHooks": true,
+      "requirePropTypes": true,
+      "accessibilityRules": true
+    },
+    "testing": {
+      "coverageThreshold": 80,
+      "requireMocks": true
+    }
+  },
+  "fileTemplates": {
+    "component": {
+      "path": "src/components/${name}/${name}.tsx",
+      "test": "src/components/${name}/${name}.test.tsx",
+      "types": "src/components/${name}/${name}.types.ts"
+    },
+    "api": {
+      "path": "src/api/${name}.py",
+      "test": "tests/api/test_${name}.py"
+    }
+  }
+}
