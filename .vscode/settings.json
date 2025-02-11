@@ -10,7 +10,7 @@
   "python.testing.unittestEnabled": false,
   "python.testing.nosetestsEnabled": false,
   "python.testing.pytestArgs": [
-    "backend"
+    "tests"
   ],
 
   // TypeScript/JavaScript settings
@@ -21,8 +21,8 @@
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": true,
-    "source.organizeImports": true
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "explicit"
   },
 
   // General settings
@@ -87,4 +87,4 @@
     "github.vscode-pull-request-github",
     "ms-azuretools.vscode-docker"
   ]
-} 
+}
