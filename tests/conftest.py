@@ -5,6 +5,8 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.engine import Engine, Connection
 from sqlalchemy.engine.base import Transaction
 from backend.app.models.base import Base
+from fastapi.testclient import TestClient
+from app.main import app
 
 
 @pytest.fixture(scope="session")
@@ -68,3 +70,9 @@ def db_session(engine: Engine, tables: None) -> Generator[Session, None, None]:
     if transaction.is_active:
         transaction.rollback()
     connection.close()
+
+
+@pytest.fixture
+def client() -> TestClient:
+    """Create a test client for the FastAPI application"""
+    return TestClient(app)
