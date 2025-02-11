@@ -63,6 +63,28 @@
       "requireMocks": true
     }
   },
+  "shellRules": {
+    "powershell": {
+      "commandSeparator": ";",
+      "lineEnding": "CRLF",
+      "pipeOperator": "|",
+      "alternatives": {
+        "cat": "Get-Content",
+        "ls": "Get-ChildItem",
+        "grep": "Select-String",
+        "rm": "Remove-Item",
+        "cp": "Copy-Item",
+        "mv": "Move-Item",
+        "echo": "Write-Output",
+        "pwd": "Get-Location"
+      }
+    },
+    "bash": {
+      "commandSeparator": "&&",
+      "lineEnding": "LF",
+      "pipeOperator": "|"
+    }
+  },
   "fileTemplates": {
     "component": {
       "path": "src/components/${name}/${name}.tsx",
