@@ -22,14 +22,10 @@ class BaseModel(Base):
     __abstract__ = True
 
     id = Column(Integer, primary_key=True)
-    created_at = Column(
-        DateTime,
-        default=lambda: datetime.now(UTC),
-        nullable=False
-    )
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
     updated_at = Column(
         DateTime,
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
-        nullable=False
+        nullable=False,
     )

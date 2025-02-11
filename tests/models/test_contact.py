@@ -24,10 +24,7 @@ def test_contact_creation_with_required_fields(db_session: Session) -> None:
 
 def test_contact_creation_with_all_fields(db_session: Session) -> None:
     """Test creating a contact with all available fields."""
-    sub_info = {
-        "family_status": "Married",
-        "professional_situation": "CEO"
-    }
+    sub_info = {"family_status": "Married", "professional_situation": "CEO"}
     hashtags = ["#business", "#vip"]
     now = datetime.now(UTC)
 
@@ -37,7 +34,7 @@ def test_contact_creation_with_all_fields(db_session: Session) -> None:
         contact_briefing_text="Important business contact",
         last_contact=now,
         sub_information=sub_info,
-        hashtags=hashtags
+        hashtags=hashtags,
     )
     db_session.add(contact)
     db_session.commit()
@@ -100,12 +97,9 @@ def test_contact_sub_information_nested_dict(db_session: Session) -> None:
     sub_info = {
         "personal": {
             "hobbies": ["reading", "hiking"],
-            "family": {"status": "married", "children": 2}
+            "family": {"status": "married", "children": 2},
         },
-        "professional": {
-            "role": "developer",
-            "skills": ["python", "typescript"]
-        }
+        "professional": {"role": "developer", "skills": ["python", "typescript"]},
     }
     contact = Contact(name="John Doe", sub_information=sub_info)
     db_session.add(contact)
@@ -119,10 +113,7 @@ def test_contact_sub_information_nested_dict(db_session: Session) -> None:
 
 def test_contact_sub_information_update(db_session: Session) -> None:
     """Test updating sub_information fields."""
-    contact = Contact(
-        name="John Doe",
-        sub_information={"role": "developer"}
-    )
+    contact = Contact(name="John Doe", sub_information={"role": "developer"})
     db_session.add(contact)
     db_session.commit()
 
@@ -132,10 +123,7 @@ def test_contact_sub_information_update(db_session: Session) -> None:
 
     saved_contact = db_session.get(Contact, contact.id)
     assert saved_contact is not None
-    assert saved_contact.sub_information == {
-        "role": "manager",
-        "team": "engineering"
-    }
+    assert saved_contact.sub_information == {"role": "manager", "team": "engineering"}
 
 
 def test_contact_hashtags_validation(db_session: Session) -> None:

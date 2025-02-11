@@ -34,30 +34,12 @@ class Contact(BaseModel):
 
     __tablename__ = "contacts"
 
-    _name = Column('name', String, nullable=False)
-    _first_name = Column('first_name', String, nullable=True)
-    _contact_briefing_text = Column(
-        'contact_briefing_text',
-        String,
-        nullable=True
-    )
-    _last_contact = Column(
-        'last_contact',
-        DateTime(timezone=True),
-        nullable=True
-    )
-    _sub_information = Column(
-        'sub_information',
-        JSON,
-        nullable=False,
-        default=dict
-    )
-    _hashtags = Column(
-        'hashtags',
-        JSON,
-        nullable=False,
-        default=list
-    )
+    _name = Column("name", String, nullable=False)
+    _first_name = Column("first_name", String, nullable=True)
+    _contact_briefing_text = Column("contact_briefing_text", String, nullable=True)
+    _last_contact = Column("last_contact", DateTime(timezone=True), nullable=True)
+    _sub_information = Column("sub_information", JSON, nullable=False, default=dict)
+    _hashtags = Column("hashtags", JSON, nullable=False, default=list)
 
     @property
     def name(self) -> str:
@@ -66,7 +48,7 @@ class Contact(BaseModel):
         Returns:
             str: The contact's full name, or empty string if not set.
         """
-        val = getattr(self, '_name', None)
+        val = getattr(self, "_name", None)
         return str(val) if val is not None else ""
 
     @name.setter
@@ -85,7 +67,7 @@ class Contact(BaseModel):
         Returns:
             Optional[str]: The contact's first name, or None if not set.
         """
-        val = getattr(self, '_first_name', None)
+        val = getattr(self, "_first_name", None)
         return str(val) if val is not None else None
 
     @first_name.setter
@@ -104,7 +86,7 @@ class Contact(BaseModel):
         Returns:
             Optional[str]: The briefing text, or None if not set.
         """
-        val = getattr(self, '_contact_briefing_text', None)
+        val = getattr(self, "_contact_briefing_text", None)
         return str(val) if val is not None else None
 
     @contact_briefing_text.setter
@@ -124,7 +106,7 @@ class Contact(BaseModel):
             Optional[datetime]: The last contact date in UTC,
             or None if not set.
         """
-        val = getattr(self, '_last_contact', None)
+        val = getattr(self, "_last_contact", None)
         if val is not None and val.tzinfo is None:
             val = val.replace(tzinfo=UTC)
         return val
@@ -151,7 +133,7 @@ class Contact(BaseModel):
         Returns:
             Dict[str, Any]: The stored information, or empty dict if not set.
         """
-        val = getattr(self, '_sub_information', {})
+        val = getattr(self, "_sub_information", {})
         return cast(Dict[str, Any], val)
 
     @sub_information.setter
@@ -179,7 +161,7 @@ class Contact(BaseModel):
         Returns:
             List[str]: The list of hashtags, or empty list if not set.
         """
-        val = getattr(self, '_hashtags', [])
+        val = getattr(self, "_hashtags", [])
         return cast(List[str], val)
 
     @hashtags.setter
@@ -193,8 +175,6 @@ class Contact(BaseModel):
             ValueError: If any tag doesn't start with '#'.
         """
         for tag in value:
-            if not tag.startswith('#'):
-                raise ValueError(
-                    "Each hashtag must be a string starting with #"
-                )
+            if not tag.startswith("#"):
+                raise ValueError("Each hashtag must be a string starting with #")
         self._hashtags = value
