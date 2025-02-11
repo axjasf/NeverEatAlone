@@ -119,6 +119,10 @@
     {
       "filePath": "docs\\brd\\modules\\contact_management\\technical\\interfaces.md",
       "group": "Default"
+    },
+    {
+      "filePath": "docs\\development\\CHEATSHEET.md",
+      "group": "Default"
     }
   ]
 }
