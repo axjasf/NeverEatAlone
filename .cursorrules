@@ -16,6 +16,7 @@
       "prefix": "You are writing tests for a contact management and note-taking application. Follow these guidelines:",
       "rules": [
         "Write tests before implementation",
+        "Explain the purpose of each test and let the test be reviewed by the user first",
         "Cover edge cases and error states",
         "Mock external dependencies",
         "Maintain test isolation",
