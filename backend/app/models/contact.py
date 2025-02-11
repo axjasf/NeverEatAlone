@@ -1,5 +1,6 @@
 from typing import Any, Dict, List, cast, Optional
-from sqlalchemy import Column, String, JSON
+from datetime import datetime, UTC
+from sqlalchemy import Column, String, JSON, DateTime
 from .base import BaseModel
 
 
@@ -15,6 +16,7 @@ class Contact(BaseModel):
         first_name (Optional[str]): Optional. The contact's first name.
         contact_briefing_text (Optional[str]): Optional. Brief notes about
             the contact.
+        last_contact (Optional[datetime]): Last contact date in UTC.
         sub_information (Dict[str, Any]): Additional structured information
             stored as JSON. Defaults to empty dict.
         hashtags (List[str]): List of hashtags for categorization. Each tag
@@ -37,6 +39,11 @@ class Contact(BaseModel):
     _contact_briefing_text = Column(
         'contact_briefing_text',
         String,
+        nullable=True
+    )
+    _last_contact = Column(
+        'last_contact',
+        DateTime(timezone=True),
         nullable=True
     )
     _sub_information = Column(
@@ -110,6 +117,31 @@ class Contact(BaseModel):
         self._contact_briefing_text = value
 
     @property
+    def last_contact(self) -> Optional[datetime]:
+        """The date of last contact with this person.
+
+        Returns:
+            Optional[datetime]: The last contact date in UTC,
+            or None if not set.
+        """
+        val = getattr(self, '_last_contact', None)
+        if val is not None and val.tzinfo is None:
+            val = val.replace(tzinfo=UTC)
+        return val
+
+    @last_contact.setter
+    def last_contact(self, value: Optional[datetime]) -> None:
+        """Set the last contact date.
+
+        Args:
+            value (Optional[datetime]): The date to set in UTC,
+            or None to unset.
+        """
+        if value is not None and value.tzinfo is None:
+            value = value.replace(tzinfo=UTC)
+        self._last_contact = value
+
+    @property
     def sub_information(self) -> Dict[str, Any]:
         """Additional structured information about the contact.
 
@@ -133,7 +165,7 @@ class Contact(BaseModel):
         Raises:
             ValueError: If value is not a dictionary.
         """
-        if not isinstance(value, dict):
+        if not isinstance(value, dict):  # type: ignore
             raise ValueError("sub_information must be a dictionary")
         self._sub_information = value
 
