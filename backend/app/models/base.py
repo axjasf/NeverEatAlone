@@ -1,5 +1,7 @@
 from sqlalchemy.orm import declarative_base
-from sqlalchemy import Column, Integer, DateTime
+from sqlalchemy import Column, DateTime
+from sqlalchemy.dialects.postgresql import UUID
+import uuid
 from datetime import datetime, UTC
 
 
@@ -14,14 +16,14 @@ class BaseModel(Base):
     as well as a unique identifier.
 
     Attributes:
-        id (Column): Primary key column, auto-incrementing integer.
+        id (Column): Primary key column, UUID.
         created_at (Column): Timestamp of when the record was created, auto-set.
         updated_at (Column): Timestamp of the last update, auto-updated.
     """
 
     __abstract__ = True
 
-    id = Column(Integer, primary_key=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
     updated_at = Column(
         DateTime,

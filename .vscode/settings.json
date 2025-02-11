@@ -123,6 +123,10 @@
     {
       "filePath": "docs\\development\\CHEATSHEET.md",
       "group": "Default"
+    },
+    {
+      "filePath": "docs\\implementation\\WORKING_NOTES.md",
+      "group": "Default"
     }
   ]
 }

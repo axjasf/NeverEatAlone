@@ -6,7 +6,7 @@ from sqlalchemy.engine import Engine, Connection
 from sqlalchemy.engine.base import Transaction
 from backend.app.models.base import Base
 from fastapi.testclient import TestClient
-from app.main import app
+from backend.app.main import app, override_get_db
 
 
 @pytest.fixture(scope="session")
@@ -20,7 +20,10 @@ def engine() -> Engine:
     Returns:
         Engine: SQLAlchemy engine instance connected to in-memory SQLite.
     """
-    return create_engine("sqlite:///:memory:")
+    return create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False}
+    )
 
 
 @pytest.fixture(scope="session")
@@ -73,6 +76,7 @@ def db_session(engine: Engine, tables: None) -> Generator[Session, None, None]:
 
 
 @pytest.fixture
-def client() -> TestClient:
-    """Create a test client for the FastAPI application"""
-    return TestClient(app)
+def client(db_session: Session) -> Generator[TestClient, None, None]:
+    """Create a test client for the FastAPI application with db session"""
+    with override_get_db(db_session):
+        yield TestClient(app)
