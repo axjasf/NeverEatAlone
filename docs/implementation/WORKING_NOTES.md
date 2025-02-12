@@ -49,7 +49,11 @@ Last Updated: [Current Date]
        - Case-insensitive search
        - Partial matches supported
        - Empty results handled
-     - Hashtag filtering (pending)
+     - Hashtag filtering (in progress) 🔄
+       - Basic implementation committed
+       - Known issue: AND logic not working correctly
+       - Returns all contacts instead of those with all tags
+       - Next step: Fix the query to properly filter by all tags
      - Sorting (pending)
 
 4. **Error Handling** ✅
@@ -64,12 +68,14 @@ Last Updated: [Current Date]
 1. **Database Design**
    - Using SQLite for testing (in-memory)
    - UUID for primary keys
-   - JSON fields for flexible data (sub_information, hashtags)
+   - JSON fields for flexible data (sub_information)
    - All fields except name are nullable
+   - Hashtags stored in separate table with many-to-many relationship
+   - Case-insensitive hashtag storage (lowercase)
 
 2. **Validation Rules**
    - Name presence and length (1-100 chars)
-   - Basic type validation (dict for sub_info, list for hashtags)
+   - Basic type validation (dict for sub_info)
    - Hashtag format validation (must start with #)
    - UTC timezone enforcement for dates
    - Pydantic field validation for complex rules
@@ -99,7 +105,12 @@ Last Updated: [Current Date]
       - ✅ Case-insensitive matches
       - ✅ Partial matches
       - ✅ No matches
-    - 🔄 Hashtag filtering
+    - �� Hashtag filtering
+      - ❌ Single hashtag filter (failing)
+      - ❌ Multiple hashtag filter (AND logic)
+      - ✅ Case-insensitive matching
+      - ✅ Non-matching hashtags
+      - ✅ Invalid hashtag format
     - 🔄 Sorting
 
 - **Validation**
@@ -111,17 +122,16 @@ Last Updated: [Current Date]
   - ✅ Hashtag format validation
 
 ### Next Steps (In Priority Order)
-1. **Complete List/Search Functionality**
-   - ✅ Add name filtering
-   - Add hashtag filtering
-   - Add sorting
-   - Add comprehensive tests
+1. **Fix Hashtag Filtering**
+   - Investigate query logic for ALL tags matching
+   - Consider alternative approaches to subquery
+   - Add more debug output for query execution
+   - Add test cases for edge cases
 
-2. **Add Search/Filter Functionality**
-   - Search by name (partial match)
-   - Filter by hashtags
-   - Sort by last_contact
-   - Pagination support
+2. **Complete List/Search Functionality**
+   - Add sorting
+   - Optimize queries
+   - Add comprehensive tests
 
 3. **Documentation**
    - OpenAPI documentation for all endpoints
@@ -139,13 +149,16 @@ Last Updated: [Current Date]
 
 ### Current Understanding
 - Basic infrastructure is complete and working
-- Core CRUD operations mostly implemented (3/4 done)
+- Core CRUD operations implemented
 - Error handling is standardized and comprehensive
 - Model validation is appropriately strict
-- Ready for implementing remaining endpoints
+- Hashtag filtering needs improvement
+- Ready for query optimization work
 
 ### Blockers/Dependencies
-None currently. Basic infrastructure is working and tests are passing.
+- Hashtag filtering query not working as expected
+- Need to investigate SQLite query execution plan
+- Consider if database schema changes would help
 
 ## Next Update Expected
-After implementing the DELETE endpoint and GET list endpoint.
+After fixing the hashtag filtering functionality.
