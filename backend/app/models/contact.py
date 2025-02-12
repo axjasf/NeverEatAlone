@@ -1,7 +1,62 @@
-from typing import Any, Dict, List, cast, Optional
+from typing import Any, Dict, List, cast, Optional, Sequence
 from datetime import datetime, UTC
-from sqlalchemy import Column, String, JSON, DateTime
-from .base import BaseModel
+from sqlalchemy import Column, String, JSON, DateTime, Table, ForeignKey, Enum
+from sqlalchemy.orm import relationship, Session, Mapped
+import sqlalchemy as sa
+from enum import Enum as PyEnum
+from .base import BaseModel, Base, GUID
+import uuid
+
+
+class EntityType(str, PyEnum):
+    """Types of entities that can have hashtags."""
+    CONTACT = "contact"
+    NOTE = "note"
+    # Add more entity types as needed
+
+
+# Association table for contact-hashtag relationship
+contact_hashtags = Table(
+    "contact_hashtags",
+    Base.metadata,
+    Column("contact_id", GUID, ForeignKey("contacts.id"), primary_key=True),
+    Column("hashtag_id", GUID, ForeignKey("hashtags.id"), primary_key=True),
+)
+
+
+class Hashtag(Base):
+    """Model for storing hashtags.
+
+    Each hashtag is stored once and can be associated with multiple entities.
+    The name must start with '#' and is stored in lowercase for case-insensitive matching.
+    The entity_type field tracks what type of entity this hashtag is used with.
+    """
+    __tablename__ = "hashtags"
+
+    id: Mapped[uuid.UUID] = Column(GUID, primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = Column(String, nullable=False)
+    entity_type: Mapped[EntityType] = Column(Enum(EntityType), nullable=False)
+
+    # Enforce uniqueness on combination of name and entity_type
+    __table_args__ = (
+        sa.UniqueConstraint('name', 'entity_type', name='uq_hashtag_name_type'),
+    )
+
+    def __init__(self, name: str, entity_type: EntityType) -> None:
+        """Create a new hashtag.
+
+        Args:
+            name: The hashtag name (must start with '#')
+            entity_type: The type of entity this hashtag is used with
+
+        Raises:
+            ValueError: If name doesn't start with '#'
+        """
+        if not name.startswith("#"):
+            raise ValueError("Hashtag must start with '#'")
+        super().__init__()
+        self.name = name.lower()  # Store in lowercase for case-insensitive matching
+        self.entity_type = entity_type
 
 
 class Contact(BaseModel):
@@ -34,12 +89,19 @@ class Contact(BaseModel):
 
     __tablename__ = "contacts"
 
-    _name = Column("name", String, nullable=False)
-    _first_name = Column("first_name", String, nullable=True)
-    _contact_briefing_text = Column("contact_briefing_text", String, nullable=True)
-    _last_contact = Column("last_contact", DateTime(timezone=True), nullable=True)
-    _sub_information = Column("sub_information", JSON, nullable=False, default=dict)
-    _hashtags = Column("hashtags", JSON, nullable=False, default=list)
+    _name: Mapped[str] = Column("name", String, nullable=False)
+    _first_name: Mapped[Optional[str]] = Column("first_name", String, nullable=True)
+    _contact_briefing_text: Mapped[Optional[str]] = Column("contact_briefing_text", String, nullable=True)
+    _last_contact: Mapped[Optional[datetime]] = Column("last_contact", DateTime(timezone=True), nullable=True)
+    _sub_information: Mapped[Dict[str, Any]] = Column("sub_information", JSON, nullable=False, default=dict)
+    _hashtags: Mapped[List[str]] = Column("hashtags", JSON, nullable=False, default=list)
+
+    # Relationship with hashtags
+    hashtags: Mapped[List[Hashtag]] = relationship(
+        "Hashtag",
+        secondary=contact_hashtags,
+        lazy="joined"
+    )
 
     @property
     def name(self) -> str:
@@ -152,29 +214,58 @@ class Contact(BaseModel):
         self._sub_information = value
 
     @property
-    def hashtags(self) -> List[str]:
-        """List of hashtags associated with the contact.
-
-        These tags can be used for categorization and searching. Each tag
-        must start with '#'.
+    def hashtag_names(self) -> List[str]:
+        """Get the list of hashtag names associated with this contact.
 
         Returns:
-            List[str]: The list of hashtags, or empty list if not set.
+            List[str]: List of hashtag names (e.g., ["#work", "#tech"]).
         """
-        val = getattr(self, "_hashtags", [])
-        return cast(List[str], val)
+        return [tag.name for tag in self.hashtags]
 
-    @hashtags.setter
-    def hashtags(self, value: List[str]) -> None:
-        """Set the hashtags for the contact.
+    def set_hashtags(self, hashtag_names: List[str]) -> None:
+        """Set the hashtags for this contact.
+
+        This method creates new hashtag entities if they don't exist and
+        associates them with this contact. It also removes any existing
+        hashtag associations that are not in the new list.
 
         Args:
-            value (List[str]): List of hashtags. Each tag must start with '#'.
+            hashtag_names: List of hashtag names to set. Each must start with '#'.
 
         Raises:
-            ValueError: If any tag doesn't start with '#'.
+            ValueError: If any hashtag name doesn't start with '#'.
+            RuntimeError: If contact is not attached to a session.
         """
-        for tag in value:
-            if not tag.startswith("#"):
+        # Validate hashtag format
+        for name in hashtag_names:
+            if not name.startswith("#"):
                 raise ValueError("Each hashtag must be a string starting with #")
-        self._hashtags = value
+
+        # Get SQLAlchemy session
+        session = sa.inspect(self).session
+        if session is None:
+            raise RuntimeError(
+                "Contact must be attached to a session to set hashtags"
+            )
+
+        # Clear existing hashtags
+        self.hashtags = []
+
+        # Create or get hashtags and associate them
+        for name in hashtag_names:
+            # Normalize name to lowercase
+            name = name.lower()
+
+            # Try to find existing hashtag
+            hashtag = session.query(Hashtag).filter(
+                Hashtag.name == name,
+                Hashtag.entity_type == EntityType.CONTACT
+            ).first()
+
+            # Create new hashtag if it doesn't exist
+            if hashtag is None:
+                hashtag = Hashtag(name=name, entity_type=EntityType.CONTACT)
+                session.add(hashtag)
+
+            # Associate hashtag with contact
+            self.hashtags.append(hashtag)

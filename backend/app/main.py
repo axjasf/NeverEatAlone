@@ -10,8 +10,10 @@ from sqlalchemy.exc import IntegrityError
 from contextlib import contextmanager
 from typing import Iterator
 from http import HTTPStatus
+import sqlalchemy as sa
+import logging
 
-from backend.app.models.contact import Contact
+from backend.app.models.contact import Contact, Hashtag, EntityType, contact_hashtags
 
 app = FastAPI(title="Contact Management API")
 
@@ -130,12 +132,13 @@ async def create_contact(
             name=contact.name,
             first_name=contact.first_name,
             sub_information=contact.sub_information or {},
-            hashtags=contact.hashtags or [],
             last_contact=contact.last_contact,
             contact_briefing_text=contact.contact_briefing_text,
         )
 
         db.add(db_contact)
+        if contact.hashtags:
+            db_contact.set_hashtags(contact.hashtags)
         db.commit()
         db.refresh(db_contact)
 
@@ -146,7 +149,7 @@ async def create_contact(
             name=str(db_contact.name),
             first_name=(str(db_contact.first_name) if db_contact.first_name else None),
             sub_information=dict(db_contact.sub_information),
-            hashtags=list(db_contact.hashtags),
+            hashtags=db_contact.hashtag_names,
             last_contact=db_contact.last_contact,
             contact_briefing_text=db_contact.contact_briefing_text,
             created_at=db_contact.created_at.replace(tzinfo=None),
@@ -183,7 +186,7 @@ async def get_contact(
         name=str(contact.name),
         first_name=(str(contact.first_name) if contact.first_name else None),
         sub_information=dict(contact.sub_information),
-        hashtags=list(contact.hashtags),
+        hashtags=contact.hashtag_names,
         last_contact=contact.last_contact,
         contact_briefing_text=contact.contact_briefing_text,
         created_at=contact.created_at.replace(tzinfo=None),
@@ -232,7 +235,8 @@ async def update_contact(
         db_contact.name = contact.name
         db_contact.first_name = contact.first_name
         db_contact.sub_information = sub_info
-        db_contact.hashtags = hashtags
+        if contact.hashtags is not None:  # Only update hashtags if they were provided
+            db_contact.set_hashtags(contact.hashtags)
         db_contact.last_contact = contact.last_contact
         db_contact.contact_briefing_text = contact.contact_briefing_text
 
@@ -246,7 +250,7 @@ async def update_contact(
             name=str(db_contact.name),
             first_name=(str(db_contact.first_name) if db_contact.first_name else None),
             sub_information=dict(db_contact.sub_information),
-            hashtags=list(db_contact.hashtags),
+            hashtags=db_contact.hashtag_names,
             last_contact=db_contact.last_contact,
             contact_briefing_text=db_contact.contact_briefing_text,
             created_at=db_contact.created_at.replace(tzinfo=None),
@@ -288,6 +292,7 @@ async def delete_contact(
 async def list_contacts(
     db: Annotated[Session, Depends(get_test_db)],
     name: Optional[str] = None,
+    hashtags: Optional[str] = None,
     limit: int = 10,
     offset: int = 0,
 ) -> ContactList:
@@ -296,6 +301,7 @@ async def list_contacts(
     Args:
         db (Session): The database session.
         name (str, optional): Filter by name (case-insensitive, partial match).
+        hashtags (str, optional): Comma-separated list of hashtags to filter by.
         limit (int, optional): Maximum number of items to return. Defaults to 10.
         offset (int, optional): Number of items to skip. Defaults to 0.
 
@@ -307,10 +313,43 @@ async def list_contacts(
 
     # Apply name filter if provided
     if name:
-        query = query.filter(Contact.__table__.c.name.ilike(f"%{name}%"))
+        query = query.filter(Contact._name.ilike(f"%{name}%"))
+
+    # Apply hashtag filter if provided
+    if hashtags:
+        print("\n=== HASHTAG FILTERING DEBUG ===")
+        print(f"Input hashtags: {hashtags}")
+        tag_list = [tag.strip().lower() for tag in hashtags.split(",") if tag.strip().startswith("#")]
+        print(f"Normalized tags: {tag_list}")
+
+        # Find contacts that have ALL requested hashtags.
+        matching_ids = (
+            sa.select(contact_hashtags.c.contact_id)
+            .join(Hashtag, contact_hashtags.c.hashtag_id == Hashtag.id)  # Explicit join condition.
+            .filter(
+                Hashtag.entity_type == EntityType.CONTACT,
+                Hashtag.name.in_(tag_list)
+            )
+            .group_by(contact_hashtags.c.contact_id)
+            .having(sa.func.count(sa.distinct(Hashtag.name)) == len(tag_list))
+            .scalar_subquery()
+        )
+
+        # Apply filter to main query.
+        query = query.filter(Contact.id.in_(matching_ids))
+
+        print("\nDebug - Final filtered query:")
+        print(str(query.statement.compile(compile_kwargs={"literal_binds": True})))
+
+        # Print filtered results for debugging
+        results = query.all()
+        print(f"\nFound {len(results)} matching contacts:")
+        for c in results:
+            print(f"- {c.name}: {c.hashtag_names}")
 
     # Get total count before pagination
     total_count = query.count()
+    print(f"\nTotal count: {total_count}")
 
     # Apply pagination
     contacts = query.offset(offset).limit(limit).all()
@@ -325,7 +364,7 @@ async def list_contacts(
                 name=str(contact.name),
                 first_name=(str(contact.first_name) if contact.first_name else None),
                 sub_information=dict(contact.sub_information),
-                hashtags=list(contact.hashtags),
+                hashtags=contact.hashtag_names,
                 last_contact=contact.last_contact,
                 contact_briefing_text=contact.contact_briefing_text,
                 created_at=contact.created_at.replace(tzinfo=None),

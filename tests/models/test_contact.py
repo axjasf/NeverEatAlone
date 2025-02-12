@@ -2,7 +2,7 @@ import pytest
 from datetime import datetime, UTC
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from backend.app.models.contact import Contact
+from backend.app.models.contact import Contact, Hashtag, EntityType
 
 
 def test_contact_creation_with_required_fields(db_session: Session) -> None:
@@ -19,7 +19,7 @@ def test_contact_creation_with_required_fields(db_session: Session) -> None:
     assert saved_contact.contact_briefing_text is None
     assert saved_contact.last_contact is None
     assert saved_contact.sub_information == {}
-    assert saved_contact.hashtags == []
+    assert saved_contact.hashtag_names == []
 
 
 def test_contact_creation_with_all_fields(db_session: Session) -> None:
@@ -28,15 +28,14 @@ def test_contact_creation_with_all_fields(db_session: Session) -> None:
     hashtags = ["#business", "#vip"]
     now = datetime.now(UTC)
 
-    contact = Contact(
-        name="John Doe",
-        first_name="John",
-        contact_briefing_text="Important business contact",
-        last_contact=now,
-        sub_information=sub_info,
-        hashtags=hashtags,
-    )
+    contact = Contact(name="John Doe")
+    contact.first_name = "John"
+    contact.contact_briefing_text = "Important business contact"
+    contact.last_contact = now
+    contact.sub_information = sub_info
     db_session.add(contact)
+    contact.set_hashtags(hashtags)
+
     db_session.commit()
     db_session.refresh(contact)
 
@@ -47,7 +46,7 @@ def test_contact_creation_with_all_fields(db_session: Session) -> None:
     assert saved_contact.contact_briefing_text == "Important business contact"
     assert saved_contact.last_contact == now
     assert saved_contact.sub_information == sub_info
-    assert saved_contact.hashtags == hashtags
+    assert saved_contact.hashtag_names == hashtags
 
 
 def test_contact_update_last_contact(db_session: Session) -> None:
@@ -99,7 +98,10 @@ def test_contact_sub_information_nested_dict(db_session: Session) -> None:
             "hobbies": ["reading", "hiking"],
             "family": {"status": "married", "children": 2},
         },
-        "professional": {"role": "developer", "skills": ["python", "typescript"]},
+        "professional": {
+            "role": "developer",
+            "skills": ["python", "typescript"]
+        },
     }
     contact = Contact(name="John Doe", sub_information=sub_info)
     db_session.add(contact)
@@ -123,16 +125,75 @@ def test_contact_sub_information_update(db_session: Session) -> None:
 
     saved_contact = db_session.get(Contact, contact.id)
     assert saved_contact is not None
-    assert saved_contact.sub_information == {"role": "manager", "team": "engineering"}
+    assert saved_contact.sub_information == {
+        "role": "manager",
+        "team": "engineering"
+    }
 
 
 def test_contact_hashtags_validation(db_session: Session) -> None:
     """Test that hashtags must be a valid list."""
+    contact = Contact(name="John Doe")
+    db_session.add(contact)
     with pytest.raises(ValueError):
-        Contact(name="John Doe", hashtags="invalid")
+        contact.set_hashtags("invalid")  # type: ignore
 
 
 def test_contact_hashtag_format(db_session: Session) -> None:
     """Test that hashtags must start with #."""
+    contact = Contact(name="John Doe")
+    db_session.add(contact)
     with pytest.raises(ValueError):
-        Contact(name="John Doe", hashtags=["invalid"])
+        contact.set_hashtags(["invalid"])  # Should raise error - no # prefix
+
+
+def test_hashtag_case_normalization(db_session: Session) -> None:
+    """Test that hashtags are normalized to lowercase."""
+    contact = Contact(name="John Doe")
+    db_session.add(contact)
+    contact.set_hashtags(["#TEST", "#CamelCase"])
+    db_session.commit()
+    db_session.refresh(contact)
+
+    assert contact.hashtag_names == ["#test", "#camelcase"]
+
+
+def test_hashtag_uniqueness(db_session: Session) -> None:
+    """Test that hashtags are unique per entity type."""
+    # Create two contacts with the same hashtag
+    contact1 = Contact(name="John Doe")
+    contact2 = Contact(name="Jane Doe")
+
+    db_session.add(contact1)
+    db_session.add(contact2)
+
+    contact1.set_hashtags(["#test"])
+    contact2.set_hashtags(["#test"])
+
+    db_session.commit()
+    db_session.refresh(contact1)
+    db_session.refresh(contact2)
+
+    # Both should reference the same hashtag entity
+    assert len(db_session.query(Hashtag).filter_by(
+        name="#test",
+        entity_type=EntityType.CONTACT
+    ).all()) == 1
+    assert contact1.hashtag_names == ["#test"]
+    assert contact2.hashtag_names == ["#test"]
+
+
+def test_hashtag_entity_type(db_session: Session) -> None:
+    """Test that hashtags are created with correct entity type."""
+    contact = Contact(name="John Doe")
+    db_session.add(contact)
+    contact.set_hashtags(["#test"])
+    db_session.commit()
+    db_session.refresh(contact)
+
+    hashtag = db_session.query(Hashtag).filter_by(
+        name="#test",
+        entity_type=EntityType.CONTACT
+    ).first()
+    assert hashtag is not None
+    assert hashtag.entity_type == EntityType.CONTACT

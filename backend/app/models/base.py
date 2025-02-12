@@ -1,33 +1,72 @@
 from sqlalchemy.orm import declarative_base
-from sqlalchemy import Column, DateTime
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, DateTime, String
+from sqlalchemy.types import TypeDecorator
 import uuid
 from datetime import datetime, UTC
+from typing import Any, Optional
 
 
 Base = declarative_base()
 
 
+class GUID(TypeDecorator[uuid.UUID]):
+    """Platform-independent GUID type.
+    Uses String(36) internally for SQLite compatibility.
+    """
+    impl = String(36)
+    cache_ok = True
+
+    def process_bind_param(
+        self,
+        value: Optional[uuid.UUID | str],
+        dialect: Any
+    ) -> Optional[str]:
+        if value is None:
+            return value
+        elif isinstance(value, str):
+            return value
+        else:
+            return str(value)
+
+    def process_result_value(
+        self,
+        value: Optional[str],
+        dialect: Any
+    ) -> Optional[uuid.UUID]:
+        if value is None:
+            return value
+        else:
+            return uuid.UUID(value)
+
+
 class BaseModel(Base):
     """Base model class that includes common fields and methods.
 
-    This class serves as the foundation for all database models in the application.
-    It provides common fields for tracking record creation and modification times,
-    as well as a unique identifier.
+    This class serves as the foundation for all database models in
+    the application. It provides common fields for tracking record
+    creation and modification times, and a unique identifier.
 
     Attributes:
-        id (Column): Primary key column, UUID.
-        created_at (Column): Timestamp of when the record was created, auto-set.
-        updated_at (Column): Timestamp of the last update, auto-updated.
+        id: Primary key column, UUID.
+        created_at: Timestamp of when the record was created.
+        updated_at: Timestamp of the last update.
     """
 
     __abstract__ = True
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
-    updated_at = Column(
-        DateTime,
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),
+    id = Column(
+        GUID,
+        primary_key=True,
+        default=lambda: str(uuid.uuid4())
+    )
+    created_at = Column(
+        DateTime(timezone=True),
         nullable=False,
+        default=lambda: datetime.now(UTC)
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC)
     )

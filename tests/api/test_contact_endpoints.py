@@ -3,7 +3,7 @@ from typing import Any, Dict
 from fastapi.testclient import TestClient
 from http import HTTPStatus
 from sqlalchemy.orm import Session
-from backend.app.models.contact import Contact
+from backend.app.models.contact import Contact, Hashtag, EntityType
 
 
 def test_create_contact_with_minimal_data(client: TestClient):
@@ -136,8 +136,8 @@ def test_get_contact_successful(client: TestClient, db_session: Session):
     contact.first_name = "John"
     contact.contact_briefing_text = "Test contact"
     contact.sub_information = {"role": "test"}
-    contact.hashtags = ["#test"]
     db_session.add(contact)
+    contact.set_hashtags(["#test"])
     db_session.commit()
     db_session.refresh(contact)
 
@@ -150,7 +150,7 @@ def test_get_contact_successful(client: TestClient, db_session: Session):
     assert data["first_name"] == contact.first_name
     assert data["contact_briefing_text"] == contact.contact_briefing_text
     assert data["sub_information"] == contact.sub_information
-    assert data["hashtags"] == contact.hashtags
+    assert data["hashtags"] == contact.hashtag_names
     assert "id" in data
     assert "created_at" in data
     assert "updated_at" in data
@@ -172,10 +172,9 @@ def test_update_contact_successful(client: TestClient, db_session: Session):
     contact.first_name = "John"
     contact.contact_briefing_text = "Original text"
     contact.sub_information = {"role": "original"}
-    contact.hashtags = ["#original"]
     db_session.add(contact)
+    contact.set_hashtags(["#original"])
     db_session.commit()
-    db_session.refresh(contact)
     original_id = contact.id
     original_created_at = contact.created_at
 
@@ -273,6 +272,7 @@ def test_update_contact_with_invalid_data(
     contact.first_name = "John"
     contact.contact_briefing_text = "Original text"
     db_session.add(contact)
+    contact.set_hashtags(["#original"])
     db_session.commit()
 
     # Get the ID and original values
@@ -458,3 +458,162 @@ def test_list_contacts_name_filter(
     # Verify matches contain filter string
     for item in data["items"]:
         assert name_filter.lower() in item["name"].lower()
+
+
+def test_list_contacts_hashtag_filter(client: TestClient, db_session: Session):
+    """Test filtering contacts by hashtags.
+
+    This test verifies that:
+    1. Contacts can be filtered by a single hashtag
+    2. Contacts can be filtered by multiple hashtags (AND logic)
+    3. Hashtag filtering is case-insensitive
+    4. Non-matching hashtags return empty results
+    5. Invalid hashtags (without #) return empty results
+    """
+    print("\n=== Setting up test data ===")
+    # Create test contacts
+    contacts = [
+        Contact(name="Alice"),
+        Contact(name="Bob"),
+        Contact(name="Charlie"),
+    ]
+
+    # Add contacts to session first
+    for contact in contacts:
+        db_session.add(contact)
+    db_session.flush()
+    print("Created contacts:", [c.name for c in contacts])
+
+    # Create hashtags
+    test_tag = "#test"
+    dev_tag = "#dev"
+    prod_tag = "#prod"
+    print("Created hashtags:", [test_tag, dev_tag, prod_tag])
+
+    # Associate hashtags with contacts
+    print("\n=== Associating hashtags ===")
+    # Alice: #test, #dev
+    contacts[0].set_hashtags([test_tag, dev_tag])
+    print(f"Alice's tags: {contacts[0].hashtag_names}")
+    # Bob: #dev
+    contacts[1].set_hashtags([dev_tag])
+    print(f"Bob's tags: {contacts[1].hashtag_names}")
+    # Charlie: #prod
+    contacts[2].set_hashtags([prod_tag])
+    print(f"Charlie's tags: {contacts[2].hashtag_names}")
+
+    db_session.commit()
+
+    print("\n=== Verifying database state ===")
+    # Verify hashtags in database
+    all_hashtags = db_session.query(Hashtag).all()
+    print("All hashtags in DB:", [h.name for h in all_hashtags])
+
+    # Verify contact associations
+    for contact in contacts:
+        db_session.refresh(contact)
+        print(f"Contact {contact.name} has tags: {contact.hashtag_names}")
+
+    print("\n=== Running test cases ===")
+    # Test single hashtag filter
+    print("\nTesting single hashtag filter: #test")
+    response = client.get("/api/contacts?hashtags=#test")
+    assert response.status_code == HTTPStatus.OK
+    data = response.json()
+    print("Response data:", data)
+    assert data["total_count"] == 1  # Only Alice has #test
+    assert len(data["items"]) == 1
+    assert data["items"][0]["name"] == "Alice"
+
+    # Test multiple hashtags (AND logic)
+    response = client.get("/api/contacts?hashtags=#test,#dev")
+    assert response.status_code == HTTPStatus.OK
+    data = response.json()
+    assert data["total_count"] == 1  # Only Alice has both #test and #dev
+    assert len(data["items"]) == 1
+    assert data["items"][0]["name"] == "Alice"
+
+    # Test case insensitivity
+    response = client.get("/api/contacts?hashtags=#TEST")
+    assert response.status_code == HTTPStatus.OK
+    data = response.json()
+    assert data["total_count"] == 1  # Only Alice has #test
+    assert len(data["items"]) == 1
+    assert data["items"][0]["name"] == "Alice"
+
+    # Test non-matching hashtag
+    response = client.get("/api/contacts?hashtags=#nonexistent")
+    assert response.status_code == HTTPStatus.OK
+    data = response.json()
+    assert data["total_count"] == 0
+    assert len(data["items"]) == 0
+
+    # Test invalid hashtag format
+    response = client.get("/api/contacts?hashtags=invalid")
+    assert response.status_code == HTTPStatus.OK
+    data = response.json()
+    assert data["total_count"] == 0
+    assert len(data["items"]) == 0
+
+
+def test_contact_hashtags_validation(client: TestClient):
+    """Test hashtag validation during contact creation.
+
+    This test verifies that:
+    1. Hashtags must start with #
+    2. Hashtags are stored in lowercase
+    3. Invalid hashtag format returns 400
+    """
+    # Test invalid hashtag format
+    contact_data = {
+        "name": "John Doe",
+        "hashtags": ["invalid"]  # Missing #
+    }
+    response = client.post("/api/contacts", json=contact_data)
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    data = response.json()
+    assert "error" in data
+    assert "each hashtag must be a string starting with #" in data["error"].lower()
+
+    # Test valid hashtags with mixed case
+    contact_data = {
+        "name": "John Doe",
+        "hashtags": ["#TEST", "#Dev"]
+    }
+    response = client.post("/api/contacts", json=contact_data)
+    assert response.status_code == HTTPStatus.CREATED
+    data = response.json()
+    assert set(data["hashtags"]) == {"#test", "#dev"}  # Should be lowercase
+
+
+def test_update_contact_hashtags(client: TestClient, db_session: Session):
+    """Test updating contact hashtags.
+
+    This test verifies that:
+    1. Hashtags can be added to existing contact
+    2. Hashtags can be removed from contact
+    3. Hashtags can be completely replaced
+    4. Case is preserved in response but normalized in storage
+    """
+    # Create initial contact with hashtags
+    contact = Contact(name="John Doe")
+    db_session.add(contact)
+    contact.set_hashtags(["#initial"])
+    db_session.commit()
+
+    # Update with new hashtags
+    update_data = {
+        "name": "John Doe",
+        "hashtags": ["#NEW", "#tags"]
+    }
+    response = client.put(f"/api/contacts/{contact.id}", json=update_data)
+    assert response.status_code == HTTPStatus.OK
+    data = response.json()
+    assert set(data["hashtags"]) == {"#new", "#tags"}
+
+    # Remove all hashtags
+    update_data["hashtags"] = []
+    response = client.put(f"/api/contacts/{contact.id}", json=update_data)
+    assert response.status_code == HTTPStatus.OK
+    data = response.json()
+    assert not data["hashtags"]
