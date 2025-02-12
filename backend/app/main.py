@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, Any, Annotated
+from typing import Optional, Any, Annotated, List
 from uuid import UUID
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -80,6 +80,14 @@ class ContactResponse(ContactCreate):
     id: UUID
     created_at: datetime
     updated_at: datetime
+
+
+class ContactList(BaseModel):
+    """Response model for paginated contact list."""
+    items: List[ContactResponse]
+    total_count: int
+    limit: int = 10
+    offset: int = 0
 
 
 @app.exception_handler(RequestValidationError)
@@ -274,3 +282,51 @@ async def delete_contact(
 
     db.delete(contact)
     db.commit()
+
+
+@app.get("/api/contacts", response_model=ContactList)
+async def list_contacts(
+    db: Annotated[Session, Depends(get_test_db)],
+    limit: int = 10,
+    offset: int = 0,
+) -> ContactList:
+    """List contacts with pagination.
+
+    Args:
+        db (Session): The database session.
+        limit (int, optional): Maximum number of items to return. Defaults to 10.
+        offset (int, optional): Number of items to skip. Defaults to 0.
+
+    Returns:
+        ContactList: Paginated list of contacts.
+    """
+    # Get total count
+    total_count = db.query(Contact).count()
+
+    # Get paginated contacts
+    contacts = db.query(Contact).offset(offset).limit(limit).all()
+
+    # Convert to response models
+    items = []
+    for contact in contacts:
+        db_id = getattr(contact.id, "_value", contact.id)
+        items.append(
+            ContactResponse(
+                id=UUID(str(db_id)) if not isinstance(db_id, UUID) else db_id,
+                name=str(contact.name),
+                first_name=(str(contact.first_name) if contact.first_name else None),
+                sub_information=dict(contact.sub_information),
+                hashtags=list(contact.hashtags),
+                last_contact=contact.last_contact,
+                contact_briefing_text=contact.contact_briefing_text,
+                created_at=contact.created_at.replace(tzinfo=None),
+                updated_at=contact.updated_at.replace(tzinfo=None),
+            )
+        )
+
+    return ContactList(
+        items=items,
+        total_count=total_count,
+        limit=limit,
+        offset=offset
+    )

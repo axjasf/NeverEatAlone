@@ -359,3 +359,56 @@ def test_delete_contact_invalid_uuid(client: TestClient):
     data = response.json()
     assert "error" in data
     assert "uuid" in data["error"].lower()
+
+
+def test_list_contacts_empty(client: TestClient):
+    """Test listing contacts when database is empty.
+
+    This test verifies that:
+    1. Response has 200 OK status
+    2. Response body contains empty items list
+    3. Response includes total_count of 0
+    """
+    response = client.get("/api/contacts")
+
+    assert response.status_code == HTTPStatus.OK
+    data = response.json()
+    assert "items" in data
+    assert len(data["items"]) == 0
+    assert data["total_count"] == 0
+
+
+def test_list_contacts_multiple(client: TestClient, db_session: Session):
+    """Test listing multiple contacts.
+
+    This test verifies that:
+    1. Response has 200 OK status
+    2. All contacts are returned in items list
+    3. Total count matches number of contacts
+    4. Each contact has all expected fields
+    """
+    # Create test contacts
+    contacts = [
+        Contact(name="Alice"),
+        Contact(name="Bob"),
+        Contact(name="Charlie"),
+    ]
+    for contact in contacts:
+        db_session.add(contact)
+    db_session.commit()
+
+    # Get list via API
+    response = client.get("/api/contacts")
+
+    assert response.status_code == HTTPStatus.OK
+    data = response.json()
+    assert "items" in data
+    assert len(data["items"]) == len(contacts)
+    assert data["total_count"] == len(contacts)
+
+    # Verify each contact has required fields
+    for item in data["items"]:
+        assert "id" in item
+        assert "name" in item
+        assert "created_at" in item
+        assert "updated_at" in item
