@@ -1,6 +1,6 @@
-from typing import Any, Dict, List, cast, Optional, Sequence
-from datetime import datetime, UTC
-from sqlalchemy import Column, String, JSON, DateTime, Table, ForeignKey, Enum
+from typing import Any, Dict, List, cast, Optional
+from datetime import datetime, UTC, timedelta
+from sqlalchemy import Column, String, JSON, DateTime, Table, ForeignKey, Enum, Integer
 from sqlalchemy.orm import relationship, Session, Mapped
 import sqlalchemy as sa
 from enum import Enum as PyEnum
@@ -12,6 +12,7 @@ class EntityType(str, PyEnum):
     """Types of entities that can have hashtags."""
     CONTACT = "contact"
     NOTE = "note"
+    STATEMENT = "statement"
     # Add more entity types as needed
 
 
@@ -30,12 +31,20 @@ class Hashtag(Base):
     Each hashtag is stored once and can be associated with multiple entities.
     The name must start with '#' and is stored in lowercase for case-insensitive matching.
     The entity_type field tracks what type of entity this hashtag is used with.
+
+    Attributes:
+        name (str): The hashtag name (must start with '#')
+        entity_type (EntityType): The type of entity this hashtag is used with
+        frequency_days (Optional[int]): Number of days between expected contacts
+        last_contact (Optional[datetime]): When this tag was last contacted
     """
     __tablename__ = "hashtags"
 
     id: Mapped[uuid.UUID] = Column(GUID, primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = Column(String, nullable=False)
     entity_type: Mapped[EntityType] = Column(Enum(EntityType), nullable=False)
+    frequency_days: Mapped[Optional[int]] = Column(Integer, nullable=True)
+    last_contact: Mapped[Optional[datetime]] = Column(DateTime(timezone=True), nullable=True)
 
     # Enforce uniqueness on combination of name and entity_type
     __table_args__ = (
@@ -57,6 +66,34 @@ class Hashtag(Base):
         super().__init__()
         self.name = name.lower()  # Store in lowercase for case-insensitive matching
         self.entity_type = entity_type
+        self.frequency_days = None
+        self.last_contact = None
+
+    @property
+    def staleness_days(self) -> Optional[int]:
+        """Calculate how many days overdue this tag is.
+
+        Returns:
+            Optional[int]: Number of days overdue, or None if frequency not set
+        """
+        if not self.frequency_days or not self.last_contact:
+            return None
+
+        # Ensure last_contact is timezone-aware
+        last_contact = self.last_contact if self.last_contact.tzinfo else self.last_contact.replace(tzinfo=UTC)
+        days_since = (datetime.now(UTC) - last_contact).days
+        overdue_days = days_since - self.frequency_days
+        return max(0, overdue_days)
+
+    def is_stale(self) -> bool:
+        """Check if this tag is overdue for contact.
+
+        Returns:
+            bool: True if tag has frequency set and is overdue
+        """
+        if not self.frequency_days or not self.last_contact:
+            return False
+        return self.staleness_days > 0
 
 
 class Contact(BaseModel):
@@ -71,7 +108,6 @@ class Contact(BaseModel):
         first_name (Optional[str]): Optional. The contact's first name.
         contact_briefing_text (Optional[str]): Optional. Brief notes about
             the contact.
-        last_contact (Optional[datetime]): Last contact date in UTC.
         sub_information (Dict[str, Any]): Additional structured information
             stored as JSON. Defaults to empty dict.
         hashtags (List[str]): List of hashtags for categorization. Each tag
@@ -92,7 +128,6 @@ class Contact(BaseModel):
     _name: Mapped[str] = Column("name", String, nullable=False)
     _first_name: Mapped[Optional[str]] = Column("first_name", String, nullable=True)
     _contact_briefing_text: Mapped[Optional[str]] = Column("contact_briefing_text", String, nullable=True)
-    _last_contact: Mapped[Optional[datetime]] = Column("last_contact", DateTime(timezone=True), nullable=True)
     _sub_information: Mapped[Dict[str, Any]] = Column("sub_information", JSON, nullable=False, default=dict)
     _hashtags: Mapped[List[str]] = Column("hashtags", JSON, nullable=False, default=list)
 
@@ -159,31 +194,6 @@ class Contact(BaseModel):
             value (Optional[str]): The briefing text to set, or None to unset.
         """
         self._contact_briefing_text = value
-
-    @property
-    def last_contact(self) -> Optional[datetime]:
-        """The date of last contact with this person.
-
-        Returns:
-            Optional[datetime]: The last contact date in UTC,
-            or None if not set.
-        """
-        val = getattr(self, "_last_contact", None)
-        if val is not None and val.tzinfo is None:
-            val = val.replace(tzinfo=UTC)
-        return val
-
-    @last_contact.setter
-    def last_contact(self, value: Optional[datetime]) -> None:
-        """Set the last contact date.
-
-        Args:
-            value (Optional[datetime]): The date to set in UTC,
-            or None to unset.
-        """
-        if value is not None and value.tzinfo is None:
-            value = value.replace(tzinfo=UTC)
-        self._last_contact = value
 
     @property
     def sub_information(self) -> Dict[str, Any]:
