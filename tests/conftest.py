@@ -21,8 +21,7 @@ def engine() -> Engine:
         Engine: SQLAlchemy engine instance connected to in-memory SQLite.
     """
     return create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False}
+        "sqlite:///:memory:", connect_args={"check_same_thread": False}
     )
 
 

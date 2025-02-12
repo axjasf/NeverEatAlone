@@ -36,22 +36,9 @@ class Contact(BaseModel):
 
     _name = Column("name", String, nullable=False)
     _first_name = Column("first_name", String, nullable=True)
-    _contact_briefing_text = Column(
-        "contact_briefing_text",
-        String,
-        nullable=True
-    )
-    _last_contact = Column(
-        "last_contact",
-        DateTime(timezone=True),
-        nullable=True
-    )
-    _sub_information = Column(
-        "sub_information",
-        JSON,
-        nullable=False,
-        default=dict
-    )
+    _contact_briefing_text = Column("contact_briefing_text", String, nullable=True)
+    _last_contact = Column("last_contact", DateTime(timezone=True), nullable=True)
+    _sub_information = Column("sub_information", JSON, nullable=False, default=dict)
     _hashtags = Column("hashtags", JSON, nullable=False, default=list)
 
     @property
@@ -189,7 +176,5 @@ class Contact(BaseModel):
         """
         for tag in value:
             if not tag.startswith("#"):
-                raise ValueError(
-                    "Each hashtag must be a string starting with #"
-                )
+                raise ValueError("Each hashtag must be a string starting with #")
         self._hashtags = value

@@ -7,8 +7,12 @@ from backend.app.models.contact import Contact
 
 
 def test_create_contact_with_minimal_data(client: TestClient):
-    """
-    Test creating a contact with only required fields (name)
+    """Test creating a contact with only required fields.
+
+    This test verifies that:
+    1. A contact can be created with only the required name field
+    2. The response includes the correct name
+    3. System fields (id, created_at, updated_at) are present
     """
     contact_data = {"name": "John Doe"}
 
@@ -27,10 +31,7 @@ def test_create_contact_with_minimal_data(client: TestClient):
     [
         ({}, "Field required"),
         ({"name": ""}, "String should have at least 1 character"),
-        (
-            {"name": "a" * 101},
-            "String should have at most 100 characters"
-        ),
+        ({"name": "a" * 101}, "String should have at most 100 characters"),
     ],
 )
 def test_create_contact_with_invalid_data(
@@ -38,9 +39,12 @@ def test_create_contact_with_invalid_data(
     invalid_data: Dict[str, Any],
     expected_error: str,
 ):
-    """
-    Test creating a contact with invalid data returns appropriate error
-    messages
+    """Test creating a contact with invalid data returns appropriate errors.
+
+    This test verifies that:
+    1. Invalid data results in a 400 Bad Request response
+    2. The error message matches the expected validation error
+    3. The error format follows the standard error response format
     """
     response = client.post("/api/contacts", json=invalid_data)
 
@@ -51,8 +55,12 @@ def test_create_contact_with_invalid_data(
 
 
 def test_get_nonexistent_contact(client: TestClient):
-    """
-    Test attempting to get a contact that doesn't exist returns 404
+    """Test attempting to get a non-existent contact.
+
+    This test verifies that:
+    1. Request for non-existent UUID returns 404 Not Found
+    2. The error message indicates the contact was not found
+    3. The error format follows the standard error response format
     """
     response = client.get("/api/contacts/00000000-0000-0000-0000-000000000000")
 
@@ -63,8 +71,12 @@ def test_get_nonexistent_contact(client: TestClient):
 
 
 def test_create_contact_with_malformed_json(client: TestClient):
-    """
-    Test sending malformed JSON returns appropriate error
+    """Test sending malformed JSON data.
+
+    This test verifies that:
+    1. Malformed JSON results in a 400 Bad Request response
+    2. The error message indicates a JSON decode error
+    3. The error format follows the standard error response format
     """
     malformed_json = "{invalid json"
     response = client.post(
@@ -82,16 +94,8 @@ def test_create_contact_with_malformed_json(client: TestClient):
 @pytest.mark.parametrize(
     "field,invalid_value,expected_error",
     [
-        (
-            "hashtags",
-            "not-a-list",
-            "Input should be a valid list"
-        ),
-        (
-            "sub_information",
-            "not-a-dict",
-            "Input should be a valid dictionary"
-        ),
+        ("hashtags", "not-a-list", "Input should be a valid list"),
+        ("sub_information", "not-a-dict", "Input should be a valid dictionary"),
     ],
 )
 def test_create_contact_with_invalid_field_formats(
@@ -100,9 +104,12 @@ def test_create_contact_with_invalid_field_formats(
     invalid_value: Any,
     expected_error: str,
 ):
-    """
-    Test creating contacts with invalid field formats returns appropriate
-    errors
+    """Test creating contacts with invalid field formats.
+
+    This test verifies that:
+    1. Invalid field types result in a 400 Bad Request response
+    2. The error message matches the expected type validation error
+    3. The error format follows the standard error response format
     """
     contact_data: Dict[str, Any] = {"name": "John Doe", field: invalid_value}
 
@@ -115,8 +122,13 @@ def test_create_contact_with_invalid_field_formats(
 
 
 def test_get_contact_successful(client: TestClient, db_session: Session):
-    """
-    Test successfully retrieving an existing contact
+    """Test successfully retrieving an existing contact.
+
+    This test verifies that:
+    1. Contact can be retrieved using its ID
+    2. All fields match the stored contact data
+    3. System fields (id, created_at, updated_at) are present
+    4. Optional fields (first_name, sub_information, hashtags) are included
     """
     # Create a contact in the database
     contact = Contact()
@@ -142,3 +154,146 @@ def test_get_contact_successful(client: TestClient, db_session: Session):
     assert "id" in data
     assert "created_at" in data
     assert "updated_at" in data
+
+
+def test_update_contact_successful(client: TestClient, db_session: Session):
+    """
+    Test successfully updating an existing contact
+
+    This test verifies that:
+    1. We can update all fields of an existing contact
+    2. The response contains the updated values
+    3. The updated_at timestamp is updated
+    4. The ID and other metadata remain unchanged
+    """
+    # Create a contact in the database
+    contact = Contact()
+    contact.name = "John Doe"
+    contact.first_name = "John"
+    contact.contact_briefing_text = "Original text"
+    contact.sub_information = {"role": "original"}
+    contact.hashtags = ["#original"]
+    db_session.add(contact)
+    db_session.commit()
+    db_session.refresh(contact)
+    original_id = contact.id
+    original_created_at = contact.created_at
+
+    # Prepare update data with changes to all fields
+    update_data = {
+        "name": "John Smith",
+        "first_name": "Johnny",
+        "contact_briefing_text": "Updated contact info",
+        "sub_information": {"role": "developer", "team": "backend"},
+        "hashtags": ["#updated", "#developer"],
+    }
+
+    # Update via API
+    response = client.put(f"/api/contacts/{contact.id}", json=update_data)
+
+    # Verify response
+    assert response.status_code == HTTPStatus.OK
+    data = response.json()
+
+    # Verify all fields are updated
+    assert data["name"] == update_data["name"]
+    assert data["first_name"] == update_data["first_name"]
+    assert data["contact_briefing_text"] == update_data["contact_briefing_text"]
+    assert data["sub_information"] == update_data["sub_information"]
+    assert data["hashtags"] == update_data["hashtags"]
+
+    # Verify metadata
+    assert data["id"] == str(original_id)
+    assert data["created_at"] == original_created_at.isoformat()
+    assert "updated_at" in data
+    assert data["updated_at"] > data["created_at"]
+
+    # Verify persistence by retrieving again
+    get_response = client.get(f"/api/contacts/{contact.id}")
+    get_data = get_response.json()
+    assert get_data == data
+
+
+def test_update_nonexistent_contact(client: TestClient):
+    """
+    Test attempting to update a contact that doesn't exist returns 404
+
+    This test verifies that:
+    1. Attempting to update a non-existent contact returns 404
+    2. The error message indicates the contact was not found
+    """
+    # Prepare update data
+    update_data = {"name": "John Smith"}
+
+    # Use a non-existent UUID
+    contact_id = "00000000-0000-0000-0000-000000000000"
+
+    # Attempt update
+    response = client.put(f"/api/contacts/{contact_id}", json=update_data)
+
+    # Verify response
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    data = response.json()
+    assert "error" in data
+    assert "not found" in data["error"].lower()
+
+
+@pytest.mark.parametrize(
+    "invalid_data,expected_error",
+    [
+        ({"name": ""}, "String should have at least 1 character"),
+        ({"name": "a" * 101}, "String should have at most 100 characters"),
+        (
+            {"name": "John Doe", "hashtags": ["invalid"]},
+            "Each hashtag must be a string starting with #",
+        ),
+        (
+            {"name": "John Doe", "sub_information": "not-a-dict"},
+            "Input should be a valid dictionary",
+        ),
+    ],
+)
+def test_update_contact_with_invalid_data(
+    client: TestClient,
+    db_session: Session,
+    invalid_data: Dict[str, Any],
+    expected_error: str,
+):
+    """
+    Test updating a contact with invalid data returns appropriate errors
+
+    This test verifies that:
+    1. Validation rules are enforced during updates
+    2. Appropriate error messages are returned
+    3. The contact remains unchanged after failed update
+    """
+    # Create a contact to update
+    contact = Contact()
+    contact.name = "John Doe"
+    contact.first_name = "John"
+    contact.contact_briefing_text = "Original text"
+    db_session.add(contact)
+    db_session.commit()
+
+    # Get the ID and original values
+    contact_id = contact.id
+    original_name = contact.name
+    original_first_name = contact.first_name
+    original_text = contact.contact_briefing_text
+
+    # Attempt update with invalid data
+    response = client.put(f"/api/contacts/{contact_id}", json=invalid_data)
+
+    # Verify error response
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    data = response.json()
+    assert "error" in data
+    assert expected_error.lower() in data["error"].lower()
+
+    # Clear the session and verify contact remains unchanged
+    db_session.expunge_all()
+    db_contact = db_session.get(Contact, contact_id)
+    assert db_contact is not None
+    assert db_contact.name == original_name
+    assert db_contact.first_name == original_first_name
+    assert db_contact.contact_briefing_text == original_text
