@@ -297,3 +297,65 @@ def test_update_contact_with_invalid_data(
     assert db_contact.name == original_name
     assert db_contact.first_name == original_first_name
     assert db_contact.contact_briefing_text == original_text
+
+
+def test_delete_contact_successful(client: TestClient, db_session: Session):
+    """Test successfully deleting an existing contact.
+
+    This test verifies that:
+    1. A contact can be deleted using its ID
+    2. The response has a 204 No Content status
+    3. The contact is actually removed from the database
+    4. Subsequent GET requests return 404
+    """
+    # Create a contact to delete
+    contact = Contact()
+    contact.name = "To Be Deleted"
+    db_session.add(contact)
+    db_session.commit()
+    contact_id = contact.id
+
+    # Delete via API
+    response = client.delete(f"/api/contacts/{contact_id}")
+    assert response.status_code == HTTPStatus.NO_CONTENT
+    assert response.content == b""  # No content in response body
+
+    # Verify contact is gone from database
+    deleted_contact = db_session.get(Contact, contact_id)
+    assert deleted_contact is None
+
+    # Verify GET returns 404
+    get_response = client.get(f"/api/contacts/{contact_id}")
+    assert get_response.status_code == HTTPStatus.NOT_FOUND
+
+
+def test_delete_nonexistent_contact(client: TestClient):
+    """Test attempting to delete a non-existent contact.
+
+    This test verifies that:
+    1. Attempting to delete a non-existent contact returns 404
+    2. The error message indicates the contact was not found
+    3. The error format follows the standard error response format
+    """
+    response = client.delete("/api/contacts/00000000-0000-0000-0000-000000000000")
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    data = response.json()
+    assert "error" in data
+    assert "not found" in data["error"].lower()
+
+
+def test_delete_contact_invalid_uuid(client: TestClient):
+    """Test attempting to delete a contact with invalid UUID format.
+
+    This test verifies that:
+    1. Invalid UUID format results in 400 Bad Request
+    2. The error message indicates the UUID format issue
+    3. The error format follows the standard error response format
+    """
+    response = client.delete("/api/contacts/not-a-uuid")
+
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    data = response.json()
+    assert "error" in data
+    assert "uuid" in data["error"].lower()

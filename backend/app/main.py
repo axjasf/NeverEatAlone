@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from contextlib import contextmanager
 from typing import Iterator
+from http import HTTPStatus
 
 from backend.app.models.contact import Contact
 
@@ -249,3 +250,27 @@ async def update_contact(
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=400, detail={"error": "Invalid data provided"})
+
+
+@app.delete("/api/contacts/{contact_id}", status_code=HTTPStatus.NO_CONTENT)
+async def delete_contact(
+    contact_id: UUID, db: Annotated[Session, Depends(get_test_db)]
+) -> None:
+    """Delete a contact by its ID.
+
+    Args:
+        contact_id (UUID): The unique identifier of the contact to delete.
+        db (Session): The database session.
+
+    Returns:
+        None: Returns no content on successful deletion.
+
+    Raises:
+        HTTPException: 404 if contact is not found.
+    """
+    contact = db.query(Contact).filter(Contact.id == contact_id).first()
+    if contact is None:
+        raise HTTPException(status_code=404, detail={"error": "Contact not found"})
+
+    db.delete(contact)
+    db.commit()
