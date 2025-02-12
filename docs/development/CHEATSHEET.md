@@ -13,6 +13,25 @@ cd backend
 python -m pytest -v  # Should show contact tests
 ```
 
+## Test Structure and Independence
+```
+tests/
+├── models/              # Model tests (independent of API)
+│   ├── conftest.py     # Database setup only
+│   └── test_*.py       # Pure model tests
+├── api/                # API tests (builds on model tests)
+│   ├── conftest.py     # FastAPI client setup
+│   └── test_*.py       # Endpoint tests
+└── conftest.py         # Re-exports fixtures
+```
+
+Key principles:
+- Model tests NEVER depend on API layer
+- API tests can use model test fixtures
+- Each test type has its own configuration
+- Use `tests/models/conftest.py` for database tests
+- Use `tests/api/conftest.py` for endpoint tests
+
 ## Running Tests
 ```bash
 # From project root (recommended)
@@ -23,6 +42,12 @@ python -m pytest tests/api/test_contact_endpoints.py -v  # Specific test file
 
 # Run with print statements visible (useful for debugging)
 python -m pytest -v -s
+
+# Debug on failure
+python -m pytest --pdb
+
+# Show local variables on failure
+python -m pytest -l
 
 # Run specific test function
 python -m pytest tests/api/test_contact_endpoints.py -v -k "test_create_contact"
