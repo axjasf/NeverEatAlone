@@ -2,7 +2,7 @@ import pytest
 from datetime import datetime, UTC, timedelta
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from backend.app.models.contact import Contact, Hashtag, EntityType
+from backend.app.models.contact import Contact, Tag, EntityType
 
 
 def test_contact_creation_with_required_fields(db_session: Session) -> None:
@@ -16,22 +16,22 @@ def test_contact_creation_with_required_fields(db_session: Session) -> None:
     assert saved_contact is not None
     assert saved_contact.name == "John Doe"
     assert saved_contact.first_name is None
-    assert saved_contact.contact_briefing_text is None
+    assert saved_contact.briefing_text is None
     assert saved_contact.sub_information == {}
-    assert saved_contact.hashtag_names == []
+    assert saved_contact.tags == []
 
 
 def test_contact_creation_with_all_fields(db_session: Session) -> None:
     """Test creating a contact with all available fields."""
     sub_info = {"family_status": "Married", "professional_situation": "CEO"}
-    hashtags = ["#business", "#vip"]
+    tags = ["#business", "#vip"]
 
     contact = Contact(name="John Doe")
     contact.first_name = "John"
-    contact.contact_briefing_text = "Important business contact"
+    contact.briefing_text = "Important business contact"
     contact.sub_information = sub_info
     db_session.add(contact)
-    contact.set_hashtags(hashtags)
+    contact.set_tags(tags)
 
     db_session.commit()
     db_session.refresh(contact)
@@ -40,9 +40,9 @@ def test_contact_creation_with_all_fields(db_session: Session) -> None:
     assert saved_contact is not None
     assert saved_contact.name == "John Doe"
     assert saved_contact.first_name == "John"
-    assert saved_contact.contact_briefing_text == "Important business contact"
+    assert saved_contact.briefing_text == "Important business contact"
     assert saved_contact.sub_information == sub_info
-    assert saved_contact.hashtag_names == hashtags
+    assert [t.name for t in saved_contact.tags] == tags
 
 
 def test_contact_name_required(db_session: Session) -> None:
@@ -111,95 +111,96 @@ def test_contact_sub_information_update(db_session: Session) -> None:
     }
 
 
-def test_contact_hashtags_validation(db_session: Session) -> None:
-    """Test that hashtags must be a valid list."""
+def test_contact_tags_validation(db_session: Session) -> None:
+    """Test that tags must be a valid list."""
     contact = Contact(name="John Doe")
     db_session.add(contact)
     with pytest.raises(ValueError):
-        contact.set_hashtags("invalid")  # type: ignore
+        contact.set_tags("invalid")  # type: ignore
 
 
-def test_contact_hashtag_format(db_session: Session) -> None:
-    """Test that hashtags must start with #."""
+def test_contact_tag_format(db_session: Session) -> None:
+    """Test that tags must start with #."""
     contact = Contact(name="John Doe")
     db_session.add(contact)
     with pytest.raises(ValueError):
-        contact.set_hashtags(["invalid"])  # Should raise error - no # prefix
+        contact.set_tags(["invalid"])  # Should raise error - no # prefix
 
 
-def test_hashtag_case_normalization(db_session: Session) -> None:
-    """Test that hashtags are normalized to lowercase."""
+def test_tag_case_normalization(db_session: Session) -> None:
+    """Test that tags are normalized to lowercase."""
     contact = Contact(name="John Doe")
     db_session.add(contact)
-    contact.set_hashtags(["#TEST", "#CamelCase"])
+    contact.set_tags(["#TEST", "#CamelCase"])
     db_session.commit()
     db_session.refresh(contact)
 
-    assert contact.hashtag_names == ["#test", "#camelcase"]
+    assert sorted(t.name for t in contact.tags) == sorted(["#test", "#camelcase"])
 
 
-def test_hashtag_uniqueness(db_session: Session) -> None:
-    """Test that hashtags are unique per entity type."""
-    # Create two contacts with the same hashtag
+def test_tag_uniqueness_per_entity(db_session: Session) -> None:
+    """Test that tags are unique per entity."""
+    # Create two contacts with the same tag
     contact1 = Contact(name="John Doe")
     contact2 = Contact(name="Jane Doe")
 
     db_session.add(contact1)
     db_session.add(contact2)
 
-    contact1.set_hashtags(["#test"])
-    contact2.set_hashtags(["#test"])
+    contact1.set_tags(["#test"])
+    contact2.set_tags(["#test"])
 
     db_session.commit()
     db_session.refresh(contact1)
     db_session.refresh(contact2)
 
-    # Both should reference the same hashtag entity
-    assert len(db_session.query(Hashtag).filter_by(
+    # Each contact should have its own tag instance
+    assert len(db_session.query(Tag).filter_by(
         name="#test",
         entity_type=EntityType.CONTACT
-    ).all()) == 1
-    assert contact1.hashtag_names == ["#test"]
-    assert contact2.hashtag_names == ["#test"]
+    ).all()) == 2
+    assert [t.name for t in contact1.tags] == ["#test"]
+    assert [t.name for t in contact2.tags] == ["#test"]
 
 
-def test_hashtag_entity_type(db_session: Session) -> None:
-    """Test that hashtags are created with correct entity type."""
+def test_tag_entity_type(db_session: Session) -> None:
+    """Test that tags are created with correct entity type."""
     contact = Contact(name="John Doe")
     db_session.add(contact)
-    contact.set_hashtags(["#test"])
+    contact.set_tags(["#test"])
     db_session.commit()
     db_session.refresh(contact)
 
-    hashtag = db_session.query(Hashtag).filter_by(
+    tag = db_session.query(Tag).filter_by(
+        entity_id=contact.id,
         name="#test",
         entity_type=EntityType.CONTACT
     ).first()
-    assert hashtag is not None
-    assert hashtag.entity_type == EntityType.CONTACT
+    assert tag is not None
+    assert tag.entity_type == EntityType.CONTACT
 
 
-def test_hashtag_frequency_tracking(db_session: Session) -> None:
-    """Test tracking frequency and staleness of contact hashtags."""
+def test_tag_frequency_tracking(db_session: Session) -> None:
+    """Test tracking frequency and staleness of contact tags."""
     # Create a contact with a weekly tag
     contact = Contact(name="John Doe")
     db_session.add(contact)
-    contact.set_hashtags(["#weekly"])
+    contact.set_tags(["#weekly"])
     db_session.commit()
 
     # Get the weekly tag
-    weekly_tag = contact.hashtags[0]
+    weekly_tag = contact.tags[0]
 
     # Set frequency and last contact
-    weekly_tag.frequency_days = 7
-    weekly_tag.last_contact = datetime.now(UTC)
+    weekly_tag.set_frequency(7)
+    weekly_tag.update_last_contact()
     db_session.commit()
 
     # Tag should not be stale yet
     assert not weekly_tag.is_stale()
 
     # Move last_contact to 8 days ago
-    weekly_tag.last_contact = datetime.now(UTC) - timedelta(days=8)
+    weekly_tag.update_last_contact(datetime.now(UTC) - timedelta(days=8))
     db_session.commit()
 
     # Tag should now be stale
@@ -207,57 +208,99 @@ def test_hashtag_frequency_tracking(db_session: Session) -> None:
     assert weekly_tag.staleness_days == 1
 
 
-def test_tag_frequency_configuration(db_session: Session) -> None:
-    """Test configuring frequency tracking on a tag."""
-    # Create a tag
-    tag = Hashtag(name="#weekly", entity_type=EntityType.CONTACT)
-    db_session.add(tag)
+def test_tag_frequency_validation(db_session: Session) -> None:
+    """Test validation of tag frequency settings."""
+    contact = Contact(name="John Doe")
+    db_session.add(contact)
+    contact.set_tags(["#weekly"])
     db_session.commit()
 
-    # Set frequency
-    tag.frequency_days = 7
-    assert tag.frequency_days == 7
-    assert not tag.is_stale()  # No last_contact yet, so not stale
-    assert tag.staleness_days is None  # No last_contact yet
+    tag = contact.tags[0]
 
-    # Set last contact
-    tag.last_contact = datetime.now(UTC)
+    # Test valid frequency range
+    tag.set_frequency(1)  # Minimum valid frequency
+    assert tag.frequency_days == 1
+    tag.set_frequency(365)  # Maximum valid frequency
+    assert tag.frequency_days == 365
+
+    # Test invalid frequencies
+    with pytest.raises(ValueError, match="between 1 and 365"):
+        tag.set_frequency(0)
+    with pytest.raises(ValueError, match="between 1 and 365"):
+        tag.set_frequency(366)
+    with pytest.raises(ValueError, match="between 1 and 365"):
+        tag.set_frequency(-1)
+
+
+def test_tag_last_contact_tracking(db_session: Session) -> None:
+    """Test tracking last contact date."""
+    contact = Contact(name="John Doe")
+    db_session.add(contact)
+    contact.set_tags(["#weekly"])
     db_session.commit()
+
+    tag = contact.tags[0]
+    tag.set_frequency(7)
+
+    # Update last contact with default (now)
+    tag.update_last_contact()
+    assert tag.last_contact is not None
+    assert (datetime.now(UTC) - tag.last_contact).total_seconds() < 1
+
+    # Update with specific date
+    specific_date = datetime.now(UTC) - timedelta(days=3)
+    tag.update_last_contact(specific_date)
+    assert tag.last_contact == specific_date
+
+
+def test_tag_staleness_calculation_basic(db_session: Session) -> None:
+    """Test basic staleness calculation scenarios."""
+    contact = Contact(name="John Doe")
+    db_session.add(contact)
+    contact.set_tags(["#weekly"])
+    db_session.commit()
+
+    tag = contact.tags[0]
+
+    # No frequency set - should not be stale
+    assert not tag.is_stale()
+    assert tag.staleness_days is None
+
+    # Set frequency but no last contact - should not be stale
+    tag.set_frequency(7)
+    assert not tag.is_stale()
+    assert tag.staleness_days is None
+
+    # Set last contact to now - should not be stale
+    tag.update_last_contact()
     assert not tag.is_stale()
     assert tag.staleness_days == 0
 
-
-def test_tag_staleness_calculation(db_session: Session) -> None:
-    """Test calculating tag staleness."""
-    # Create a tag with weekly frequency
-    tag = Hashtag(name="#weekly", entity_type=EntityType.CONTACT)
-    tag.frequency_days = 7
-    tag.last_contact = datetime.now(UTC) - timedelta(days=10)  # 10 days ago
-    db_session.add(tag)
-    db_session.commit()
-
+    # Set last contact to 8 days ago - should be stale
+    tag.update_last_contact(datetime.now(UTC) - timedelta(days=8))
     assert tag.is_stale()
-    assert tag.staleness_days == 3  # 10 days - 7 days = 3 days overdue
+    assert tag.staleness_days == 1
 
 
-def test_tag_frequency_inheritance(db_session: Session) -> None:
-    """Test that new statements inherit tag frequency settings."""
-    # Create a contact with a weekly tag
+def test_tag_frequency_disable(db_session: Session) -> None:
+    """Test disabling frequency tracking."""
     contact = Contact(name="John Doe")
     db_session.add(contact)
-    contact.set_hashtags(["#weekly"])
+    contact.set_tags(["#weekly"])
     db_session.commit()
 
-    # Configure frequency on the tag
-    weekly_tag = contact.hashtags[0]
-    weekly_tag.frequency_days = 7
-    weekly_tag.last_contact = datetime.now(UTC)
-    db_session.commit()
+    tag = contact.tags[0]
+    tag.set_frequency(7)
+    tag.update_last_contact()
+    assert tag.frequency_days is not None
+    assert tag.last_contact is not None
 
-    # When we create a statement (to be implemented)
-    # It should inherit the same tag with the same frequency
-    # But have its own last_contact tracking
-    # TODO: Implement this part when we add Statement model
+    # Disable tracking
+    tag.disable_frequency()
+    assert tag.frequency_days is None
+    assert tag.last_contact is None
+    assert not tag.is_stale()
+    assert tag.staleness_days is None
 
 
 def test_multiple_tag_frequencies(db_session: Session) -> None:
@@ -265,60 +308,22 @@ def test_multiple_tag_frequencies(db_session: Session) -> None:
     # Create a contact with multiple tags
     contact = Contact(name="John Doe")
     db_session.add(contact)
-    contact.set_hashtags(["#weekly", "#monthly"])
+    contact.set_tags(["#weekly", "#monthly"])
     db_session.commit()
 
     # Set different frequencies
-    weekly_tag = next(t for t in contact.hashtags if t.name == "#weekly")
-    monthly_tag = next(t for t in contact.hashtags if t.name == "#monthly")
+    weekly_tag = next(t for t in contact.tags if t.name == "#weekly")
+    monthly_tag = next(t for t in contact.tags if t.name == "#monthly")
 
-    weekly_tag.frequency_days = 7
-    monthly_tag.frequency_days = 30
+    weekly_tag.set_frequency(7)
+    monthly_tag.set_frequency(30)
 
     now = datetime.now(UTC)
-    weekly_tag.last_contact = now - timedelta(days=10)  # Overdue
-    monthly_tag.last_contact = now - timedelta(days=20)  # Not overdue
+    weekly_tag.update_last_contact(now - timedelta(days=10))  # Overdue
+    monthly_tag.update_last_contact(now - timedelta(days=20))  # Not overdue
     db_session.commit()
 
     assert weekly_tag.is_stale()
     assert not monthly_tag.is_stale()
     assert weekly_tag.staleness_days == 3
     assert monthly_tag.staleness_days == 0
-
-
-def test_disable_tag_frequency(db_session: Session) -> None:
-    """Test disabling frequency tracking on a tag."""
-    # Create a tag with frequency
-    tag = Hashtag(name="#weekly", entity_type=EntityType.CONTACT)
-    tag.frequency_days = 7
-    tag.last_contact = datetime.now(UTC) - timedelta(days=10)
-    db_session.add(tag)
-    db_session.commit()
-
-    assert tag.is_stale()  # Should be stale initially
-
-    # Disable frequency tracking
-    tag.frequency_days = None
-    db_session.commit()
-
-    assert not tag.is_stale()  # Should not be stale when frequency disabled
-    assert tag.staleness_days is None
-
-
-def test_update_tag_last_contact(db_session: Session) -> None:
-    """Test updating last contact date on a tag."""
-    # Create a tag with frequency
-    tag = Hashtag(name="#weekly", entity_type=EntityType.CONTACT)
-    tag.frequency_days = 7
-    tag.last_contact = datetime.now(UTC) - timedelta(days=10)
-    db_session.add(tag)
-    db_session.commit()
-
-    assert tag.is_stale()  # Should be stale initially
-
-    # Update last contact to now
-    tag.last_contact = datetime.now(UTC)
-    db_session.commit()
-
-    assert not tag.is_stale()  # Should not be stale after update
-    assert tag.staleness_days == 0

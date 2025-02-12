@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, cast, Optional
-from datetime import datetime, UTC, timedelta
-from sqlalchemy import Column, String, JSON, DateTime, Table, ForeignKey, Enum, Integer
-from sqlalchemy.orm import relationship, Session, Mapped
+from datetime import datetime, UTC
+from sqlalchemy import Column, String, JSON, DateTime, Enum, Integer
+from sqlalchemy.orm import relationship, Mapped
 import sqlalchemy as sa
 from enum import Enum as PyEnum
 from .base import BaseModel, Base, GUID
@@ -9,63 +9,78 @@ import uuid
 
 
 class EntityType(str, PyEnum):
-    """Types of entities that can have hashtags."""
+    """Types of entities that can have tags."""
     CONTACT = "contact"
     NOTE = "note"
     STATEMENT = "statement"
-    # Add more entity types as needed
 
 
-# Association table for contact-hashtag relationship
-contact_hashtags = Table(
-    "contact_hashtags",
-    Base.metadata,
-    Column("contact_id", GUID, ForeignKey("contacts.id"), primary_key=True),
-    Column("hashtag_id", GUID, ForeignKey("hashtags.id"), primary_key=True),
-)
+class Tag(Base):
+    """Model for storing tags.
 
-
-class Hashtag(Base):
-    """Model for storing hashtags.
-
-    Each hashtag is stored once and can be associated with multiple entities.
+    Each tag is tied to a specific entity (contact, note, or statement).
     The name must start with '#' and is stored in lowercase for case-insensitive matching.
-    The entity_type field tracks what type of entity this hashtag is used with.
+    The entity_type field tracks what type of entity this tag is used with.
 
     Attributes:
-        name (str): The hashtag name (must start with '#')
-        entity_type (EntityType): The type of entity this hashtag is used with
-        frequency_days (Optional[int]): Number of days between expected contacts
+        entity_id (UUID): ID of the entity this tag belongs to
+        entity_type (EntityType): Type of entity this tag is used with
+        name (str): The tag name (must start with '#')
+        frequency_days (Optional[int]): Days between expected contacts
         last_contact (Optional[datetime]): When this tag was last contacted
     """
-    __tablename__ = "hashtags"
+    __tablename__ = "tags"
 
-    id: Mapped[uuid.UUID] = Column(GUID, primary_key=True, default=uuid.uuid4)
-    name: Mapped[str] = Column(String, nullable=False)
-    entity_type: Mapped[EntityType] = Column(Enum(EntityType), nullable=False)
+    entity_id: Mapped[uuid.UUID] = Column(GUID, primary_key=True)
+    entity_type: Mapped[EntityType] = Column(Enum(EntityType), primary_key=True)
+    name: Mapped[str] = Column(String, primary_key=True)
     frequency_days: Mapped[Optional[int]] = Column(Integer, nullable=True)
     last_contact: Mapped[Optional[datetime]] = Column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
 
-    # Enforce uniqueness on combination of name and entity_type
-    __table_args__ = (
-        sa.UniqueConstraint('name', 'entity_type', name='uq_hashtag_name_type'),
-    )
-
-    def __init__(self, name: str, entity_type: EntityType) -> None:
-        """Create a new hashtag.
+    def __init__(self, entity_id: uuid.UUID, entity_type: EntityType, name: str) -> None:
+        """Create a new tag.
 
         Args:
-            name: The hashtag name (must start with '#')
-            entity_type: The type of entity this hashtag is used with
+            entity_id: ID of the entity this tag belongs to
+            entity_type: Type of entity this tag is used with
+            name: The tag name (must start with '#')
 
         Raises:
             ValueError: If name doesn't start with '#'
         """
         if not name.startswith("#"):
-            raise ValueError("Hashtag must start with '#'")
+            raise ValueError("Tag must start with '#'")
         super().__init__()
-        self.name = name.lower()  # Store in lowercase for case-insensitive matching
+        self.entity_id = entity_id
         self.entity_type = entity_type
+        self.name = name.lower()  # Store in lowercase for case-insensitive matching
+        self.frequency_days = None
+        self.last_contact = None
+
+    def set_frequency(self, days: int) -> None:
+        """Set the contact frequency for this tag.
+
+        Args:
+            days: Number of days between expected contacts (1-365)
+
+        Raises:
+            ValueError: If frequency is invalid
+        """
+        if not 1 <= days <= 365:
+            raise ValueError("Frequency must be between 1 and 365 days")
+        self.frequency_days = days
+
+    def update_last_contact(self, contact_date: Optional[datetime] = None) -> None:
+        """Update the last contact date.
+
+        Args:
+            contact_date: The contact date to set, defaults to now
+        """
+        self.last_contact = contact_date or datetime.now(UTC)
+
+    def disable_frequency(self) -> None:
+        """Disable frequency tracking for this tag."""
         self.frequency_days = None
         self.last_contact = None
 
@@ -93,7 +108,8 @@ class Hashtag(Base):
         """
         if not self.frequency_days or not self.last_contact:
             return False
-        return self.staleness_days > 0
+        staleness = self.staleness_days
+        return staleness > 0 if staleness is not None else False
 
 
 class Contact(BaseModel):
@@ -101,41 +117,31 @@ class Contact(BaseModel):
 
     This model represents a contact in the system, storing both required and
     optional information about the contact. It supports flexible additional
-    information through a JSON field and categorization via hashtags.
+    information through a JSON field and categorization via tags.
 
     Attributes:
         name (str): Required. The full name of the contact.
         first_name (Optional[str]): Optional. The contact's first name.
-        contact_briefing_text (Optional[str]): Optional. Brief notes about
-            the contact.
+        briefing_text (Optional[str]): Optional. Brief notes about the contact.
         sub_information (Dict[str, Any]): Additional structured information
             stored as JSON. Defaults to empty dict.
-        hashtags (List[str]): List of hashtags for categorization. Each tag
-            must start with '#'. Defaults to empty list.
-
-    Example:
-        >>> contact = Contact(
-        ...     name="John Doe",
-        ...     first_name="John",
-        ...     contact_briefing_text="Met at conference",
-        ...     sub_information={"role": "Developer"},
-        ...     hashtags=["#tech", "#conference"]
-        ... )
+        tags (List[Tag]): List of tags for categorization.
     """
 
     __tablename__ = "contacts"
 
     _name: Mapped[str] = Column("name", String, nullable=False)
     _first_name: Mapped[Optional[str]] = Column("first_name", String, nullable=True)
-    _contact_briefing_text: Mapped[Optional[str]] = Column("contact_briefing_text", String, nullable=True)
+    _briefing_text: Mapped[Optional[str]] = Column("briefing_text", String, nullable=True)
     _sub_information: Mapped[Dict[str, Any]] = Column("sub_information", JSON, nullable=False, default=dict)
-    _hashtags: Mapped[List[str]] = Column("hashtags", JSON, nullable=False, default=list)
 
-    # Relationship with hashtags
-    hashtags: Mapped[List[Hashtag]] = relationship(
-        "Hashtag",
-        secondary=contact_hashtags,
-        lazy="joined"
+    # Relationship with tags
+    tags: Mapped[List[Tag]] = relationship(
+        "Tag",
+        primaryjoin="and_(Contact.id == Tag.entity_id, Tag.entity_type == 'contact')",
+        cascade="all, delete-orphan",
+        lazy="joined",
+        foreign_keys=[Tag.entity_id]
     )
 
     @property
@@ -177,23 +183,23 @@ class Contact(BaseModel):
         self._first_name = value
 
     @property
-    def contact_briefing_text(self) -> Optional[str]:
+    def briefing_text(self) -> Optional[str]:
         """Brief notes about the contact.
 
         Returns:
             Optional[str]: The briefing text, or None if not set.
         """
-        val = getattr(self, "_contact_briefing_text", None)
+        val = getattr(self, "_briefing_text", None)
         return str(val) if val is not None else None
 
-    @contact_briefing_text.setter
-    def contact_briefing_text(self, value: Optional[str]) -> None:
+    @briefing_text.setter
+    def briefing_text(self, value: Optional[str]) -> None:
         """Set the contact briefing text.
 
         Args:
             value (Optional[str]): The briefing text to set, or None to unset.
         """
-        self._contact_briefing_text = value
+        self._briefing_text = value
 
     @property
     def sub_information(self) -> Dict[str, Any]:
@@ -223,59 +229,30 @@ class Contact(BaseModel):
             raise ValueError("sub_information must be a dictionary")
         self._sub_information = value
 
-    @property
-    def hashtag_names(self) -> List[str]:
-        """Get the list of hashtag names associated with this contact.
+    def set_tags(self, tag_names: List[str]) -> None:
+        """Set the tags for this contact.
 
-        Returns:
-            List[str]: List of hashtag names (e.g., ["#work", "#tech"]).
-        """
-        return [tag.name for tag in self.hashtags]
-
-    def set_hashtags(self, hashtag_names: List[str]) -> None:
-        """Set the hashtags for this contact.
-
-        This method creates new hashtag entities if they don't exist and
-        associates them with this contact. It also removes any existing
-        hashtag associations that are not in the new list.
+        This method creates new tag entities for each tag name and associates
+        them with this contact. It also removes any existing tag associations
+        that are not in the new list.
 
         Args:
-            hashtag_names: List of hashtag names to set. Each must start with '#'.
+            tag_names: List of tag names to set. Each must start with '#'.
 
         Raises:
-            ValueError: If any hashtag name doesn't start with '#'.
+            ValueError: If any tag name doesn't start with '#'.
             RuntimeError: If contact is not attached to a session.
         """
-        # Validate hashtag format
-        for name in hashtag_names:
+        # Validate tag format
+        for name in tag_names:
             if not name.startswith("#"):
-                raise ValueError("Each hashtag must be a string starting with #")
+                raise ValueError("Each tag must be a string starting with #")
 
-        # Get SQLAlchemy session
-        session = sa.inspect(self).session
-        if session is None:
-            raise RuntimeError(
-                "Contact must be attached to a session to set hashtags"
-            )
+        # Convert names to lowercase for case-insensitive matching
+        tag_names = [name.lower() for name in tag_names]
 
-        # Clear existing hashtags
-        self.hashtags = []
-
-        # Create or get hashtags and associate them
-        for name in hashtag_names:
-            # Normalize name to lowercase
-            name = name.lower()
-
-            # Try to find existing hashtag
-            hashtag = session.query(Hashtag).filter(
-                Hashtag.name == name,
-                Hashtag.entity_type == EntityType.CONTACT
-            ).first()
-
-            # Create new hashtag if it doesn't exist
-            if hashtag is None:
-                hashtag = Hashtag(name=name, entity_type=EntityType.CONTACT)
-                session.add(hashtag)
-
-            # Associate hashtag with contact
-            self.hashtags.append(hashtag)
+        # Create new tags
+        self.tags = [
+            Tag(entity_id=self.id, entity_type=EntityType.CONTACT, name=name)
+            for name in tag_names
+        ]
