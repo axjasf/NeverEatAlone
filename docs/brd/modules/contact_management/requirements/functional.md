@@ -52,6 +52,9 @@
 - FR3.1.4: System MUST break down notes into statements
 - FR3.1.5: System MUST maintain link between notes and statements
 - FR3.1.6: System MUST allow editing of statements
+- FR3.1.7: System MUST support tagging individual statements
+- FR3.1.8: System MUST maintain tag relationships when splitting notes into statements
+- FR3.1.9: System MUST allow filtering statements by tags
 
 ### 3.2 Voice Processing
 - FR3.2.1: System MUST transcribe voice notes to text
@@ -66,6 +69,8 @@
 - FR3.3.4: System MUST require user approval for suggested updates
 - FR3.3.5: System MUST show which statements will lead to which JSON updates
 - FR3.3.6: System MUST detect potential reminder triggers in notes and suggest creating reminders with field reference
+- FR3.3.7: System MUST suggest relevant tags for statements based on content
+- FR3.3.8: System MUST maintain tag context when suggesting JSON updates
 
 ### 3.4 Interaction Tracking
 - FR3.4.1: System MUST use notes to track all contact interactions

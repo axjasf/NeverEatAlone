@@ -50,18 +50,30 @@
 
 ## Product Backlog
 
-### Sprint 3: Ring Management
-1. **Ring Features**
-   - Ring model implementation
-   - Contact-Ring relationships
-   - Ring CRUD operations
-   - Test coverage
+### Sprint 3: Enhanced Tag System
+1. **Tag Features**
+   - Add reminder capabilities to tags
+   - Migrate existing ring data to tags
+   - Update tag filtering logic
+   - Test coverage for new tag features
+   - Implement statement tagging support
+   - Add tag inheritance from notes to statements
 
-2. **Ring Integration**
-   - Contact assignment to rings
-   - Ring-based filtering
-   - Ring-based reminders
-   - Test coverage
+2. **Tag Integration**
+   - Contact assignment to reminder-enabled tags
+   - Tag-based filtering with reminder support
+   - Tag-based reminders
+   - Test coverage for reminder features
+   - Statement tag filtering and search
+   - Tag suggestion system for statements
+
+3. **Documentation and Testing**
+   - Update API documentation
+   - Document tag inheritance rules
+   - Add statement tag examples
+   - Test tag propagation
+   - Test statement tag filtering
+   - Performance testing for tag queries
 
 ### Sprint 4: AI Integration
 1. **Voice Processing**
@@ -181,12 +193,31 @@ mypy
 5. Improve validation error messages ✅
 6. Add proper error handling for hashtag validation ✅
 
-## Phase 5: Search and Filter 🔄
-1. Implement name search
-2. Add hashtag filtering
-3. Add date range filtering
-4. Implement sorting
-5. Add pagination support
+## Phase 5: Enhanced Tag System 🔄
+1. Add reminder capabilities to hashtags
+   - Add reminder fields to hashtag model
+   - Update hashtag validation
+   - Add reminder-specific endpoints
+   - Test reminder functionality
+
+2. Migrate existing ring data
+   - Create migration script
+   - Convert rings to reminder-enabled tags
+   - Update contact associations
+   - Migrate existing reminders
+   - Test data consistency
+
+3. Update tag filtering
+   - Add reminder-based filtering
+   - Update contact search
+   - Add reminder status tracking
+   - Test new filtering options
+
+4. Documentation
+   - Update API documentation
+   - Add migration guide
+   - Document new tag features
+   - Update examples
 
 ## Phase 6: Documentation 🔄
 1. Add OpenAPI documentation
@@ -205,6 +236,7 @@ mypy
 3. Error handling tests ✅
 4. Search/filter tests 🔄
 5. Edge case tests ✅
+6. Tag reminder tests 🔄
 
 ## Phase 8: Final Polish 🔄
 1. Code cleanup

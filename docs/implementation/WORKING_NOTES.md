@@ -1,6 +1,6 @@
 # Working Notes - Contact Management System
 
-## Current Focus: Contact API Implementation
+## Current Focus: Enhanced Tag System Implementation
 Last Updated: [Current Date]
 
 ### What We've Done ✅
@@ -20,12 +20,21 @@ Last Updated: [Current Date]
      - `contact_briefing_text` (optional, string)
      - `last_contact` (optional, datetime with UTC)
      - `sub_information` (optional, JSON dict)
-     - `hashtags` (optional, list of strings starting with '#')
    - Property getters/setters with validation
    - Type hints and documentation
-   - Implemented Pydantic validation for hashtags
+   - Implemented Pydantic validation
 
-3. **API Endpoint Implementation**
+3. **Tag System Implementation**
+   - Basic hashtag model with case-insensitive storage ✅
+   - Many-to-many relationship with contacts ✅
+   - Entity type support (CONTACT, NOTE, STATEMENT) ✅
+   - Tag validation and normalization ✅
+   - Basic tag filtering ✅
+   - Statement tagging support 🔄
+   - Tag inheritance from notes 🔄
+   - Preparing for reminder capabilities 🔄
+
+4. **API Endpoint Implementation**
    - POST /api/contacts (Create) ✅
      - Accepts required name field
      - Accepts all optional fields
@@ -49,20 +58,20 @@ Last Updated: [Current Date]
        - Case-insensitive search
        - Partial matches supported
        - Empty results handled
-     - Hashtag filtering (in progress) 🔄
+     - Tag filtering (in progress) 🔄
        - Basic implementation committed
        - Known issue: AND logic not working correctly
        - Returns all contacts instead of those with all tags
        - Next step: Fix the query to properly filter by all tags
      - Sorting (pending)
 
-4. **Error Handling** ✅
+5. **Error Handling** ✅
    - Standardized error response format using {"error": "message"}
    - Implemented validation error handling
    - Added malformed JSON handling
    - Added not found handling
    - Improved validation error messages
-   - Added proper error handling for hashtag validation
+   - Added proper error handling for tag validation
 
 ### Technical Decisions Made
 1. **Database Design**
@@ -70,15 +79,18 @@ Last Updated: [Current Date]
    - UUID for primary keys
    - JSON fields for flexible data (sub_information)
    - All fields except name are nullable
-   - Hashtags stored in separate table with many-to-many relationship
-   - Case-insensitive hashtag storage (lowercase)
+   - Tags stored in separate table with many-to-many relationship
+   - Case-insensitive tag storage (lowercase)
+   - Enhanced tag system to replace rings
+   - Added reminder capabilities to tags
 
 2. **Validation Rules**
    - Name presence and length (1-100 chars)
    - Basic type validation (dict for sub_info)
-   - Hashtag format validation (must start with #)
+   - Tag format validation (must start with #)
    - UTC timezone enforcement for dates
    - Pydantic field validation for complex rules
+   - Reminder frequency validation for tags
 
 3. **API Design**
    - Clean separation between database models and API schemas
@@ -105,38 +117,41 @@ Last Updated: [Current Date]
       - ✅ Case-insensitive matches
       - ✅ Partial matches
       - ✅ No matches
-    - �� Hashtag filtering
-      - ❌ Single hashtag filter (failing)
-      - ❌ Multiple hashtag filter (AND logic)
+    - 🔄 Tag filtering
+      - ❌ Single tag filter (failing)
+      - ❌ Multiple tag filter (AND logic)
       - ✅ Case-insensitive matching
-      - ✅ Non-matching hashtags
-      - ✅ Invalid hashtag format
+      - ✅ Non-matching tags
+      - ✅ Invalid tag format
     - 🔄 Sorting
 
-- **Validation**
-  - ✅ Missing required fields
-  - ✅ Invalid name length
-  - ✅ Invalid field types (hashtags, sub_information)
-  - ✅ Malformed JSON
-  - ✅ Update validation
-  - ✅ Hashtag format validation
+- **Tag System**
+  - ✅ Basic tag operations
+  - ✅ Case insensitivity
+  - ✅ Tag validation
+  - 🔄 Reminder capabilities
+  - 🔄 Tag-based filtering
+  - 🔄 Reminder frequency validation
 
 ### Next Steps (In Priority Order)
-1. **Fix Hashtag Filtering**
+1. **Fix Tag Filtering**
    - Investigate query logic for ALL tags matching
    - Consider alternative approaches to subquery
    - Add more debug output for query execution
    - Add test cases for edge cases
 
-2. **Complete List/Search Functionality**
-   - Add sorting
-   - Optimize queries
-   - Add comprehensive tests
+2. **Implement Enhanced Tag System**
+   - Add reminder fields to tag model
+   - Update validation logic
+   - Add reminder-specific endpoints
+   - Migrate existing ring data
+   - Test reminder functionality
 
 3. **Documentation**
    - OpenAPI documentation for all endpoints
    - API usage examples
    - Error response examples
+   - Migration guide for rings to tags
 
 ### Notes on Implementation
 - Following strict TDD approach
@@ -152,13 +167,16 @@ Last Updated: [Current Date]
 - Core CRUD operations implemented
 - Error handling is standardized and comprehensive
 - Model validation is appropriately strict
-- Hashtag filtering needs improvement
-- Ready for query optimization work
+- Tag filtering needs improvement
+- Statement tagging ready for implementation
+- Tag inheritance rules defined
 
 ### Blockers/Dependencies
-- Hashtag filtering query not working as expected
+- Tag filtering query not working as expected
 - Need to investigate SQLite query execution plan
 - Consider if database schema changes would help
+- Plan data migration from rings to tags
+- Test tag inheritance performance
 
 ## Next Update Expected
-After fixing the hashtag filtering functionality.
+After implementing enhanced tag system with reminder capabilities.
