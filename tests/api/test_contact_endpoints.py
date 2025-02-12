@@ -412,3 +412,49 @@ def test_list_contacts_multiple(client: TestClient, db_session: Session):
         assert "name" in item
         assert "created_at" in item
         assert "updated_at" in item
+
+
+@pytest.mark.parametrize(
+    "name_filter,expected_count",
+    [
+        ("Alice", 1),      # Exact match
+        ("bob", 1),        # Case insensitive
+        ("li", 2),         # Partial match (Alice, Charlie)
+        ("David", 0),      # No matches
+    ],
+)
+def test_list_contacts_name_filter(
+    client: TestClient,
+    db_session: Session,
+    name_filter: str,
+    expected_count: int,
+):
+    """Test filtering contacts by name.
+
+    This test verifies that:
+    1. Name filter works case-insensitively
+    2. Partial name matches are found
+    3. Total count reflects filtered results
+    4. No results when filter doesn't match
+    """
+    # Create test contacts
+    contacts = [
+        Contact(name="Alice"),
+        Contact(name="Bob"),
+        Contact(name="Charlie"),
+    ]
+    for contact in contacts:
+        db_session.add(contact)
+    db_session.commit()
+
+    # Get filtered list
+    response = client.get(f"/api/contacts?name={name_filter}")
+
+    assert response.status_code == HTTPStatus.OK
+    data = response.json()
+    assert len(data["items"]) == expected_count
+    assert data["total_count"] == expected_count
+
+    # Verify matches contain filter string
+    for item in data["items"]:
+        assert name_filter.lower() in item["name"].lower()

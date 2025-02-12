@@ -39,10 +39,18 @@ Last Updated: [Current Date]
      - Validates all fields
      - Returns 404 if not found
      - Returns 400 for validation errors
-   - DELETE /api/contacts/{id} (Delete) 🔄
-     - In progress
+   - DELETE /api/contacts/{id} (Delete) ✅
+     - Deletes contact by UUID
+     - Returns 404 if not found
+     - Returns 204 on success
    - GET /api/contacts (List/Search) 🔄
-     - In progress
+     - Basic listing with pagination ✅
+     - Name filtering ✅
+       - Case-insensitive search
+       - Partial matches supported
+       - Empty results handled
+     - Hashtag filtering (pending)
+     - Sorting (pending)
 
 4. **Error Handling** ✅
    - Standardized error response format using {"error": "message"}
@@ -82,8 +90,17 @@ Last Updated: [Current Date]
   - ✅ Update contact with valid data
   - ✅ Update non-existent contact
   - ✅ Update with invalid data
-  - 🔄 Delete contact (in progress)
-  - 🔄 List contacts (in progress)
+  - ✅ Delete contact
+  - ✅ List contacts (basic)
+    - ✅ Empty database
+    - ✅ Multiple contacts
+    - ✅ Name filtering
+      - ✅ Exact matches
+      - ✅ Case-insensitive matches
+      - ✅ Partial matches
+      - ✅ No matches
+    - 🔄 Hashtag filtering
+    - 🔄 Sorting
 
 - **Validation**
   - ✅ Missing required fields
@@ -94,9 +111,11 @@ Last Updated: [Current Date]
   - ✅ Hashtag format validation
 
 ### Next Steps (In Priority Order)
-1. **Complete CRUD Operations**
-   - Implement DELETE endpoint with proper status codes
-   - Implement GET list endpoint with basic filtering
+1. **Complete List/Search Functionality**
+   - ✅ Add name filtering
+   - Add hashtag filtering
+   - Add sorting
+   - Add comprehensive tests
 
 2. **Add Search/Filter Functionality**
    - Search by name (partial match)

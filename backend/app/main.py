@@ -287,24 +287,33 @@ async def delete_contact(
 @app.get("/api/contacts", response_model=ContactList)
 async def list_contacts(
     db: Annotated[Session, Depends(get_test_db)],
+    name: Optional[str] = None,
     limit: int = 10,
     offset: int = 0,
 ) -> ContactList:
-    """List contacts with pagination.
+    """List contacts with pagination and filtering.
 
     Args:
         db (Session): The database session.
+        name (str, optional): Filter by name (case-insensitive, partial match).
         limit (int, optional): Maximum number of items to return. Defaults to 10.
         offset (int, optional): Number of items to skip. Defaults to 0.
 
     Returns:
-        ContactList: Paginated list of contacts.
+        ContactList: Paginated and filtered list of contacts.
     """
-    # Get total count
-    total_count = db.query(Contact).count()
+    # Start with base query
+    query = db.query(Contact)
 
-    # Get paginated contacts
-    contacts = db.query(Contact).offset(offset).limit(limit).all()
+    # Apply name filter if provided
+    if name:
+        query = query.filter(Contact.__table__.c.name.ilike(f"%{name}%"))
+
+    # Get total count before pagination
+    total_count = query.count()
+
+    # Apply pagination
+    contacts = query.offset(offset).limit(limit).all()
 
     # Convert to response models
     items = []
