@@ -195,7 +195,7 @@ def test_delete(
     # Get the ORM instance to get the ID
     stmt = select(TagORM).where(and_(
         TagORM.entity_id == saved_tag.entity_id,
-        TagORM.entity_type == saved_tag.entity_type.value,
+        TagORM.entity_type == saved_tag.entity_type,
         TagORM.name == saved_tag.name
     ))
     orm_tag = db_session.execute(stmt).scalar_one()

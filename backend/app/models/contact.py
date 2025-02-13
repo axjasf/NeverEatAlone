@@ -1,12 +1,13 @@
-from typing import Dict, Any, List
-from sqlalchemy.orm import Mapped, mapped_column, relationship, foreign, remote
-from sqlalchemy import String, JSON
+from typing import Dict, Any, List, Optional
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import String, JSON, and_
 from .base import BaseModel
 from .tag import Tag, EntityType
+from backend.app.database import Base
 import uuid
 
 
-class Contact(BaseModel):
+class Contact(Base, BaseModel):
     """Model for storing contact information.
 
     A contact represents a person or entity that we want to keep in touch with.
@@ -38,12 +39,34 @@ class Contact(BaseModel):
     # Tags exist independently, no cascade
     tags: Mapped[List[Tag]] = relationship(
         Tag,
-        primaryjoin=(
-            "and_(foreign(Contact.id) == remote(Tag.entity_id), "
-            "Tag.entity_type == 'contact')"
+        primaryjoin=lambda: and_(
+            Contact.id == Tag.entity_id,
+            Tag.entity_type == EntityType.CONTACT.value
         ),
+        foreign_keys=[Tag.entity_id],
         lazy="joined"
     )
+
+    def __init__(
+        self,
+        name: str,
+        first_name: Optional[str] = None,
+        briefing_text: Optional[str] = None,
+        sub_information: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """Initialize a new Contact.
+
+        Args:
+            name: The contact's name
+            first_name: The contact's first name (optional)
+            briefing_text: A brief description of the contact (optional)
+            sub_information: Additional information about the contact (optional)
+        """
+        super().__init__()
+        self.name = name
+        self.first_name = first_name
+        self.briefing_text = briefing_text
+        self.sub_information = sub_information or {}
 
     def set_tags(self, tag_names: List[str]) -> None:
         """Set the tags for this contact.
@@ -64,6 +87,10 @@ class Contact(BaseModel):
 
         # Create new tags
         self.tags = [
-            Tag(entity_id=uuid.UUID(str(self.id)), entity_type=EntityType.CONTACT, name=name)
+            Tag(
+                entity_id=uuid.UUID(str(self.id)),
+                entity_type=EntityType.CONTACT,
+                name=name
+            )
             for name in tag_names
         ]

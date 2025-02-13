@@ -4,6 +4,10 @@ from enum import Enum as PyEnum
 from typing import Optional
 from uuid import UUID
 import re
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import String, Integer, DateTime, ForeignKey, CheckConstraint
+from .base import BaseModel
+from backend.app.database import Base
 
 
 class EntityType(str, PyEnum):
@@ -20,7 +24,7 @@ class EntityType(str, PyEnum):
     STATEMENT = "statement"
 
 
-class Tag:
+class Tag(Base, BaseModel):
     """Model for storing tags.
 
     Each tag is tied to a specific entity (contact, note, or statement) and can
@@ -38,6 +42,22 @@ class Tag:
         frequency_days: Optional number of days between expected contacts
         last_contact: When the entity was last contacted
     """
+    __tablename__ = "tags"
+
+    # Foreign key constraints for each entity type
+    entity_id: Mapped[UUID] = mapped_column(nullable=False)
+    entity_type: Mapped[str] = mapped_column(String, nullable=False)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    frequency_days: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    last_contact: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Add check constraint to ensure entity_type is valid
+    __table_args__ = (
+        CheckConstraint(
+            entity_type.in_([e.value for e in EntityType]),
+            name="valid_entity_type"
+        ),
+    )
 
     @staticmethod
     def get_current_time() -> datetime:
@@ -73,11 +93,12 @@ class Tag:
         if not re.match(r'^#[\w]+$', name):
             raise ValueError("Tag name can only contain letters, numbers, and underscores")
 
+        super().__init__()
         self.entity_id = entity_id
-        self.entity_type = entity_type
+        self.entity_type = entity_type.value
         self.name = name.lower()
-        self.frequency_days: Optional[int] = None
-        self.last_contact: Optional[datetime] = None
+        self.frequency_days = None
+        self.last_contact = None
 
     def update_last_contact(self, timestamp: Optional[datetime] = None) -> None:
         """Update the last contact timestamp.

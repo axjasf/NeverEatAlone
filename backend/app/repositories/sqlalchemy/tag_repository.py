@@ -23,7 +23,7 @@ class TagORM(Base):
 
     But for database efficiency, we also maintain an internal ID.
     """
-    __tablename__ = "tags"
+    __tablename__ = "tag_orm"
 
     id: Mapped[UUID] = mapped_column(GUID, primary_key=True, default=uuid4)
     entity_id: Mapped[UUID] = mapped_column(GUID, nullable=False)
@@ -42,7 +42,7 @@ class TagORM(Base):
         """Create an ORM instance from a domain model instance."""
         return cls(
             entity_id=tag.entity_id,
-            entity_type=tag.entity_type.value,
+            entity_type=tag.entity_type,
             name=tag.name,
             frequency_days=tag.frequency_days,
             last_contact=tag.last_contact
@@ -90,7 +90,7 @@ class SQLAlchemyTagRepository:
         # Look for existing tag with same natural key
         stmt = select(TagORM).where(and_(
             TagORM.entity_id == tag.entity_id,
-            TagORM.entity_type == tag.entity_type.value,
+            TagORM.entity_type == tag.entity_type,
             TagORM.name == tag.name
         ))
         existing = self.session.execute(stmt).scalar_one_or_none()
@@ -169,7 +169,7 @@ class SQLAlchemyTagRepository:
         # Find the managed instance
         stmt = select(TagORM).where(and_(
             TagORM.entity_id == tag.entity_id,
-            TagORM.entity_type == tag.entity_type.value,
+            TagORM.entity_type == tag.entity_type,
             TagORM.name == tag.name
         ))
         managed_tag = self.session.execute(stmt).scalar_one_or_none()
