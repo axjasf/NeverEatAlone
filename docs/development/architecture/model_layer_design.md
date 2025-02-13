@@ -1,7 +1,7 @@
 # Model Layer Design
 
 ## Overview
-This document outlines the architecture of the model layer in NeverEatAlone, using a Domain-Driven Design approach with the Repository pattern.
+This document outlines the architecture of the model layer in NeverEatAlone, using a Domain-Driven Design approach with the Repository pattern. See below.
 
 ## Architecture
 
