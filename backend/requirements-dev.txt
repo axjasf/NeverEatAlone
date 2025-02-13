@@ -17,9 +17,9 @@ isort==5.12.0
 bandit==1.7.5
 
 # Type Stubs
-types-all==1.0.0
 types-requests==2.31.0.10
 types-python-dateutil==2.8.19.14
+types-sqlalchemy==1.4.53.38  # Added for SQLAlchemy type support
 
 # Development Tools
 pre-commit==3.5.0
