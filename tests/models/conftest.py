@@ -15,14 +15,15 @@ from backend.app.models.tag import Tag
 def engine() -> Engine:
     """Create a SQLite test database engine."""
     engine = create_engine("sqlite:///:memory:")
-    Base.metadata.create_all(engine)
     return engine
 
 
 @pytest.fixture(scope="session")
 def tables(engine: Engine) -> Generator[None, None, None]:
     """Create all tables in the test database."""
+    Base.metadata.create_all(engine)  # Create tables before tests
     yield None
+    Base.metadata.drop_all(engine)  # Drop tables after tests
 
 
 @pytest.fixture

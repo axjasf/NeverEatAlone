@@ -1,12 +1,9 @@
-from sqlalchemy.orm import declarative_base
 from sqlalchemy import Column, DateTime, String
 from sqlalchemy.types import TypeDecorator
 import uuid
 from datetime import datetime, UTC
 from typing import Any, Optional
-
-
-Base = declarative_base()
+from backend.app.database import Base
 
 
 class GUID(TypeDecorator[uuid.UUID]):
@@ -39,7 +36,7 @@ class GUID(TypeDecorator[uuid.UUID]):
             return uuid.UUID(value)
 
 
-class BaseModel(Base):
+class BaseModel:
     """Base model class that includes common fields and methods.
 
     This class serves as the foundation for all database models in

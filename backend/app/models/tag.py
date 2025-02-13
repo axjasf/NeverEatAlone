@@ -2,45 +2,7 @@
 from enum import Enum as PyEnum
 import uuid
 from datetime import datetime, timezone
-from typing import Optional, cast
-from sqlalchemy import Column, String, Enum, DateTime, Integer
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
-from sqlalchemy.types import TypeDecorator
-from sqlalchemy.orm import validates
-from backend.app.database import Base
-
-
-class GUID(TypeDecorator):
-    """Platform-independent GUID type.
-
-    Uses PostgreSQL's UUID type, otherwise uses String(36).
-    """
-    impl = PGUUID
-    cache_ok = True
-
-    def load_dialect_impl(self, dialect):
-        if dialect.name == 'postgresql':
-            return dialect.type_descriptor(PGUUID())
-        else:
-            return dialect.type_descriptor(String(36))
-
-    def process_bind_param(self, value, dialect):
-        if value is None:
-            return value
-        elif dialect.name == 'postgresql':
-            return str(value)
-        else:
-            if not isinstance(value, uuid.UUID):
-                return str(uuid.UUID(value))
-            return str(value)
-
-    def process_result_value(self, value, dialect):
-        if value is None:
-            return value
-        else:
-            if not isinstance(value, uuid.UUID):
-                value = uuid.UUID(value)
-            return value
+from typing import Optional
 
 
 class EntityType(str, PyEnum):
@@ -50,68 +12,42 @@ class EntityType(str, PyEnum):
     STATEMENT = "statement"
 
 
-class Tag(Base):
+class Tag:
     """Model for storing tags.
 
     Each tag is tied to a specific entity (contact, note, or statement).
+    The name must start with '#' and is stored in lowercase for case-insensitive matching.
+    The entity_type field tracks what type of entity this tag is used with.
+
+    Attributes:
+        entity_id (UUID): ID of the entity this tag belongs to
+        entity_type (EntityType): Type of entity this tag is used with
+        name (str): The tag name (must start with '#')
+        frequency_days (Optional[int]): Days between expected contacts
+        last_contact (Optional[datetime]): When this tag was last contacted
     """
-    __tablename__ = "tags"
 
-    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
-    entity_id = Column(GUID(), nullable=False)
-    entity_type = Column(Enum(EntityType), nullable=False)
-    name = Column(String, nullable=False)
-    frequency_days = Column(Integer, nullable=True)  # e.g., 7 for weekly
-    last_contact = Column(DateTime(timezone=True), nullable=True)
-    created_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        nullable=False
-    )
-    updated_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
-        nullable=False
-    )
-
-    def __init__(
-        self,
-        entity_id: uuid.UUID,
-        entity_type: EntityType,
-        name: str
-    ) -> None:
+    def __init__(self, entity_id: uuid.UUID, entity_type: EntityType, name: str) -> None:
         """Create a new tag.
 
         Args:
             entity_id: ID of the entity this tag belongs to
             entity_type: Type of entity this tag is used with
             name: The tag name (must start with '#')
+
+        Raises:
+            ValueError: If name doesn't start with '#'
         """
-        super().__init__()
+        if not name.startswith("#"):
+            raise ValueError("Tag must start with '#'")
+        if len(name) <= 1:
+            raise ValueError("Tag name must not be empty after '#'")
+
         self.entity_id = entity_id
         self.entity_type = entity_type
         self.name = self._normalize_name(name)
-
-    @validates('name')
-    def validate_name(self, key: str, name: str) -> str:
-        """Validate and normalize tag name.
-
-        Args:
-            key: Field name being validated
-            name: Tag name to validate
-
-        Returns:
-            Normalized tag name
-
-        Raises:
-            ValueError: If tag name is invalid
-        """
-        if not name.startswith('#'):
-            raise ValueError("Tag name must start with '#'")
-        if len(name) <= 1:
-            raise ValueError("Tag name must not be empty after '#'")
-        return self._normalize_name(name)
+        self.frequency_days: Optional[int] = None
+        self.last_contact: Optional[datetime] = None
 
     @staticmethod
     def _normalize_name(name: str) -> str:
@@ -157,18 +93,15 @@ class Tag(Base):
         Returns:
             True if contact is overdue based on frequency, False otherwise
         """
-        freq_days = cast(Optional[int], self.frequency_days)
-        last_contact = cast(Optional[datetime], self.last_contact)
-
-        if not freq_days or not last_contact:
+        if not self.frequency_days or not self.last_contact:
             return False
 
         # Ensure last_contact is timezone-aware
-        if last_contact.tzinfo is None:
-            last_contact = last_contact.replace(tzinfo=timezone.utc)
+        if self.last_contact.tzinfo is None:
+            self.last_contact = self.last_contact.replace(tzinfo=timezone.utc)
 
-        time_since_contact = datetime.now(timezone.utc) - last_contact
-        return bool(time_since_contact.days > freq_days)
+        time_since_contact = datetime.now(timezone.utc) - self.last_contact
+        return bool(time_since_contact.days > self.frequency_days)
 
     @property
     def staleness_days(self) -> Optional[int]:
@@ -177,16 +110,13 @@ class Tag(Base):
         Returns:
             Number of days overdue, or None if not stale or no frequency set
         """
-        freq_days = cast(Optional[int], self.frequency_days)
-        last_contact = cast(Optional[datetime], self.last_contact)
-
-        if not freq_days or not last_contact:
+        if not self.frequency_days or not self.last_contact:
             return None
 
         # Ensure last_contact is timezone-aware
-        if last_contact.tzinfo is None:
-            last_contact = last_contact.replace(tzinfo=timezone.utc)
+        if self.last_contact.tzinfo is None:
+            self.last_contact = self.last_contact.replace(tzinfo=timezone.utc)
 
-        time_since_contact = datetime.now(timezone.utc) - last_contact
-        days_overdue = time_since_contact.days - freq_days
+        time_since_contact = datetime.now(timezone.utc) - self.last_contact
+        days_overdue = time_since_contact.days - self.frequency_days
         return days_overdue if days_overdue > 0 else None

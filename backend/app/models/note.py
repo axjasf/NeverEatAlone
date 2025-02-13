@@ -1,9 +1,8 @@
-from datetime import datetime, UTC
 from typing import List
-from sqlalchemy import Column, String, ForeignKey
-from sqlalchemy.orm import relationship, Mapped
-from .base import BaseModel, Base, GUID
-from .contact import Contact, Tag, EntityType
+from sqlalchemy import String, ForeignKey
+from sqlalchemy.orm import relationship, Mapped, mapped_column, foreign, remote
+from .base import BaseModel
+from .tag import Tag, EntityType
 import uuid
 
 
@@ -15,20 +14,17 @@ class Statement(BaseModel):
     """
     __tablename__ = "statements"
 
-    note_id: Mapped[uuid.UUID] = Column(GUID, ForeignKey("notes.id"), nullable=False)
-    content: Mapped[str] = Column(String, nullable=False)
+    note_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("notes.id"), nullable=False)
+    content: Mapped[str] = mapped_column(String, nullable=False)
 
-    # Relationship with tags
+    # Relationship with tags - no cascade, tags exist independently
     tags: Mapped[List[Tag]] = relationship(
-        "Tag",
+        Tag,
         primaryjoin=(
-            "and_(Statement.id == Tag.entity_id, "
+            "and_(foreign(Statement.id) == remote(Tag.entity_id), "
             "Tag.entity_type == 'statement')"
         ),
-        cascade="all, delete-orphan",
-        lazy="joined",
-        foreign_keys=[Tag.entity_id],
-        overlaps="tags"
+        lazy="joined"
     )
 
     def set_tags(self, tag_names: List[str]) -> None:
@@ -51,7 +47,7 @@ class Statement(BaseModel):
         # Create new tags
         self.tags = [
             Tag(
-                entity_id=self.id,
+                entity_id=uuid.UUID(str(self.id)),
                 entity_type=EntityType.STATEMENT,
                 name=name
             )
@@ -60,39 +56,40 @@ class Statement(BaseModel):
 
 
 class Note(BaseModel):
-    """Model for storing contact notes.
+    """Model for storing notes about contacts.
 
-    Notes capture interactions and information about contacts. They can be
-    broken down into statements for more granular tracking.
+    Each note is associated with a contact and can have multiple statements.
+    Notes can also be tagged for better organization.
 
     Attributes:
-        contact_id: ID of the contact this note is about
-        content: The full text content of the note
-        statements: Individual statements extracted from the note
-        tags: Tags associated with the entire note
+        contact_id (UUID): ID of the contact this note is about
+        content (str): The note content
+        tags (List[Tag]): Tags associated with this note
+        statements (List[Statement]): Individual statements in this note
     """
     __tablename__ = "notes"
 
-    contact_id: Mapped[uuid.UUID] = Column(GUID, ForeignKey("contacts.id"), nullable=False)
-    content: Mapped[str] = Column(String, nullable=False)
+    contact_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("contacts.id"), nullable=False)
+    content: Mapped[str] = mapped_column(String, nullable=False)
 
     # Relationships
-    contact: Mapped[Contact] = relationship("Contact", back_populates="notes")
+    contact: Mapped["Contact"] = relationship(
+        "Contact",
+        back_populates="notes"
+    )
     statements: Mapped[List[Statement]] = relationship(
-        "Statement",
-        cascade="all, delete-orphan",
+        Statement,
+        cascade="all, delete-orphan",  # Statements are owned by the note
         lazy="joined"
     )
+    # Tags exist independently, no cascade
     tags: Mapped[List[Tag]] = relationship(
-        "Tag",
+        Tag,
         primaryjoin=(
-            "and_(Note.id == Tag.entity_id, "
+            "and_(foreign(Note.id) == remote(Tag.entity_id), "
             "Tag.entity_type == 'note')"
         ),
-        cascade="all, delete-orphan",
-        lazy="joined",
-        foreign_keys=[Tag.entity_id],
-        overlaps="tags"
+        lazy="joined"
     )
 
     def set_tags(self, tag_names: List[str]) -> None:
@@ -114,10 +111,6 @@ class Note(BaseModel):
 
         # Create new tags
         self.tags = [
-            Tag(
-                entity_id=self.id,
-                entity_type=EntityType.NOTE,
-                name=name
-            )
+            Tag(entity_id=uuid.UUID(str(self.id)), entity_type=EntityType.NOTE, name=name)
             for name in tag_names
         ]

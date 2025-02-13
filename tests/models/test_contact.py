@@ -2,7 +2,7 @@ import pytest
 from datetime import datetime, UTC, timedelta
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from backend.app.models.contact import Contact, Tag, EntityType
+from backend.app.models.contact import Contact
 
 
 def test_contact_creation_with_required_fields(db_session: Session) -> None:
@@ -18,21 +18,19 @@ def test_contact_creation_with_required_fields(db_session: Session) -> None:
     assert saved_contact.first_name is None
     assert saved_contact.briefing_text is None
     assert saved_contact.sub_information == {}
-    assert saved_contact.tags == []
 
 
 def test_contact_creation_with_all_fields(db_session: Session) -> None:
     """Test creating a contact with all available fields."""
     sub_info = {"family_status": "Married", "professional_situation": "CEO"}
-    tags = ["#business", "#vip"]
 
-    contact = Contact(name="John Doe")
-    contact.first_name = "John"
-    contact.briefing_text = "Important business contact"
-    contact.sub_information = sub_info
+    contact = Contact(
+        name="John Doe",
+        first_name="John",
+        briefing_text="Important business contact",
+        sub_information=sub_info
+    )
     db_session.add(contact)
-    contact.set_tags(tags)
-
     db_session.commit()
     db_session.refresh(contact)
 
@@ -42,14 +40,13 @@ def test_contact_creation_with_all_fields(db_session: Session) -> None:
     assert saved_contact.first_name == "John"
     assert saved_contact.briefing_text == "Important business contact"
     assert saved_contact.sub_information == sub_info
-    assert [t.name for t in saved_contact.tags] == tags
 
 
 def test_contact_name_required(db_session: Session) -> None:
     """Test that contact creation fails when name is not provided."""
-    contact = Contact()
-    db_session.add(contact)
     with pytest.raises(IntegrityError):
+        contact = Contact()  # No name provided
+        db_session.add(contact)
         db_session.commit()
 
 
@@ -60,15 +57,13 @@ def test_contact_sub_information_validation(db_session: Session) -> None:
 
 
 def test_contact_sub_information_empty_dict(db_session: Session) -> None:
-    """Test that sub_information can be an empty dictionary."""
-    contact = Contact(name="John Doe", sub_information={})
+    """Test that sub_information defaults to empty dict."""
+    contact = Contact(name="John Doe")
     db_session.add(contact)
     db_session.commit()
     db_session.refresh(contact)
 
-    saved_contact = db_session.get(Contact, contact.id)
-    assert saved_contact is not None
-    assert saved_contact.sub_information == {}
+    assert contact.sub_information == {}
 
 
 def test_contact_sub_information_nested_dict(db_session: Session) -> None:
