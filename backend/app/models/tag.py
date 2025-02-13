@@ -85,7 +85,7 @@ class Tag:
         Args:
             timestamp: Specific timestamp to set, or None to use current time
         """
-        self.last_contact = timestamp if timestamp is not None else self.get_current_time()
+        self.last_contact = timestamp if timestamp is not None else Tag.get_current_time()
 
     def set_frequency(self, days: Optional[int]) -> None:
         """Set the frequency for this tag.

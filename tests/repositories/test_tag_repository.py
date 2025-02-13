@@ -217,3 +217,79 @@ def test_delete(
         assert found is None
     finally:
         new_session.close()
+
+
+def test_delete_nonexistent_tag(
+    tag_repository: SQLAlchemyTagRepository,
+    db_session: Session
+) -> None:
+    """Test deleting a tag that doesn't exist.
+
+    Should:
+    - Not raise any errors
+    - Leave database in consistent state
+    """
+    # Clean up any existing tags
+    db_session.query(TagORM).delete()
+    db_session.commit()
+
+    # Create a tag that was never saved
+    tag = Tag(
+        entity_id=TEST_UUID,
+        entity_type=EntityType.CONTACT,
+        name="#nonexistent"
+    )
+
+    # Try to delete a tag that was never saved
+    tag_repository.delete(tag)
+    db_session.commit()
+
+    # Database should still work normally after
+    tag_repository.save(tag)
+    db_session.commit()
+
+    found = tag_repository.find_by_entity(TEST_UUID, EntityType.CONTACT)
+    assert len(found) == 1
+
+
+def test_disable_tag_frequency(
+    tag_repository: SQLAlchemyTagRepository,
+    db_session: Session
+) -> None:
+    """Test disabling frequency tracking on a tag.
+
+    Should:
+    - Clear frequency when set to None
+    - Clear last_contact when frequency is disabled
+    - Persist these changes to database
+    """
+    # Clean up any existing tags
+    db_session.query(TagORM).delete()
+    db_session.commit()
+
+    # Create a new tag with frequency
+    tag = Tag(
+        entity_id=TEST_UUID,
+        entity_type=EntityType.CONTACT,
+        name="#frequency_test"
+    )
+    tag.set_frequency(7)  # Weekly
+    tag_repository.save(tag)
+    db_session.commit()
+
+    # Verify initial state
+    found = tag_repository.find_by_entity(TEST_UUID, EntityType.CONTACT)
+    assert len(found) == 1
+    assert found[0].frequency_days == 7
+    assert found[0].last_contact is not None
+
+    # Disable frequency
+    found[0].set_frequency(None)
+    tag_repository.save(found[0])
+    db_session.commit()
+
+    # Verify frequency is disabled
+    found = tag_repository.find_by_entity(TEST_UUID, EntityType.CONTACT)
+    assert len(found) == 1
+    assert found[0].frequency_days is None
+    assert found[0].last_contact is None
