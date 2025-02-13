@@ -38,11 +38,7 @@ def test_tag_creation(db_session: Session) -> None:
     db_session.commit()
     db_session.refresh(tag)
 
-    saved_tag = db_session.get(Tag, (
-        tag.entity_id,
-        tag.entity_type,
-        tag.name
-    ))
+    saved_tag = db_session.get(Tag, tag.id)
     assert saved_tag is not None
     assert saved_tag.name == "#test"  # Should be lowercase
     assert saved_tag.entity_type == EntityType.CONTACT
