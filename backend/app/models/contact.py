@@ -126,6 +126,7 @@ class Contact(BaseModel):
         sub_information (Dict[str, Any]): Additional structured information
             stored as JSON. Defaults to empty dict.
         tags (List[Tag]): List of tags for categorization.
+        notes (List[Note]): List of notes about this contact.
     """
 
     __tablename__ = "contacts"
@@ -142,6 +143,14 @@ class Contact(BaseModel):
         cascade="all, delete-orphan",
         lazy="joined",
         foreign_keys=[Tag.entity_id]
+    )
+
+    # Relationship with notes
+    notes: Mapped[List["Note"]] = relationship(
+        "Note",
+        back_populates="contact",
+        cascade="all, delete-orphan",
+        lazy="joined"
     )
 
     @property

@@ -1,6 +1,6 @@
 # Testing Guide
 
-This document outlines our testing approach, structure, and common commands for the NeverEatAlone project.
+This document outlines our testing approach, structure, and strategy for the NeverEatAlone project.
 
 ## Test Structure
 
@@ -30,22 +30,6 @@ Model tests verify the behavior of our SQLAlchemy models in isolation from the A
 - `test_contact.py` - Contact model tests
 - `test_notes.py` - Note model tests
 
-**Running Model Tests**:
-```bash
-# Run all model tests
-python -m pytest tests/models/
-
-# Run specific model tests
-python -m pytest tests/models/test_contact.py
-python -m pytest tests/models/test_notes.py
-
-# Run with verbosity
-python -m pytest tests/models/test_contact.py -v
-
-# Run specific test function
-python -m pytest tests/models/test_contact.py::test_contact_creation_with_required_fields
-```
-
 ### API Tests
 
 API tests verify the behavior of our FastAPI endpoints. They test:
@@ -59,22 +43,6 @@ API tests verify the behavior of our FastAPI endpoints. They test:
 **Key Files**:
 - `test_contact_endpoints.py` - Contact API endpoint tests
 - `test_note_endpoints.py` - Note API endpoint tests
-
-**Running API Tests**:
-```bash
-# Run all API tests
-python -m pytest tests/api/
-
-# Run specific API tests
-python -m pytest tests/api/test_contact_endpoints.py
-python -m pytest tests/api/test_note_endpoints.py
-
-# Run with verbosity
-python -m pytest tests/api/test_contact_endpoints.py -v
-
-# Run specific test function
-python -m pytest tests/api/test_contact_endpoints.py::test_create_contact_with_minimal_data
-```
 
 ## Test Configuration
 
@@ -118,41 +86,6 @@ Key fixtures:
    - Use transactions to rollback changes
    - Don't rely on database state between tests
    - Use fixtures for common setup
-
-## Common Commands
-
-### Running Tests
-```bash
-# Run all tests
-python -m pytest
-
-# Run with coverage
-python -m pytest --cov=backend
-
-# Run with output
-python -m pytest -v
-
-# Run and stop on first failure
-python -m pytest -x
-
-# Run failed tests first
-python -m pytest --ff
-
-# Run tests matching pattern
-python -m pytest -k "contact"
-```
-
-### Debugging Tests
-```bash
-# Run with debug on failure
-python -m pytest --pdb
-
-# Show print output
-python -m pytest -s
-
-# Show locals on failure
-python -m pytest -l
-```
 
 ## Example Test Patterns
 
@@ -200,3 +133,5 @@ Common issues and solutions:
    - Check Python path configuration
    - Verify circular import prevention
    - Check fixture availability
+
+For day-to-day test commands and quick reference, see CHEATSHEET.md.
