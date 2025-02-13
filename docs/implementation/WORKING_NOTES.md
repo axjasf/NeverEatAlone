@@ -1,182 +1,129 @@
-# Working Notes - Contact Management System
+# Working Notes - Model Layer Refactoring
 
-## Current Focus: Enhanced Tag System Implementation
+## Current Focus: Tag Domain Model Implementation
 Last Updated: [Current Date]
 
-### What We've Done ✅
-1. **Test Infrastructure Setup**
-   - Created basic test structure for API endpoints
-   - Set up test fixtures in conftest.py
-   - Configured SQLite in-memory database for testing
-   - Implemented session management with transaction isolation
-   - Set up test client with proper database context
+### What We're Working On 🔨
+1. **Tag Domain Model Refactoring**
+   - Converting to pure domain model
+   - Implementing value objects
+   - Removing database dependencies
+   - Updating test suite
 
-2. **Contact Model Implementation**
-   - Implemented base model with UUID primary key
-   - Defined required fields:
-     - `name` (required, string, 1-100 chars)
-   - Defined optional fields:
-     - `first_name` (optional, string)
-     - `contact_briefing_text` (optional, string)
-     - `last_contact` (optional, datetime with UTC)
-     - `sub_information` (optional, JSON dict)
-   - Property getters/setters with validation
-   - Type hints and documentation
-   - Implemented Pydantic validation
+2. **Repository Pattern Implementation**
+   - Designing repository interfaces
+   - Planning SQLAlchemy implementation
+   - Setting up test infrastructure
 
-3. **Tag System Implementation**
-   - Basic hashtag model with case-insensitive storage ✅
-   - Many-to-many relationship with contacts ✅
-   - Entity type support (CONTACT, NOTE, STATEMENT) ✅
-   - Tag validation and normalization ✅
-   - Basic tag filtering ✅
-   - Statement tagging support 🔄
-   - Tag inheritance from notes 🔄
-   - Preparing for reminder capabilities 🔄
+### Just Finished ✅
+1. **Initial Tag Model Analysis**
+   - Identified core business logic:
+     - Tag name validation and normalization
+     - Frequency tracking
+     - Last contact tracking
+     - Staleness calculation
+   - Identified value objects:
+     - EntityType (CONTACT, NOTE, STATEMENT)
+     - TagName (with validation and normalization)
+     - Frequency (with validation)
 
-4. **API Endpoint Implementation**
-   - POST /api/contacts (Create) ✅
-     - Accepts required name field
-     - Accepts all optional fields
-     - Returns 201 on success with created contact
-     - Returns 400 for validation errors
-   - GET /api/contacts/{id} (Read) ✅
-     - Returns contact by UUID
-     - Returns 404 if not found
-   - PUT /api/contacts/{id} (Update) ✅
-     - Updates existing contact
-     - Validates all fields
-     - Returns 404 if not found
-     - Returns 400 for validation errors
-   - DELETE /api/contacts/{id} (Delete) ✅
-     - Deletes contact by UUID
-     - Returns 404 if not found
-     - Returns 204 on success
-   - GET /api/contacts (List/Search) 🔄
-     - Basic listing with pagination ✅
-     - Name filtering ✅
-       - Case-insensitive search
-       - Partial matches supported
-       - Empty results handled
-     - Tag filtering (in progress) 🔄
-       - Basic implementation committed
-       - Known issue: AND logic not working correctly
-       - Returns all contacts instead of those with all tags
-       - Next step: Fix the query to properly filter by all tags
-     - Sorting (pending)
-
-5. **Error Handling** ✅
-   - Standardized error response format using {"error": "message"}
-   - Implemented validation error handling
-   - Added malformed JSON handling
-   - Added not found handling
-   - Improved validation error messages
-   - Added proper error handling for tag validation
+2. **Test Suite Setup**
+   - Basic validation tests
+   - Business logic tests
+   - Frequency tracking tests
+   - Last contact tests
+   - Staleness calculation tests
 
 ### Technical Decisions Made
-1. **Database Design**
-   - Using SQLite for testing (in-memory)
-   - UUID for primary keys
-   - JSON fields for flexible data (sub_information)
-   - All fields except name are nullable
-   - Tags stored in separate table with many-to-many relationship
-   - Case-insensitive tag storage (lowercase)
-   - Enhanced tag system to replace rings
-   - Added reminder capabilities to tags
+1. **Domain Model Design**
+   - Keep models as pure Python classes
+   - Use value objects for complex properties
+   - Validate in constructors
+   - Make invalid states unrepresentable
+   - Use type hints consistently
 
-2. **Validation Rules**
-   - Name presence and length (1-100 chars)
-   - Basic type validation (dict for sub_info)
-   - Tag format validation (must start with #)
-   - UTC timezone enforcement for dates
-   - Pydantic field validation for complex rules
-   - Reminder frequency validation for tags
+2. **Repository Pattern**
+   - Use Protocol classes for interfaces
+   - Keep repositories focused on persistence
+   - Handle transactions at service level
+   - Use SQLAlchemy for implementation
+   - Keep ORM models separate
 
-3. **API Design**
-   - Clean separation between database models and API schemas
-   - Consistent error response format
-   - Proper HTTP status codes (201, 400, 404)
-   - Proper type conversion between SQLAlchemy and Pydantic
-   - Comprehensive input validation
+3. **Testing Strategy**
+   - Pure unit tests for domain models
+   - No database dependencies in unit tests
+   - Integration tests for repositories
+   - Use test doubles appropriately
+   - Focus on behavior, not implementation
 
 ### Current Test Coverage
-- **Basic CRUD**
-  - ✅ Create with minimal data (just name)
-  - ✅ Create with all fields
-  - ✅ Get existing contact
-  - ✅ Get non-existent contact
-  - ✅ Update contact with valid data
-  - ✅ Update non-existent contact
-  - ✅ Update with invalid data
-  - ✅ Delete contact
-  - ✅ List contacts (basic)
-    - ✅ Empty database
-    - ✅ Multiple contacts
-    - ✅ Name filtering
-      - ✅ Exact matches
-      - ✅ Case-insensitive matches
-      - ✅ Partial matches
-      - ✅ No matches
-    - 🔄 Tag filtering
-      - ❌ Single tag filter (failing)
-      - ❌ Multiple tag filter (AND logic)
-      - ✅ Case-insensitive matching
-      - ✅ Non-matching tags
-      - ✅ Invalid tag format
-    - 🔄 Sorting
-
-- **Tag System**
-  - ✅ Basic tag operations
-  - ✅ Case insensitivity
-  - ✅ Tag validation
-  - 🔄 Reminder capabilities
-  - 🔄 Tag-based filtering
-  - 🔄 Reminder frequency validation
+- **Tag Domain Model**
+  - ✅ Basic creation and validation
+  - ✅ Name normalization
+  - ✅ Frequency tracking
+  - ✅ Last contact tracking
+  - ✅ Staleness calculation
+  - ❌ Value objects
+  - ❌ Repository integration
 
 ### Next Steps (In Priority Order)
-1. **Fix Tag Filtering**
-   - Investigate query logic for ALL tags matching
-   - Consider alternative approaches to subquery
-   - Add more debug output for query execution
-   - Add test cases for edge cases
-
-2. **Implement Enhanced Tag System**
-   - Add reminder fields to tag model
+1. **Complete Tag Domain Model**
+   - Create TagName value object
+   - Create Frequency value object
    - Update validation logic
-   - Add reminder-specific endpoints
-   - Migrate existing ring data
-   - Test reminder functionality
+   - Remove SQLAlchemy dependencies
+   - Update tests
 
-3. **Documentation**
-   - OpenAPI documentation for all endpoints
-   - API usage examples
-   - Error response examples
-   - Migration guide for rings to tags
+2. **Implement Tag Repository**
+   - Create repository interface
+   - Create SQLAlchemy implementation
+   - Add integration tests
+   - Handle transactions
+   - Add error handling
+
+### Blockers/Dependencies
+- Need to handle existing data migration
+- Need to update API endpoints
+- Need to handle transactions
+- Need to update documentation
 
 ### Notes on Implementation
 - Following strict TDD approach
-- Keeping code simple and focused
-- Only implementing what's in requirements
-- Maintaining clean separation of concerns
-- Using type hints consistently
-- Following PEP 8 style guide
-- Using Pydantic for validation
+- Keeping domain models pure
+- Using value objects for validation
+- Strong type hints throughout
+- Clean separation of concerns
 
-### Current Understanding
-- Basic infrastructure is complete and working
-- Core CRUD operations implemented
-- Error handling is standardized and comprehensive
-- Model validation is appropriately strict
-- Tag filtering needs improvement
-- Statement tagging ready for implementation
-- Tag inheritance rules defined
+## Implementation History
 
-### Blockers/Dependencies
-- Tag filtering query not working as expected
-- Need to investigate SQLite query execution plan
-- Consider if database schema changes would help
-- Plan data migration from rings to tags
-- Test tag inheritance performance
+### Sprint: Backend Core - Part 2 ✅
+1. **Contact Model Implementation**
+   - Basic contact information structure
+   - JSON sub-information support
+   - Hashtag support
+   - Test coverage
+
+2. **Basic API Endpoints**
+   - POST /api/contacts (Create)
+   - GET /api/contacts/{id} (Read)
+   - PUT /api/contacts/{id} (Update)
+   - DELETE /api/contacts/{id} (Delete)
+   - Error handling
+   - Input validation
+
+3. **Tag System Implementation**
+   - Basic hashtag model with case-insensitive storage
+   - Many-to-many relationship with contacts
+   - Entity type support
+   - Tag validation and normalization
+   - Basic tag filtering
+
+4. **Error Handling**
+   - Standardized error response format
+   - Validation error handling
+   - Malformed JSON handling
+   - Not found handling
+   - Tag validation error handling
 
 ## Next Update Expected
-After implementing enhanced tag system with reminder capabilities.
+After implementing Tag value objects and repository pattern.
