@@ -7,8 +7,11 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.engine import Engine
 from backend.app.database import Base
 
-# Import all ORM models to ensure they are registered with SQLAlchemy
-from backend.app.repositories.sqlalchemy.tag_repository import TagORM
+# Import all models to ensure they are registered with SQLAlchemy
+from backend.app.models.contact import Contact  # noqa: F401
+from backend.app.models.note import Note  # noqa: F401
+from backend.app.models.tag import Tag  # noqa: F401
+from backend.app.repositories.sqlalchemy.tag_repository import TagORM  # noqa: F401
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -18,7 +21,15 @@ logger = logging.getLogger(__name__)
 @pytest.fixture(scope="session")
 def engine() -> Engine:
     """Create a SQLite test database engine."""
-    engine = create_engine("sqlite:///:memory:", echo=True)
+    engine = create_engine(
+        "sqlite:///:memory:",
+        echo=True,
+        # Explicitly set connection pooling
+        pool_pre_ping=True,
+        pool_recycle=3600,
+        # Ensure proper transaction isolation
+        isolation_level="SERIALIZABLE"
+    )
     logger.info("Creating database tables...")
     Base.metadata.create_all(engine)
 
@@ -33,10 +44,20 @@ def engine() -> Engine:
 @pytest.fixture
 def db_session(engine: Engine) -> Generator[Session, None, None]:
     """Create a new database session for a test."""
-    Session = sessionmaker(bind=engine)
+    connection = engine.connect()
+    # Begin a non-ORM transaction
+    transaction = connection.begin()
+
+    # Create session with the connection
+    Session = sessionmaker(bind=connection)
     session = Session()
+
     try:
         yield session
     finally:
-        session.rollback()
+        # Ensure proper cleanup
         session.close()
+        # Rollback the transaction
+        transaction.rollback()
+        # Close the connection
+        connection.close()
