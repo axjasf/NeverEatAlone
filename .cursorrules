@@ -77,6 +77,18 @@
         "mv": "Move-Item",
         "echo": "Write-Output",
         "pwd": "Get-Location"
+      },
+      "testCommands": {
+        "setup": [
+          "cd .",
+          "cd backend",
+          ".\\venv\\Scripts\\Activate.ps1"
+        ],
+        "runTest": "python -m pytest {path} -v",
+        "runSpecificTest": "python -m pytest {path}::{test_name} -v",
+        "runWithPrints": "python -m pytest {path} -v -s",
+        "debugOnFailure": "python -m pytest {path} --pdb",
+        "fullCommand": "cd .; cd backend; .\\venv\\Scripts\\Activate.ps1; python -m pytest {path} -v"
       }
     },
     "bash": {
