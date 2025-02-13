@@ -1,19 +1,28 @@
 # Working Notes - Model Layer Refactoring
+Version: 2024.02.13-1
 
-## Current Focus: Tag Domain Model Implementation
-Last Updated: [Current Date]
+## Version History
+- 2024.02.13-1: Added versioning, updated focus to Tag value objects
+- 2024.02.13-0: Initial version, model layer refactoring plan
+
+## Current Focus: Tag Value Objects Implementation
+Last Updated: 2024-02-13
 
 ### What We're Working On 🔨
-1. **Tag Domain Model Refactoring**
-   - Converting to pure domain model
-   - Implementing value objects
-   - Removing database dependencies
-   - Updating test suite
+1. **Tag Value Objects**
+   - Creating TagName value object
+     - Validation rules
+     - Case normalization
+     - Immutability
+   - Creating Frequency value object
+     - Range validation
+     - Business rules
+   - Unit tests for both
 
-2. **Repository Pattern Implementation**
-   - Designing repository interfaces
-   - Planning SQLAlchemy implementation
-   - Setting up test infrastructure
+2. **Tag Domain Model Updates**
+   - Converting to use new value objects
+   - Removing SQLAlchemy dependencies
+   - Updating existing tests
 
 ### Just Finished ✅
 1. **Initial Tag Model Analysis**
@@ -35,95 +44,65 @@ Last Updated: [Current Date]
    - Staleness calculation tests
 
 ### Technical Decisions Made
-1. **Domain Model Design**
+1. **Value Objects Design**
+   - Use Python dataclasses with frozen=True
+   - Validate in __post_init__
+   - Make invalid states unrepresentable
+   - Include only business rules
+   - Keep persistence separate
+
+2. **Domain Model Design**
    - Keep models as pure Python classes
    - Use value objects for complex properties
    - Validate in constructors
    - Make invalid states unrepresentable
    - Use type hints consistently
 
-2. **Repository Pattern**
-   - Use Protocol classes for interfaces
-   - Keep repositories focused on persistence
-   - Handle transactions at service level
-   - Use SQLAlchemy for implementation
-   - Keep ORM models separate
-
 3. **Testing Strategy**
-   - Pure unit tests for domain models
-   - No database dependencies in unit tests
-   - Integration tests for repositories
-   - Use test doubles appropriately
+   - Pure unit tests for value objects
+   - No database dependencies
+   - Property-based testing for validation
+   - Test edge cases thoroughly
    - Focus on behavior, not implementation
 
 ### Current Test Coverage
+- **Tag Value Objects**
+  - ❌ TagName validation
+  - ❌ TagName normalization
+  - ❌ Frequency validation
+  - ❌ Value object immutability
+
 - **Tag Domain Model**
   - ✅ Basic creation and validation
   - ✅ Name normalization
   - ✅ Frequency tracking
   - ✅ Last contact tracking
   - ✅ Staleness calculation
-  - ❌ Value objects
+  - ❌ Integration with value objects
   - ❌ Repository integration
 
 ### Next Steps (In Priority Order)
-1. **Complete Tag Domain Model**
+1. **Implement Value Objects**
    - Create TagName value object
    - Create Frequency value object
-   - Update validation logic
+   - Write comprehensive tests
+   - Update Tag model to use them
+
+2. **Update Tag Model**
    - Remove SQLAlchemy dependencies
-   - Update tests
-
-2. **Implement Tag Repository**
-   - Create repository interface
-   - Create SQLAlchemy implementation
-   - Add integration tests
-   - Handle transactions
-   - Add error handling
-
-### Blockers/Dependencies
-- Need to handle existing data migration
-- Need to update API endpoints
-- Need to handle transactions
-- Need to update documentation
+   - Use new value objects
+   - Update validation logic
+   - Update existing tests
 
 ### Notes on Implementation
 - Following strict TDD approach
-- Keeping domain models pure
-- Using value objects for validation
-- Strong type hints throughout
-- Clean separation of concerns
+- Using dataclasses for value objects
+- Ensuring immutability
+- Comprehensive validation
+- Clear error messages
 
 ## Implementation History
-
-### Sprint: Backend Core - Part 2 ✅
-1. **Contact Model Implementation**
-   - Basic contact information structure
-   - JSON sub-information support
-   - Hashtag support
-   - Test coverage
-
-2. **Basic API Endpoints**
-   - POST /api/contacts (Create)
-   - GET /api/contacts/{id} (Read)
-   - PUT /api/contacts/{id} (Update)
-   - DELETE /api/contacts/{id} (Delete)
-   - Error handling
-   - Input validation
-
-3. **Tag System Implementation**
-   - Basic hashtag model with case-insensitive storage
-   - Many-to-many relationship with contacts
-   - Entity type support
-   - Tag validation and normalization
-   - Basic tag filtering
-
-4. **Error Handling**
-   - Standardized error response format
-   - Validation error handling
-   - Malformed JSON handling
-   - Not found handling
-   - Tag validation error handling
+[Previous history moved to HISTORY.md]
 
 ## Next Update Expected
-After implementing Tag value objects and repository pattern.
+After implementing and testing TagName value object.
