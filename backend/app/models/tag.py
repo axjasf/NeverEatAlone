@@ -1,12 +1,20 @@
-# Minimal implementation to make tests pass
-from enum import Enum as PyEnum
-import uuid
+"""Tag domain model."""
 from datetime import datetime, timezone
+from enum import Enum as PyEnum
 from typing import Optional
+from uuid import UUID
+import re
 
 
 class EntityType(str, PyEnum):
-    """Types of entities that can have tags."""
+    """Types of entities that can have tags.
+
+    Represents the hierarchical structure:
+    - Contacts are the primary entity
+    - Notes belong to contacts
+    - Statements belong to notes
+    All can have tags for categorization and reminders.
+    """
     CONTACT = "contact"
     NOTE = "note"
     STATEMENT = "statement"
@@ -15,19 +23,39 @@ class EntityType(str, PyEnum):
 class Tag:
     """Model for storing tags.
 
-    Each tag is tied to a specific entity (contact, note, or statement).
-    The name must start with '#' and is stored in lowercase for case-insensitive matching.
-    The entity_type field tracks what type of entity this tag is used with.
+    Each tag is tied to a specific entity (contact, note, or statement) and can
+    optionally track contact frequency for reminders.
+
+    A tag is uniquely identified by the combination of:
+    - entity_id: What it's attached to
+    - entity_type: What kind of thing it's attached to
+    - name: The tag text itself
 
     Attributes:
-        entity_id (UUID): ID of the entity this tag belongs to
-        entity_type (EntityType): Type of entity this tag is used with
-        name (str): The tag name (must start with '#')
-        frequency_days (Optional[int]): Days between expected contacts
-        last_contact (Optional[datetime]): When this tag was last contacted
+        entity_id: ID of the entity this tag belongs to
+        entity_type: Type of entity this tag is used with
+        name: The tag name (must start with '#')
+        frequency_days: Optional number of days between expected contacts
+        last_contact: When the entity was last contacted
     """
 
-    def __init__(self, entity_id: uuid.UUID, entity_type: EntityType, name: str) -> None:
+    @staticmethod
+    def get_current_time() -> datetime:
+        """Get the current time.
+
+        This method exists to make testing easier by allowing time to be mocked.
+
+        Returns:
+            datetime: Current time in UTC
+        """
+        return datetime.now(timezone.utc)
+
+    def __init__(
+        self,
+        entity_id: UUID,
+        entity_type: EntityType,
+        name: str
+    ) -> None:
         """Create a new tag.
 
         Args:
@@ -36,30 +64,20 @@ class Tag:
             name: The tag name (must start with '#')
 
         Raises:
-            ValueError: If name doesn't start with '#'
+            ValueError: If tag name is invalid
         """
-        if not name.startswith("#"):
-            raise ValueError("Tag must start with '#'")
+        if not name.startswith('#'):
+            raise ValueError("Tag name must start with '#'")
         if len(name) <= 1:
-            raise ValueError("Tag name must not be empty after '#'")
+            raise ValueError("Tag name cannot be empty")
+        if not re.match(r'^#[\w]+$', name):
+            raise ValueError("Tag name can only contain letters, numbers, and underscores")
 
         self.entity_id = entity_id
         self.entity_type = entity_type
-        self.name = self._normalize_name(name)
+        self.name = name.lower()
         self.frequency_days: Optional[int] = None
         self.last_contact: Optional[datetime] = None
-
-    @staticmethod
-    def _normalize_name(name: str) -> str:
-        """Normalize tag name to lowercase.
-
-        Args:
-            name: Tag name to normalize
-
-        Returns:
-            Normalized tag name
-        """
-        return name.lower()
 
     def update_last_contact(self, timestamp: Optional[datetime] = None) -> None:
         """Update the last contact timestamp.
@@ -67,7 +85,7 @@ class Tag:
         Args:
             timestamp: Specific timestamp to set, or None to use current time
         """
-        self.last_contact = timestamp if timestamp is not None else datetime.now(timezone.utc)
+        self.last_contact = timestamp if timestamp is not None else self.get_current_time()
 
     def set_frequency(self, days: Optional[int]) -> None:
         """Set the frequency for this tag.
@@ -78,14 +96,16 @@ class Tag:
         Raises:
             ValueError: If days is not between 1 and 365
         """
-        if days is not None and (days < 1 or days > 365):
-            raise ValueError("Frequency must be between 1 and 365 days")
-        self.frequency_days = days
+        if days is not None:
+            if not (1 <= days <= 365):
+                raise ValueError("Frequency must be between 1 and 365 days")
+            # Set last_contact to now when enabling frequency
+            self.update_last_contact()
+        else:
+            # Clear last_contact when disabling frequency
+            self.last_contact = None
 
-    def disable_frequency(self) -> None:
-        """Disable frequency tracking for this tag."""
-        self.frequency_days = None
-        self.last_contact = None
+        self.frequency_days = days
 
     def is_stale(self) -> bool:
         """Check if this tag is stale based on frequency and last contact.
@@ -96,27 +116,5 @@ class Tag:
         if not self.frequency_days or not self.last_contact:
             return False
 
-        # Ensure last_contact is timezone-aware
-        if self.last_contact.tzinfo is None:
-            self.last_contact = self.last_contact.replace(tzinfo=timezone.utc)
-
-        time_since_contact = datetime.now(timezone.utc) - self.last_contact
-        return bool(time_since_contact.days > self.frequency_days)
-
-    @property
-    def staleness_days(self) -> Optional[int]:
-        """Get the number of days this tag is overdue.
-
-        Returns:
-            Number of days overdue, or None if not stale or no frequency set
-        """
-        if not self.frequency_days or not self.last_contact:
-            return None
-
-        # Ensure last_contact is timezone-aware
-        if self.last_contact.tzinfo is None:
-            self.last_contact = self.last_contact.replace(tzinfo=timezone.utc)
-
-        time_since_contact = datetime.now(timezone.utc) - self.last_contact
-        days_overdue = time_since_contact.days - self.frequency_days
-        return days_overdue if days_overdue > 0 else None
+        time_since_contact = self.get_current_time() - self.last_contact
+        return time_since_contact.days > self.frequency_days
