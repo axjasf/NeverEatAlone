@@ -6,6 +6,7 @@ from sqlalchemy import String, JSON
 from .base import BaseORMModel
 from .tag import TagORM
 from .note import NoteORM
+from .reminder import ReminderORM
 from .contact_tag import contact_tags
 
 
@@ -31,4 +32,11 @@ class ContactORM(BaseORMModel):
     # Tags exist independently, no cascade
     tags: Mapped[List[TagORM]] = relationship(
         TagORM, secondary=contact_tags, lazy="joined"
+    )
+    # Reminders are owned by the contact
+    reminders: Mapped[List[ReminderORM]] = relationship(  # type: ignore
+        ReminderORM,
+        back_populates="contact",
+        cascade="all, delete-orphan",
+        lazy="joined",
     )
