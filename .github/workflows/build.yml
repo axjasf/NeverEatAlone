@@ -1,20 +1,21 @@
-name: Build
+name: Build and Analysis
 on:
   push:
     branches:
       - main
+      - develop
   pull_request:
     types: [opened, synchronize, reopened]
 
 jobs:
   build:
-    name: Build and Test
-    runs-on: windows-latest
+    name: Build, Test, and Analyze
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+          fetch-depth: 0  # Shallow clones should be disabled for better analysis
 
       # Backend setup and tests
       - name: Set up Python
@@ -30,9 +31,9 @@ jobs:
           pip install -r backend/requirements-dev.txt
 
       - name: Run Python tests with coverage
+        working-directory: ./backend
         run: |
-          cd backend
-          python -m pytest --cov=app --cov-report=xml --cov-report=term-missing --junitxml=pytest-report.xml
+          pytest --cov=app --cov-report=xml:coverage.xml --cov-report=term-missing --junitxml=pytest-report.xml
 
       # Frontend setup and tests
       - name: Set up Node.js
@@ -48,35 +49,44 @@ jobs:
           npm ci
           npm install -g typescript
 
-      - name: Create src directory if it doesn't exist
-        working-directory: ./frontend
-        run: mkdir -p src
-
-      - name: Type check
-        working-directory: ./frontend
-        run: |
-          # Create a dummy file if src is empty to prevent tsc error
-          if [ ! "$(ls -A src)" ]; then
-            echo "// TODO: Add your code here" > src/index.ts
-          fi
-          npm run type-check
-
       - name: Run TypeScript tests with coverage
         working-directory: ./frontend
-        run: npm run test -- --coverage --coverageReporters=lcov --coverageReporters=text-summary --passWithNoTests
+        run: |
+          npm run test -- --coverage --coverageReporters=lcov --coverageReporters=text-summary --passWithNoTests
+
+      # Code Quality Checks
+      - name: Run Python linting
+        working-directory: ./backend
+        run: |
+          flake8 .
+          black --check .
+          isort --check-only .
+
+      - name: Run TypeScript linting
+        working-directory: ./frontend
+        run: |
+          npm run lint
+          npm run type-check
 
       # SonarQube analysis
       - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v4
+        uses: SonarSource/sonarqube-scan-action@v2
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         with:
           args: >
-            -Dsonar.projectKey=${{ github.repository_owner }}_${{ github.event.repository.name }}
-            -Dsonar.organization=${{ github.repository_owner }}
+            -Dsonar.projectKey=NeverEatAlone
+            -Dsonar.sources=backend/app,frontend/src
+            -Dsonar.tests=tests,frontend/tests
+            -Dsonar.python.coverage.reportPaths=backend/coverage.xml
+            -Dsonar.python.xunit.reportPath=backend/pytest-report.xml
+            -Dsonar.javascript.lcov.reportPaths=frontend/coverage/lcov.info
+            -Dsonar.python.version=3.11
+            -Dsonar.sourceEncoding=UTF-8
+            -Dsonar.verbose=true
 
-      # Upload test results
+      # Upload test results as artifacts
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
