@@ -64,7 +64,7 @@ jobs:
         if: success() || failure()  # Run even if previous steps failed
         run: |
           echo "::group::Running Black formatter check"
-          python -m black . --check --diff || {
+          python -m black . --check --diff > black_check.log 2>&1 || {
             echo "::error::Black formatting issues found"
             exit 1
           }
@@ -75,7 +75,7 @@ jobs:
         if: success() || failure()
         run: |
           echo "::group::Running Flake8"
-          python -m flake8 . --count --statistics --show-source || {
+          python -m flake8 . --count --statistics --show-source --tee --output-file=flake8_report.txt || {
             echo "::error::Flake8 issues found"
             exit 1
           }
@@ -86,7 +86,7 @@ jobs:
         if: success() || failure()
         run: |
           echo "::group::Running MyPy"
-          python -m mypy --config-file mypy.ini . || {
+          python -m mypy --config-file mypy.ini . --txt-report mypy_report > mypy_output.log 2>&1 || {
             echo "::error::Type checking issues found"
             exit 1
           }
@@ -100,8 +100,12 @@ jobs:
           path: |
             ${{ env.PYTHON_ROOT }}/**/*.txt
             ${{ env.PYTHON_ROOT }}/**/*.log
+            black_check.log
+            flake8_report.txt
+            mypy_report
+            mypy_output.log
           retention-days: 14
-          if-no-files-found: ignore
+          if-no-files-found: warn
 
   backend-test:
     name: Backend Tests
@@ -173,8 +177,28 @@ jobs:
           if [ -f "${{ env.PYTHON_ROOT }}/pytest-report.xml" ]; then
             echo "Test report generated successfully"
             echo "Coverage report available in artifacts"
+
+            # Create a summary of test results
+            echo "=== Test Execution Summary ===" > test_summary.txt
+            echo "Date: $(date)" >> test_summary.txt
+            echo "Python Version: ${{ env.PYTHON_VERSION }}" >> test_summary.txt
+            echo "" >> test_summary.txt
+
+            # Extract key metrics from pytest report
+            if [ -f "${{ env.PYTHON_ROOT }}/coverage.xml" ]; then
+              echo "Coverage Report:" >> test_summary.txt
+              grep -A 5 "<coverage" "${{ env.PYTHON_ROOT }}/coverage.xml" >> test_summary.txt
+            fi
+
+            if [ -f "${{ env.PYTHON_ROOT }}/pytest-report.xml" ]; then
+              echo "" >> test_summary.txt
+              echo "Test Results:" >> test_summary.txt
+              grep -A 5 "<testsuite" "${{ env.PYTHON_ROOT }}/pytest-report.xml" >> test_summary.txt
+            fi
           else
             echo "::error::Test report generation failed"
+            echo "Test execution failed" > test_summary.txt
+            echo "No test reports generated" >> test_summary.txt
           fi
           echo "::endgroup::"
 
@@ -188,7 +212,9 @@ jobs:
             ${{ env.PYTHON_ROOT }}/coverage_html/**
             ${{ env.PYTHON_ROOT }}/pytest-report.xml
             ${{ env.PYTHON_ROOT }}/.coverage
+            test_summary.txt
           retention-days: 14
+          if-no-files-found: warn
 
   frontend-lint:
     name: Frontend Linting
