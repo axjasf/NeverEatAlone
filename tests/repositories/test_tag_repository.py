@@ -6,8 +6,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy.engine import Engine
 from sqlalchemy import select, and_
 
-from backend.app.models.tag import Tag, EntityType
-from backend.app.repositories.sqlalchemy.tag_repository import SQLAlchemyTagRepository, TagORM
+from backend.app.models.domain.tag import Tag, EntityType
+from backend.app.models.orm.tag import TagORM
+from backend.app.models.repositories.sqlalchemy_tag_repository import SQLAlchemyTagRepository
 
 
 TEST_UUID = UUID("11111111-1111-1111-1111-111111111111")
@@ -154,6 +155,7 @@ def test_find_stale(
         name="#stale"
     )
     stale_tag.set_frequency(7)  # Weekly
+    # Ensure both timestamps have UTC timezone
     stale_tag.update_last_contact(TEST_DATETIME - timedelta(days=8))
     tag_repository.save(stale_tag)
 

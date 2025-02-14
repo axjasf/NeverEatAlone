@@ -2,7 +2,7 @@
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 import re
 
 
@@ -32,6 +32,7 @@ class Tag:
     - name: The tag text itself
 
     Attributes:
+        id: Unique identifier for this tag instance
         entity_id: ID of the entity this tag belongs to
         entity_type: Type of entity this tag is used with
         name: The tag name (must start with '#')
@@ -62,6 +63,7 @@ class Tag:
         if not re.match(r'^#[\w]+$', name):
             raise ValueError("Tag name can only contain letters, numbers, and underscores")
 
+        self.id: UUID = uuid4()
         self.entity_id = entity_id
         self.entity_type = entity_type.value
         self.name = name.lower()
