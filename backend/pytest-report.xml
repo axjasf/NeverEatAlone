@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="1" failures="0" skipped="0" tests="1" time="3.167" timestamp="2025-02-14T10:12:50.613509-08:00" hostname="W-PF4N0KDS"><testcase classname="" name="tests.api.test_contact_endpoints" time="0.000"><error message="collection failure">ImportError while importing test module 'c:\Users\D047951\Documents\GitHub\NeverEatAlone\tests\api\test_contact_endpoints.py'.
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="1" failures="0" skipped="0" tests="1" time="2.691" timestamp="2025-02-14T10:27:50.047842-08:00" hostname="W-PF4N0KDS"><testcase classname="" name="tests.api.test_contact_endpoints" time="0.000"><error message="collection failure">ImportError while importing test module 'c:\Users\D047951\Documents\GitHub\NeverEatAlone\tests\api\test_contact_endpoints.py'.
 Hint: make sure your test modules/packages have valid Python names.
 Traceback:
 backend\venv\Lib\site-packages\_pytest\python.py:493: in importtestmodule
