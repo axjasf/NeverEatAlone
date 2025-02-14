@@ -1,0 +1,36 @@
+[flake8]
+max-line-length = 88  # Match black's default line length
+extend-ignore =
+    # Temporarily ignore docstring issues while we fix other problems
+    D100,  # Missing docstring in public module
+    D101,  # Missing docstring in public class
+    D102,  # Missing docstring in public method
+    D103,  # Missing docstring in public function
+    D104,  # Missing docstring in public package
+    D105,  # Missing docstring in magic method
+    D200,  # One-line docstring should fit on one line with quotes
+    D205,  # 1 blank line required between summary line and description
+    D400,  # First line should end with a period
+    D401,  # First line should be in imperative mood
+
+exclude =
+    .git,
+    __pycache__,
+    build,
+    dist,
+    *.pyc,
+    *.egg-info,
+    .eggs,
+    venv,
+    .venv,
+    .env,
+    env
+
+per-file-ignores =
+    # Allow unused imports in __init__.py files
+    __init__.py: F401
+    # Allow undefined names in models (they're resolved at runtime)
+    app/models/orm/*.py: F821
+
+# Specify the order of imports
+import-order-style = google
