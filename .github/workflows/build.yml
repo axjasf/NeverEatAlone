@@ -64,9 +64,6 @@ jobs:
     name: Backend Tests
     needs: backend-lint
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ${{ env.PYTHON_ROOT }}
     steps:
       - uses: actions/checkout@v4
 
@@ -81,6 +78,7 @@ jobs:
 
       - name: Install dependencies
         id: install
+        working-directory: ${{ env.PYTHON_ROOT }}
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
@@ -91,17 +89,23 @@ jobs:
         id: tests
         run: |
           echo "::group::Running pytest with coverage"
-          # Ensure we're in the correct directory
-          pwd
+          # Ensure we're in the correct directory and show structure
+          cd ${{ env.PYTHON_ROOT }}
+          echo "Current directory: $(pwd)"
+          echo "Project root: $(cd .. && pwd)"
+          echo "Directory structure:"
           ls -la
-          echo "Running tests from directory: $(pwd)"
+          echo "Tests directory structure:"
+          ls -la ../tests
+
+          # Run tests from backend directory but point to tests in root
           python -m pytest \
             --cov=app \
             --cov-report=xml:coverage.xml \
             --cov-report=term-missing \
             --junitxml=pytest-report.xml \
             -v \
-            tests/
+            ../tests
           echo "::endgroup::"
 
       - name: Upload test results
