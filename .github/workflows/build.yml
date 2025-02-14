@@ -69,11 +69,20 @@ jobs:
           npm run type-check
 
       # SonarQube analysis
+      - name: Debug Info
+        run: |
+          echo "Current branch: ${GITHUB_REF#refs/heads/}"
+          echo "GitHub event: ${{ github.event_name }}"
+          echo "Repository: ${{ github.repository }}"
+          pwd
+          ls -la
+
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v2
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: >
             -Dsonar.projectKey=NeverEatAlone
@@ -85,6 +94,9 @@ jobs:
             -Dsonar.python.version=3.11
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.verbose=true
+            -Dsonar.scm.provider=git
+            -Dsonar.branch.name=${GITHUB_REF#refs/heads/}
+            -X
 
       # Upload test results as artifacts
       - name: Upload test results
