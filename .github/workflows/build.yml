@@ -252,7 +252,7 @@ jobs:
         if: success() || failure()
         run: |
           echo "::group::Running ESLint"
-          npm run lint || {
+          npm run lint > eslint_output.log 2>&1 || {
             echo "::error::ESLint issues found"
             exit 1
           }
@@ -263,11 +263,34 @@ jobs:
         if: success() || failure()
         run: |
           echo "::group::Running TypeScript Check"
-          npm run type-check || {
+          npm run type-check > typescript_check.log 2>&1 || {
             echo "::error::Type check failed"
             exit 1
           }
           echo "::endgroup::"
+
+      - name: Generate lint summary
+        if: always()
+        run: |
+          echo "=== Frontend Lint Summary ===" > lint_summary.txt
+          echo "Date: $(date)" >> lint_summary.txt
+          echo "Node Version: ${{ env.NODE_VERSION }}" >> lint_summary.txt
+          echo "" >> lint_summary.txt
+
+          echo "ESLint Results:" >> lint_summary.txt
+          if [ -f "eslint_output.log" ]; then
+            cat eslint_output.log >> lint_summary.txt
+          else
+            echo "No ESLint output found" >> lint_summary.txt
+          fi
+
+          echo "" >> lint_summary.txt
+          echo "TypeScript Check Results:" >> lint_summary.txt
+          if [ -f "typescript_check.log" ]; then
+            cat typescript_check.log >> lint_summary.txt
+          else
+            echo "No TypeScript check output found" >> lint_summary.txt
+          fi
 
       - name: Upload lint results
         if: always()
@@ -277,8 +300,11 @@ jobs:
           path: |
             ${{ env.NODE_ROOT }}/eslint-report.json
             ${{ env.NODE_ROOT }}/tsconfig.tsbuildinfo
+            eslint_output.log
+            typescript_check.log
+            lint_summary.txt
           retention-days: 14
-          if-no-files-found: ignore
+          if-no-files-found: warn
 
   frontend-test:
     name: Frontend Tests
@@ -323,6 +349,29 @@ jobs:
           }
           echo "::endgroup::"
 
+      - name: Generate test summary
+        if: always()
+        run: |
+          echo "=== Frontend Test Summary ===" > test_summary.txt
+          echo "Date: $(date)" >> test_summary.txt
+          echo "Node Version: ${{ env.NODE_VERSION }}" >> test_summary.txt
+          echo "" >> test_summary.txt
+
+          if [ -f "junit.xml" ]; then
+            echo "Test Results:" >> test_summary.txt
+            grep -A 5 "<testsuite" junit.xml >> test_summary.txt
+
+            echo "" >> test_summary.txt
+            echo "Coverage Summary:" >> test_summary.txt
+            if [ -f "coverage/coverage-summary.json" ]; then
+              cat coverage/coverage-summary.json >> test_summary.txt
+            else
+              echo "No coverage summary found" >> test_summary.txt
+            fi
+          else
+            echo "No test results found" >> test_summary.txt
+          fi
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -331,6 +380,7 @@ jobs:
           path: |
             ${{ env.NODE_ROOT }}/coverage/**
             ${{ env.NODE_ROOT }}/junit.xml
+            test_summary.txt
           retention-days: 14
           if-no-files-found: warn
 
@@ -375,10 +425,89 @@ jobs:
           }
           echo "::endgroup::"
 
+      - name: Generate build summary
+        if: always()
+        run: |
+          echo "=== Frontend Build Summary ===" > build_summary.txt
+          echo "Date: $(date)" >> build_summary.txt
+          echo "Node Version: ${{ env.NODE_VERSION }}" >> build_summary.txt
+          echo "Build Version: $REACT_APP_VERSION" >> build_summary.txt
+          echo "" >> build_summary.txt
+
+          if [ -d "build" ]; then
+            echo "Build Statistics:" >> build_summary.txt
+            echo "- Total files: $(find build -type f | wc -l)" >> build_summary.txt
+            echo "- Build size: $(du -sh build | cut -f1)" >> build_summary.txt
+
+            echo "" >> build_summary.txt
+            echo "Asset Sizes:" >> build_summary.txt
+            find build -type f -exec ls -lh {} \; >> build_summary.txt
+          else
+            echo "Build directory not found" >> build_summary.txt
+          fi
+
       - name: Upload build artifacts
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: frontend-build
-          path: ${{ env.NODE_ROOT }}/build
+          path: |
+            ${{ env.NODE_ROOT }}/build
+            build_summary.txt
+          retention-days: 14
+
+  workflow-summary:
+    name: Generate Workflow Summary
+    needs: [backend-lint, backend-test, frontend-lint, frontend-test, build]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts
+
+      - name: Generate workflow summary
+        run: |
+          echo "# Workflow Execution Summary" > workflow_summary.md
+          echo "## Backend Results" >> workflow_summary.md
+
+          if [ -d "all-artifacts/backend-test-results" ]; then
+            echo "### Test Results" >> workflow_summary.md
+            cat all-artifacts/backend-test-results/test_summary.txt >> workflow_summary.md
+          fi
+
+          if [ -d "all-artifacts/lint-results" ]; then
+            echo "### Lint Results" >> workflow_summary.md
+            for f in all-artifacts/lint-results/*.txt; do
+              if [ -f "$f" ]; then
+                echo "\`\`\`" >> workflow_summary.md
+                cat "$f" >> workflow_summary.md
+                echo "\`\`\`" >> workflow_summary.md
+              fi
+            done
+          fi
+
+          echo "## Frontend Results" >> workflow_summary.md
+
+          if [ -d "all-artifacts/frontend-test-results" ]; then
+            echo "### Test Results" >> workflow_summary.md
+            cat all-artifacts/frontend-test-results/test_summary.txt >> workflow_summary.md
+          fi
+
+          if [ -d "all-artifacts/frontend-lint-results" ]; then
+            echo "### Lint Results" >> workflow_summary.md
+            cat all-artifacts/frontend-lint-results/lint_summary.txt >> workflow_summary.md
+          fi
+
+          if [ -d "all-artifacts/frontend-build" ]; then
+            echo "### Build Results" >> workflow_summary.md
+            cat all-artifacts/frontend-build/build_summary.txt >> workflow_summary.md
+          fi
+
+      - name: Upload workflow summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-summary
+          path: workflow_summary.md
           retention-days: 14
