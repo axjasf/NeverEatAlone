@@ -65,6 +65,23 @@ class RecurrencePattern:
                 raise ValueError("End date must be after start date")
         self.end_date = end_date
 
+    def __eq__(self, other: object) -> bool:
+        """Compare two recurrence patterns for equality.
+
+        Args:
+            other: The other pattern to compare with
+
+        Returns:
+            True if patterns are equal, False otherwise
+        """
+        if not isinstance(other, RecurrencePattern):
+            return NotImplemented
+        return (
+            self.interval == other.interval
+            and self.unit == other.unit
+            and self.end_date == other.end_date
+        )
+
     def get_next_date(self, from_date: datetime) -> Optional[datetime]:
         """Calculate the next occurrence after a given date.
 
@@ -179,7 +196,7 @@ class Reminder(BaseModel):
             ValueError: If reminder is already completed/cancelled or completion_date is invalid
         """
         if self.status != ReminderStatus.PENDING:
-            raise ValueError(f"Cannot complete reminder in {self.status} status")
+            raise ValueError(f"Cannot complete reminder in {self.status.value.upper()} status")
 
         if not completion_date.tzinfo:
             raise ValueError("Completion date must be timezone-aware")
