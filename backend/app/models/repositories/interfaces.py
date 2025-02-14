@@ -1,17 +1,77 @@
-"""Tag repository interface."""
+"""Repository interfaces."""
 from typing import Protocol, Optional, List
 from uuid import UUID
+from ..domain.note import Note
 from ..domain.tag import Tag, EntityType
+
+
+class NoteRepository(Protocol):
+    """Interface for note persistence operations."""
+
+    def save(self, note: Note) -> Note:
+        """Save a note.
+
+        Args:
+            note: The note to save
+
+        Returns:
+            The saved note with any updates from the database
+        """
+        ...
+
+    def find_by_id(self, note_id: UUID) -> Optional[Note]:
+        """Find a note by its ID.
+
+        Args:
+            note_id: The ID to search for
+
+        Returns:
+            The note if found, None otherwise
+        """
+        ...
+
+    def find_by_contact(self, contact_id: UUID) -> List[Note]:
+        """Find all notes for a contact.
+
+        Args:
+            contact_id: The contact's ID
+
+        Returns:
+            List of notes for the contact
+        """
+        ...
+
+    def find_by_tag(self, tag_name: str) -> List[Note]:
+        """Find all notes with a specific tag.
+
+        Args:
+            tag_name: The tag name to search for
+
+        Returns:
+            List of notes with the tag
+        """
+        ...
+
+    def delete(self, note: Note) -> None:
+        """Delete a note.
+
+        Args:
+            note: The note to delete
+        """
+        ...
 
 
 class TagRepository(Protocol):
     """Interface for tag persistence operations."""
 
-    def save(self, tag: Tag) -> None:
+    def save(self, tag: Tag) -> Tag:
         """Save a tag.
 
         Args:
             tag: The tag to save
+
+        Returns:
+            The saved tag with any updates from the database
         """
         ...
 
