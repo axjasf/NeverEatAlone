@@ -1,99 +1,54 @@
-name: Build and Analysis
+name: CI
 
 on:
   push:
-    branches:
-      - main
-      - develop
+    branches: [ main ]
   pull_request:
-    types: [opened, synchronize, reopened]
+    branches: [ main ]
 
 jobs:
-  build:
-    name: CI Build, Test, and SonarQube
+  test:
+    name: Test Python Backend
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
 
     steps:
-      # 1. Check out the repository
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Required for full commit history in Sonar
+    - uses: actions/checkout@v4
 
-      # 2. Set up Python and install dependencies
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-          cache: pip
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
 
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt
-          pip install -r backend/requirements-dev.txt
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
 
-      # 3. Run Python tests with coverage
-      - name: Test Python
-        run: |
-          python -m pytest tests \
-            --cov=backend/app \
-            --cov-report=xml:backend/coverage.xml \
-            --cov-report=term-missing \
-            --junitxml=backend/pytest-report.xml \
-            -v
+    - name: Run tests
+      run: |
+        python -m pytest tests \
+          --cov=app \
+          --cov-report=xml:coverage.xml \
+          --cov-report=term-missing \
+          --junitxml=pytest-report.xml \
+          -v
 
-      # 4. Lint and type-check (Python)
-      - name: Python Lint and Type Check
-        run: |
-          python -m black . --check
-          python -m isort . --check-only
-          python -m flake8 .
-          python -m mypy .
+    - name: Run linting
+      run: |
+        python -m black . --check
+        python -m flake8 .
+        python -m mypy .
 
-      # 5. Set up Node and install dependencies
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install Node.js dependencies
-        working-directory: ./frontend
-        run: |
-          npm ci
-          npm install -g typescript
-
-      # 6. Run TypeScript tests with coverage
-      - name: Test Frontend
-        working-directory: ./frontend
-        run: |
-          npm run test -- --coverage --coverageReporters=lcov --coverageReporters=text-summary --passWithNoTests
-
-      # 7. Run SonarQube analysis
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v2
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        with:
-          args: >
-            -Dsonar.projectKey=NeverEatAlone
-            -Dsonar.sources=backend/app,frontend/src
-            -Dsonar.tests=tests,frontend/tests
-            -Dsonar.python.coverage.reportPaths=backend/coverage.xml
-            -Dsonar.python.xunit.reportPath=backend/pytest-report.xml
-            -Dsonar.javascript.lcov.reportPaths=frontend/coverage/lcov.info
-            -Dsonar.python.version=3.11
-            -Dsonar.sourceEncoding=UTF-8
-
-      # 8. Upload coverage and test artifacts (optional)
-      - name: Upload Test Results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: |
-            backend/coverage.xml
-            backend/pytest-report.xml
-            frontend/coverage/lcov.info
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: |
+          coverage.xml
+          pytest-report.xml

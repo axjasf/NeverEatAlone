@@ -1,31 +1,7 @@
 [flake8]
 # Line length configuration
 max-line-length = 88  # Match black's default
-extend-ignore =
-    # Whitespace before ':' (black handles this)
-    E203,
-    # Line break before binary operator (black handles this)
-    W503,
-    # Missing docstring in public module (handled separately)
-    D100,
-    # Missing docstring in public class (handled separately)
-    D101,
-    # Missing docstring in public method (handled separately)
-    D102,
-    # Missing docstring in public function (handled separately)
-    D103,
-    # Missing docstring in public package (handled separately)
-    D104,
-    # Missing docstring in magic method (handled separately)
-    D105,
-    # One-line docstring should fit on one line with quotes
-    D200,
-    # 1 blank line required between summary line and description
-    D205,
-    # First line should end with a period
-    D400,
-    # First line should be in imperative mood
-    D401
+extend-ignore = E203
 
 # Files to exclude from checks
 exclude =
@@ -46,12 +22,10 @@ exclude =
 
 # Per-file-ignores for specific cases
 per-file-ignores =
-    # Allow unused imports in __init__.py files
+    # Allow unused imports in __init__.py
     __init__.py: F401
-    # Allow type annotation imports to be unused
-    *.py: F401
-    # Ignore "may be undefined or defined from star imports"
-    *.py: F403, F405
+    # Allow undefined names in conftest.py
+    conftest.py: F821
 
 # Import order settings
 import-order-style = google

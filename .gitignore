@@ -25,11 +25,23 @@ MANIFEST
 env/
 venv/
 ENV/
+
+# Test and coverage
 .pytest_cache/
+**/.pytest_cache/
 .coverage
 htmlcov/
 coverage.xml
+pytest-report.xml
+**/pytest-report.xml
+**/coverage.xml
+
+# Type checking
 .mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
 
 # Node
 node_modules/
@@ -66,7 +78,6 @@ logs/
 tmp/
 doctmp/
 **/nevereatalone.egg-info/
-**/.pytest_cache/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -83,7 +94,6 @@ pip-delete-this-directory.txt
 *.cover
 *.py,cover
 .hypothesis/
-.pytest_cache/
 cover/
 
 # Translations
@@ -175,12 +185,6 @@ celerybeat.pid
 # mypy
 .dmypy.json
 
-# Pyre type checker
-.pyre/
-
-# pytype static type analyzer
-.pytype/
-
 # Cython debug symbols
 cython_debug/
 
@@ -193,4 +197,3 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
-backend/pytest-report.xml
