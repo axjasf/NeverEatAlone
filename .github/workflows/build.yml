@@ -82,7 +82,6 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: >
             -Dsonar.projectKey=NeverEatAlone
@@ -96,6 +95,7 @@ jobs:
             -Dsonar.verbose=true
             -Dsonar.scm.provider=git
             -Dsonar.branch.name=${GITHUB_REF#refs/heads/}
+            -Dsonar.github.oauth=${{ github.token }}
             -X
 
       # Upload test results as artifacts
