@@ -1,4 +1,5 @@
 """Base ORM model."""
+
 from datetime import datetime, timezone
 from sqlalchemy import Column, DateTime, String
 from sqlalchemy.types import TypeDecorator
@@ -11,13 +12,12 @@ class GUID(TypeDecorator[uuid.UUID]):
     """Platform-independent GUID type.
     Uses String(36) internally for SQLite compatibility.
     """
+
     impl = String(36)
     cache_ok = True
 
     def process_bind_param(
-        self,
-        value: Optional[uuid.UUID | str],
-        dialect: Any
+        self, value: Optional[uuid.UUID | str], dialect: Any
     ) -> Optional[str]:
         if value is None:
             return value
@@ -27,9 +27,7 @@ class GUID(TypeDecorator[uuid.UUID]):
             return str(value)
 
     def process_result_value(
-        self,
-        value: Optional[str],
-        dialect: Any
+        self, value: Optional[str], dialect: Any
     ) -> Optional[uuid.UUID]:
         if value is None:
             return value
@@ -52,19 +50,15 @@ class BaseORMModel(Base):
 
     __abstract__ = True
 
-    id = Column(
-        GUID,
-        primary_key=True,
-        default=lambda: str(uuid.uuid4())
-    )
+    id = Column(GUID, primary_key=True, default=lambda: str(uuid.uuid4()))
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(timezone.utc)
+        default=lambda: datetime.now(timezone.utc),
     )
     updated_at = Column(
         DateTime(timezone=True),
         nullable=False,
         default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc)
+        onupdate=lambda: datetime.now(timezone.utc),
     )

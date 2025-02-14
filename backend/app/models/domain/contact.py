@@ -1,4 +1,5 @@
 """Contact domain model."""
+
 from typing import Dict, Any, List, TYPE_CHECKING
 from .base import BaseModel
 
@@ -28,7 +29,7 @@ class Contact(BaseModel):
         name: str,
         first_name: str | None = None,
         briefing_text: str | None = None,
-        sub_information: Dict[str, Any] | None = None
+        sub_information: Dict[str, Any] | None = None,
     ) -> None:
         """Initialize a new Contact.
 
@@ -46,9 +47,7 @@ class Contact(BaseModel):
         self.name = name
         self.first_name = first_name
         self.briefing_text = briefing_text
-        if sub_information is not None and not isinstance(
-            sub_information, dict
-        ):
+        if sub_information is not None and not isinstance(sub_information, dict):
             raise ValueError("sub_information must be a dictionary")
         self.sub_information = sub_information or {}
         self.notes: List["Note"] = []

@@ -1,4 +1,5 @@
 """SQLAlchemy implementation of the tag repository."""
+
 from typing import Optional, List
 from uuid import UUID
 from sqlalchemy import select
@@ -33,7 +34,7 @@ class SQLAlchemyTagRepository(TagRepository):
         stmt = select(TagORM).where(
             TagORM.entity_id == tag.entity_id,
             TagORM.entity_type == tag.entity_type,
-            TagORM.name == tag.name
+            TagORM.name == tag.name,
         )
         existing = self.session.execute(stmt).scalar_one_or_none()
 
@@ -50,7 +51,7 @@ class SQLAlchemyTagRepository(TagRepository):
                 entity_type=tag.entity_type,
                 name=tag.name,
                 frequency_days=tag.frequency_days,
-                last_contact=tag.last_contact
+                last_contact=tag.last_contact,
             )
             self.session.add(tag_orm)
 
@@ -71,11 +72,7 @@ class SQLAlchemyTagRepository(TagRepository):
             return None
         return self._to_domain(tag_orm)
 
-    def find_by_entity(
-        self,
-        entity_id: UUID,
-        entity_type: EntityType
-    ) -> List[Tag]:
+    def find_by_entity(self, entity_id: UUID, entity_type: EntityType) -> List[Tag]:
         """Find all tags for an entity.
 
         Args:
@@ -86,8 +83,7 @@ class SQLAlchemyTagRepository(TagRepository):
             List of tags for the entity
         """
         stmt = select(TagORM).where(
-            TagORM.entity_id == entity_id,
-            TagORM.entity_type == entity_type.value
+            TagORM.entity_id == entity_id, TagORM.entity_type == entity_type.value
         )
         tags_orm = self.session.execute(stmt).scalars().all()
         return [self._to_domain(tag) for tag in tags_orm]
@@ -140,7 +136,7 @@ class SQLAlchemyTagRepository(TagRepository):
         tag = Tag(
             entity_id=tag_orm.entity_id,
             entity_type=EntityType(tag_orm.entity_type),
-            name=tag_orm.name
+            name=tag_orm.name,
         )
         tag.frequency_days = tag_orm.frequency_days
         # Ensure timezone is preserved

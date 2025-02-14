@@ -1,4 +1,5 @@
 """Integration tests for SQLAlchemy tag repository."""
+
 import pytest
 from datetime import datetime, UTC, timedelta
 from uuid import UUID
@@ -8,7 +9,9 @@ from sqlalchemy import select, and_
 
 from backend.app.models.domain.tag import Tag, EntityType
 from backend.app.models.orm.tag import TagORM
-from backend.app.models.repositories.sqlalchemy_tag_repository import SQLAlchemyTagRepository
+from backend.app.models.repositories.sqlalchemy_tag_repository import (
+    SQLAlchemyTagRepository,
+)
 
 
 TEST_UUID = UUID("11111111-1111-1111-1111-111111111111")
@@ -36,17 +39,11 @@ def sample_tag() -> Tag:
     Returns:
         Tag: A test tag instance
     """
-    return Tag(
-        entity_id=TEST_UUID,
-        entity_type=EntityType.CONTACT,
-        name="#test"
-    )
+    return Tag(entity_id=TEST_UUID, entity_type=EntityType.CONTACT, name="#test")
 
 
 def test_save_and_find_by_entity(
-    tag_repository: SQLAlchemyTagRepository,
-    sample_tag: Tag,
-    db_session: Session
+    tag_repository: SQLAlchemyTagRepository, sample_tag: Tag, db_session: Session
 ) -> None:
     """Test saving a tag and retrieving it by entity.
 
@@ -69,9 +66,7 @@ def test_save_and_find_by_entity(
 
 
 def test_save_updates_existing_tag(
-    tag_repository: SQLAlchemyTagRepository,
-    sample_tag: Tag,
-    db_session: Session
+    tag_repository: SQLAlchemyTagRepository, sample_tag: Tag, db_session: Session
 ) -> None:
     """Test that saving a tag with same natural key updates the existing one.
 
@@ -86,11 +81,7 @@ def test_save_updates_existing_tag(
     db_session.commit()
 
     # Create new tag with same natural key but different frequency
-    updated_tag = Tag(
-        entity_id=TEST_UUID,
-        entity_type=EntityType.CONTACT,
-        name="#test"
-    )
+    updated_tag = Tag(entity_id=TEST_UUID, entity_type=EntityType.CONTACT, name="#test")
     updated_tag.set_frequency(14)  # Biweekly
     tag_repository.save(updated_tag)
     db_session.commit()
@@ -103,8 +94,7 @@ def test_save_updates_existing_tag(
 
 
 def test_find_by_name(
-    tag_repository: SQLAlchemyTagRepository,
-    db_session: Session
+    tag_repository: SQLAlchemyTagRepository, db_session: Session
 ) -> None:
     """Test finding tags by name (case-insensitive).
 
@@ -128,8 +118,7 @@ def test_find_by_name(
 
 
 def test_find_stale(
-    tag_repository: SQLAlchemyTagRepository,
-    db_session: Session
+    tag_repository: SQLAlchemyTagRepository, db_session: Session
 ) -> None:
     """Test finding stale tags.
 
@@ -139,20 +128,14 @@ def test_find_stale(
     - Use consistent time for comparison
     """
     # Create fresh tag
-    fresh_tag = Tag(
-        entity_id=TEST_UUID,
-        entity_type=EntityType.CONTACT,
-        name="#fresh"
-    )
+    fresh_tag = Tag(entity_id=TEST_UUID, entity_type=EntityType.CONTACT, name="#fresh")
     fresh_tag.set_frequency(7)  # Weekly
     fresh_tag.update_last_contact(TEST_DATETIME)
     tag_repository.save(fresh_tag)
 
     # Create stale tag
     stale_tag = Tag(
-        entity_id=TEST_UUID_2,
-        entity_type=EntityType.CONTACT,
-        name="#stale"
+        entity_id=TEST_UUID_2, entity_type=EntityType.CONTACT, name="#stale"
     )
     stale_tag.set_frequency(7)  # Weekly
     # Ensure both timestamps have UTC timezone
@@ -181,7 +164,7 @@ def test_delete(
     tag_repository: SQLAlchemyTagRepository,
     sample_tag: Tag,
     db_session: Session,
-    engine: Engine
+    engine: Engine,
 ) -> None:
     """Test deleting a tag.
 
@@ -195,11 +178,13 @@ def test_delete(
     db_session.commit()
 
     # Get the ORM instance to get the ID
-    stmt = select(TagORM).where(and_(
-        TagORM.entity_id == saved_tag.entity_id,
-        TagORM.entity_type == saved_tag.entity_type,
-        TagORM.name == saved_tag.name
-    ))
+    stmt = select(TagORM).where(
+        and_(
+            TagORM.entity_id == saved_tag.entity_id,
+            TagORM.entity_type == saved_tag.entity_type,
+            TagORM.name == saved_tag.name,
+        )
+    )
     orm_tag = db_session.execute(stmt).scalar_one()
     tag_id = orm_tag.id
 
@@ -222,8 +207,7 @@ def test_delete(
 
 
 def test_delete_nonexistent_tag(
-    tag_repository: SQLAlchemyTagRepository,
-    db_session: Session
+    tag_repository: SQLAlchemyTagRepository, db_session: Session
 ) -> None:
     """Test deleting a tag that doesn't exist.
 
@@ -236,11 +220,7 @@ def test_delete_nonexistent_tag(
     db_session.commit()
 
     # Create a tag that was never saved
-    tag = Tag(
-        entity_id=TEST_UUID,
-        entity_type=EntityType.CONTACT,
-        name="#nonexistent"
-    )
+    tag = Tag(entity_id=TEST_UUID, entity_type=EntityType.CONTACT, name="#nonexistent")
 
     # Try to delete a tag that was never saved
     tag_repository.delete(tag)
@@ -255,8 +235,7 @@ def test_delete_nonexistent_tag(
 
 
 def test_disable_tag_frequency(
-    tag_repository: SQLAlchemyTagRepository,
-    db_session: Session
+    tag_repository: SQLAlchemyTagRepository, db_session: Session
 ) -> None:
     """Test disabling frequency tracking on a tag.
 
@@ -271,9 +250,7 @@ def test_disable_tag_frequency(
 
     # Create a new tag with frequency
     tag = Tag(
-        entity_id=TEST_UUID,
-        entity_type=EntityType.CONTACT,
-        name="#frequency_test"
+        entity_id=TEST_UUID, entity_type=EntityType.CONTACT, name="#frequency_test"
     )
     tag.set_frequency(7)  # Weekly
     tag_repository.save(tag)

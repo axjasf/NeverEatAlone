@@ -1,11 +1,14 @@
 """Tests for the Contact repository."""
+
 import pytest
 from datetime import datetime, UTC, timedelta
 from sqlalchemy.orm import Session
 from backend.app.models.domain.contact import Contact
 from backend.app.models.domain.tag import Tag, EntityType
 from backend.app.models.orm.contact import ContactORM
-from backend.app.models.repositories.sqlalchemy_contact_repository import SQLAlchemyContactRepository
+from backend.app.models.repositories.sqlalchemy_contact_repository import (
+    SQLAlchemyContactRepository,
+)
 
 
 def test_contact_save_and_find(db_session: Session) -> None:
@@ -14,9 +17,7 @@ def test_contact_save_and_find(db_session: Session) -> None:
 
     # Create and save a contact
     contact = Contact(
-        name="John Doe",
-        first_name="John",
-        briefing_text="Important business contact"
+        name="John Doe", first_name="John", briefing_text="Important business contact"
     )
     repo.save(contact)
 
@@ -137,7 +138,7 @@ def test_contact_find_all(db_session: Session) -> None:
     contacts = [
         Contact(name="John Doe"),
         Contact(name="Jane Doe"),
-        Contact(name="Bob Smith")
+        Contact(name="Bob Smith"),
     ]
     for contact in contacts:
         repo.save(contact)
@@ -145,8 +146,4 @@ def test_contact_find_all(db_session: Session) -> None:
     # Find all contacts
     all_contacts = repo.find_all()
     assert len(all_contacts) == 3
-    assert {c.name for c in all_contacts} == {
-        "John Doe",
-        "Jane Doe",
-        "Bob Smith"
-    }
+    assert {c.name for c in all_contacts} == {"John Doe", "Jane Doe", "Bob Smith"}

@@ -1,4 +1,5 @@
 """SQLAlchemy implementation of the note repository."""
+
 from typing import Optional, List
 from uuid import UUID
 from sqlalchemy import select
@@ -32,18 +33,11 @@ class SQLAlchemyNoteRepository(NoteRepository):
             The saved note with any updates from the database
         """
         # Convert domain model to ORM
-        note_orm = NoteORM(
-            id=note.id,
-            contact_id=note.contact_id,
-            content=note.content
-        )
+        note_orm = NoteORM(id=note.id, contact_id=note.contact_id, content=note.content)
 
         # Add statements
         for i, statement in enumerate(note.statements):
-            statement_orm = StatementORM(
-                content=statement.content,
-                sequence_number=i
-            )
+            statement_orm = StatementORM(content=statement.content, sequence_number=i)
             note_orm.statements.append(statement_orm)
 
             # Add statement tags
@@ -51,16 +45,14 @@ class SQLAlchemyNoteRepository(NoteRepository):
                 tag_orm = TagORM(
                     name=tag.name,
                     entity_type=EntityType.STATEMENT.value,
-                    entity_id=statement_orm.id
+                    entity_id=statement_orm.id,
                 )
                 statement_orm.tags.append(tag_orm)
 
         # Add note tags
         for tag in note.tags:
             tag_orm = TagORM(
-                name=tag.name,
-                entity_type=EntityType.NOTE.value,
-                entity_id=note_orm.id
+                name=tag.name, entity_type=EntityType.NOTE.value, entity_id=note_orm.id
             )
             note_orm.tags.append(tag_orm)
 
@@ -106,11 +98,7 @@ class SQLAlchemyNoteRepository(NoteRepository):
         Returns:
             List of notes with the tag
         """
-        stmt = (
-            select(NoteORM)
-            .join(NoteORM.tags)
-            .where(TagORM.name == tag_name.lower())
-        )
+        stmt = select(NoteORM).join(NoteORM.tags).where(TagORM.name == tag_name.lower())
         notes_orm = self.session.execute(stmt).scalars().unique().all()
         return [self._to_domain(note) for note in notes_orm]
 
@@ -135,10 +123,7 @@ class SQLAlchemyNoteRepository(NoteRepository):
             The domain model
         """
         # Create domain model
-        note = Note(
-            contact_id=note_orm.contact_id,
-            content=note_orm.content
-        )
+        note = Note(contact_id=note_orm.contact_id, content=note_orm.content)
 
         # Add statements
         for statement_orm in note_orm.statements:

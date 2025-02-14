@@ -1,4 +1,5 @@
 """Tests for the Note ORM model."""
+
 import pytest
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -16,10 +17,7 @@ def test_note_creation_with_required_fields(db_session: Session) -> None:
     db_session.commit()
 
     # Create note
-    note = NoteORM(
-        contact_id=contact.id,
-        content="Had a great meeting today."
-    )
+    note = NoteORM(contact_id=contact.id, content="Had a great meeting today.")
     db_session.add(note)
     db_session.commit()
     db_session.refresh(note)
@@ -63,16 +61,22 @@ def test_note_statement_creation(db_session: Session) -> None:
 
     note = NoteORM(
         contact_id=contact.id,
-        content="Had a great meeting today. Discussed project timeline. Need to follow up next week."
+        content="Had a great meeting today. Discussed project timeline. Need to follow up next week.",
     )
     db_session.add(note)
     db_session.commit()
 
     # Create statements
     statements = [
-        StatementORM(note_id=note.id, content="Had a great meeting today.", sequence_number=1),
-        StatementORM(note_id=note.id, content="Discussed project timeline.", sequence_number=2),
-        StatementORM(note_id=note.id, content="Need to follow up next week.", sequence_number=3)
+        StatementORM(
+            note_id=note.id, content="Had a great meeting today.", sequence_number=1
+        ),
+        StatementORM(
+            note_id=note.id, content="Discussed project timeline.", sequence_number=2
+        ),
+        StatementORM(
+            note_id=note.id, content="Need to follow up next week.", sequence_number=3
+        ),
     ]
     for stmt in statements:
         db_session.add(stmt)
@@ -84,7 +88,7 @@ def test_note_statement_creation(db_session: Session) -> None:
     assert [s.content for s in note.statements] == [
         "Had a great meeting today.",
         "Discussed project timeline.",
-        "Need to follow up next week."
+        "Need to follow up next week.",
     ]
 
 
@@ -95,16 +99,13 @@ def test_note_statement_deletion(db_session: Session) -> None:
     db_session.add(contact)
     db_session.commit()
 
-    note = NoteORM(
-        contact_id=contact.id,
-        content="Statement 1. Statement 2."
-    )
+    note = NoteORM(contact_id=contact.id, content="Statement 1. Statement 2.")
     db_session.add(note)
     db_session.commit()
 
     statements = [
         StatementORM(note_id=note.id, content="Statement 1.", sequence_number=1),
-        StatementORM(note_id=note.id, content="Statement 2.", sequence_number=2)
+        StatementORM(note_id=note.id, content="Statement 2.", sequence_number=2),
     ]
     for stmt in statements:
         db_session.add(stmt)
@@ -115,7 +116,9 @@ def test_note_statement_deletion(db_session: Session) -> None:
     db_session.commit()
 
     # Verify statements are deleted
-    remaining_statements = db_session.query(StatementORM).filter_by(note_id=note.id).all()
+    remaining_statements = (
+        db_session.query(StatementORM).filter_by(note_id=note.id).all()
+    )
     assert len(remaining_statements) == 0
 
 
@@ -126,10 +129,7 @@ def test_note_tagging(db_session: Session) -> None:
     db_session.add(contact)
     db_session.commit()
 
-    note = NoteORM(
-        contact_id=contact.id,
-        content="Meeting about #project timeline."
-    )
+    note = NoteORM(contact_id=contact.id, content="Meeting about #project timeline.")
     db_session.add(note)
     db_session.commit()
 
@@ -150,17 +150,12 @@ def test_statement_tagging(db_session: Session) -> None:
     db_session.add(contact)
     db_session.commit()
 
-    note = NoteORM(
-        contact_id=contact.id,
-        content="Meeting about project timeline."
-    )
+    note = NoteORM(contact_id=contact.id, content="Meeting about project timeline.")
     db_session.add(note)
     db_session.commit()
 
     statement = StatementORM(
-        note_id=note.id,
-        content="Meeting about project timeline.",
-        sequence_number=1
+        note_id=note.id, content="Meeting about project timeline.", sequence_number=1
     )
     db_session.add(statement)
     db_session.commit()

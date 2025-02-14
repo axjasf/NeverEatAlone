@@ -1,4 +1,5 @@
 """Test configuration for model tests."""
+
 import pytest
 from typing import Generator
 from sqlalchemy import create_engine
@@ -10,7 +11,6 @@ from backend.app.database import Base
 from backend.app.models.domain.contact import Contact  # noqa: F401
 from backend.app.models.domain.note import Note  # noqa: F401
 from backend.app.models.domain.tag import Tag  # noqa: F401
-
 
 
 @pytest.fixture(scope="session")

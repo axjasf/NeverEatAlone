@@ -1,4 +1,5 @@
 """Tests for the Contact domain model."""
+
 import pytest
 from uuid import UUID
 from backend.app.models.domain.contact import Contact
@@ -32,7 +33,7 @@ def test_contact_creation():
         name="John Doe",
         first_name="John",
         briefing_text="Important business contact",
-        sub_information=sub_info
+        sub_information=sub_info,
     )
     assert contact.name == "John Doe"
     assert contact.first_name == "John"
@@ -62,10 +63,7 @@ def test_contact_sub_information_validation():
             "hobbies": ["reading", "hiking"],
             "family": {"status": "married", "children": 2},
         },
-        "professional": {
-            "role": "developer",
-            "skills": ["python", "typescript"]
-        },
+        "professional": {"role": "developer", "skills": ["python", "typescript"]},
     }
     contact = Contact(name="John Doe", sub_information=sub_info)
     assert contact.sub_information == sub_info

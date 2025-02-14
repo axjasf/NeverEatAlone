@@ -1,4 +1,5 @@
 """Tests for the Base domain model."""
+
 from datetime import datetime, UTC
 from uuid import UUID
 from backend.app.models.domain.base import BaseModel
@@ -35,6 +36,7 @@ def test_base_model_update_tracking():
 
     # Wait a moment to ensure timestamp difference
     import time
+
     time.sleep(0.001)
 
     # Trigger update

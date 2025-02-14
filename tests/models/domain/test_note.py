@@ -1,4 +1,5 @@
 """Tests for the Note domain model."""
+
 import pytest
 from datetime import datetime, UTC
 from uuid import UUID
@@ -19,10 +20,7 @@ def test_note_creation():
     1. A contact_id identifying which contact it belongs to
     2. Content (the actual note text)
     """
-    note = Note(
-        contact_id=TEST_UUID,
-        content="Test note content"
-    )
+    note = Note(contact_id=TEST_UUID, content="Test note content")
 
     assert note.contact_id == TEST_UUID
     assert note.content == "Test note content"
@@ -139,6 +137,7 @@ def test_note_update_tracking():
 
     # Wait a moment to ensure timestamp difference
     import time
+
     time.sleep(0.001)
 
     # Test content update

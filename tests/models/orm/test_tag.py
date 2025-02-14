@@ -1,4 +1,5 @@
 """Tests for the Tag ORM model."""
+
 import pytest
 from datetime import datetime, UTC
 from sqlalchemy.orm import Session
@@ -18,9 +19,7 @@ def test_tag_creation_with_required_fields(db_session: Session) -> None:
     db_session.commit()
 
     tag = TagORM(
-        entity_id=contact.id,
-        entity_type=EntityType.CONTACT.value,
-        name="#test"
+        entity_id=contact.id, entity_type=EntityType.CONTACT.value, name="#test"
     )
     db_session.add(tag)
     db_session.commit()
@@ -44,7 +43,7 @@ def test_tag_entity_type_validation(db_session: Session) -> None:
     tag = TagORM(
         entity_id=contact.id,
         entity_type="invalid_type",  # Invalid entity type
-        name="#test"
+        name="#test",
     )
     db_session.add(tag)
     with pytest.raises(IntegrityError):
@@ -64,7 +63,7 @@ def test_tag_frequency_and_last_contact(db_session: Session) -> None:
         entity_type=EntityType.CONTACT.value,
         name="#weekly",
         frequency_days=7,
-        last_contact=now
+        last_contact=now,
     )
     db_session.add(tag)
     db_session.commit()
@@ -89,9 +88,7 @@ def test_tag_contact_relationship(db_session: Session) -> None:
     db_session.commit()
 
     tag = TagORM(
-        entity_id=contact.id,
-        entity_type=EntityType.CONTACT.value,
-        name="#test"
+        entity_id=contact.id, entity_type=EntityType.CONTACT.value, name="#test"
     )
     db_session.add(tag)
     db_session.commit()
@@ -125,11 +122,7 @@ def test_tag_note_relationship(db_session: Session) -> None:
     db_session.commit()
 
     # Create and associate tag
-    tag = TagORM(
-        entity_id=note.id,
-        entity_type=EntityType.NOTE.value,
-        name="#test"
-    )
+    tag = TagORM(entity_id=note.id, entity_type=EntityType.NOTE.value, name="#test")
     db_session.add(tag)
     db_session.commit()
 
@@ -161,18 +154,14 @@ def test_tag_statement_relationship(db_session: Session) -> None:
     db_session.commit()
 
     statement = StatementORM(
-        note_id=note.id,
-        content="Test statement",
-        sequence_number=1
+        note_id=note.id, content="Test statement", sequence_number=1
     )
     db_session.add(statement)
     db_session.commit()
 
     # Create and associate tag
     tag = TagORM(
-        entity_id=statement.id,
-        entity_type=EntityType.STATEMENT.value,
-        name="#test"
+        entity_id=statement.id, entity_type=EntityType.STATEMENT.value, name="#test"
     )
     db_session.add(tag)
     db_session.commit()
@@ -196,20 +185,14 @@ def test_tag_statement_relationship(db_session: Session) -> None:
 def test_tag_required_fields(db_session: Session) -> None:
     """Test that required fields cannot be null."""
     # Test missing entity_id
-    tag = TagORM(
-        entity_type=EntityType.CONTACT.value,
-        name="#test"
-    )
+    tag = TagORM(entity_type=EntityType.CONTACT.value, name="#test")
     db_session.add(tag)
     with pytest.raises(IntegrityError):
         db_session.commit()
     db_session.rollback()
 
     # Test missing entity_type
-    tag = TagORM(
-        entity_id=ContactORM(name="Test Contact").id,
-        name="#test"
-    )
+    tag = TagORM(entity_id=ContactORM(name="Test Contact").id, name="#test")
     db_session.add(tag)
     with pytest.raises(IntegrityError):
         db_session.commit()
@@ -218,7 +201,7 @@ def test_tag_required_fields(db_session: Session) -> None:
     # Test missing name
     tag = TagORM(
         entity_id=ContactORM(name="Test Contact").id,
-        entity_type=EntityType.CONTACT.value
+        entity_type=EntityType.CONTACT.value,
     )
     db_session.add(tag)
     with pytest.raises(IntegrityError):

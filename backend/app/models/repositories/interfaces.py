@@ -1,4 +1,5 @@
 """Repository interfaces."""
+
 from typing import Protocol, Optional, List
 from uuid import UUID
 from ..domain.note import Note
@@ -86,11 +87,7 @@ class TagRepository(Protocol):
         """
         ...
 
-    def find_by_entity(
-        self,
-        entity_id: UUID,
-        entity_type: EntityType
-    ) -> List[Tag]:
+    def find_by_entity(self, entity_id: UUID, entity_type: EntityType) -> List[Tag]:
         """Find all tags for an entity.
 
         Args:

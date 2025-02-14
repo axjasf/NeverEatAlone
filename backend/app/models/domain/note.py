@@ -1,4 +1,5 @@
 """Note domain model."""
+
 from datetime import datetime, timezone
 from typing import List, TYPE_CHECKING
 from uuid import UUID
@@ -14,6 +15,7 @@ class Statement(BaseModel):
     Statements allow breaking down notes into smaller, taggable pieces
     for more granular organization and tracking.
     """
+
     def __init__(self, content: str) -> None:
         """Create a new statement.
 
@@ -68,6 +70,7 @@ class Note(BaseModel):
     Notes capture interactions, observations, and plans related to a contact.
     They can be broken down into statements and tagged for organization.
     """
+
     def __init__(self, contact_id: UUID, content: str) -> None:
         """Create a new note.
 

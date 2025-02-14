@@ -1,4 +1,5 @@
 """Tests for the Contact ORM model."""
+
 import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -31,7 +32,7 @@ def test_contact_creation_with_all_fields(db_session: Session) -> None:
         name="John Doe",
         first_name="John",
         briefing_text="Important business contact",
-        sub_information=sub_info
+        sub_information=sub_info,
     )
     db_session.add(contact)
     db_session.commit()
@@ -60,10 +61,7 @@ def test_contact_sub_information_json_storage(db_session: Session) -> None:
             "hobbies": ["reading", "hiking"],
             "family": {"status": "married", "children": 2},
         },
-        "professional": {
-            "role": "developer",
-            "skills": ["python", "typescript"]
-        },
+        "professional": {"role": "developer", "skills": ["python", "typescript"]},
     }
     contact = ContactORM(name="John Doe", sub_information=sub_info)
     db_session.add(contact)
@@ -108,14 +106,10 @@ def test_contact_tag_relationship(db_session: Session) -> None:
 
     # Add tags
     tag1 = TagORM(
-        name="#test",
-        entity_id=contact.id,
-        entity_type=EntityType.CONTACT.value
+        name="#test", entity_id=contact.id, entity_type=EntityType.CONTACT.value
     )
     tag2 = TagORM(
-        name="#project",
-        entity_id=contact.id,
-        entity_type=EntityType.CONTACT.value
+        name="#project", entity_id=contact.id, entity_type=EntityType.CONTACT.value
     )
 
     # Add tags to session and save them to get IDs

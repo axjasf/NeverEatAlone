@@ -1,4 +1,5 @@
 """Tests for the Tag domain model."""
+
 import pytest
 from datetime import datetime, UTC, timedelta
 from uuid import UUID
@@ -21,7 +22,7 @@ def test_tag_creation():
     tag = Tag(
         entity_id=TEST_UUID,
         entity_type=EntityType.CONTACT,
-        name="#TEST"  # Using uppercase to test case normalization
+        name="#TEST",  # Using uppercase to test case normalization
     )
 
     # Verify initial state
@@ -43,35 +44,19 @@ def test_tag_name_validation():
     """
     # Test missing '#'
     with pytest.raises(ValueError, match="Tag name must start with '#'"):
-        Tag(
-            entity_id=TEST_UUID,
-            entity_type=EntityType.CONTACT,
-            name="test"
-        )
+        Tag(entity_id=TEST_UUID, entity_type=EntityType.CONTACT, name="test")
 
     # Test empty name
     with pytest.raises(ValueError, match="Tag name cannot be empty"):
-        Tag(
-            entity_id=TEST_UUID,
-            entity_type=EntityType.CONTACT,
-            name="#"
-        )
+        Tag(entity_id=TEST_UUID, entity_type=EntityType.CONTACT, name="#")
 
     # Test invalid characters
     error_msg = "Tag name can only contain letters, numbers, and underscores"
     with pytest.raises(ValueError, match=error_msg):
-        Tag(
-            entity_id=TEST_UUID,
-            entity_type=EntityType.CONTACT,
-            name="#test!"
-        )
+        Tag(entity_id=TEST_UUID, entity_type=EntityType.CONTACT, name="#test!")
 
     # Test case normalization
-    tag = Tag(
-        entity_id=TEST_UUID,
-        entity_type=EntityType.CONTACT,
-        name="#TEST_123"
-    )
+    tag = Tag(entity_id=TEST_UUID, entity_type=EntityType.CONTACT, name="#TEST_123")
     assert tag.name == "#test_123"
 
 
@@ -83,11 +68,7 @@ def test_tag_frequency():
     2. Setting frequency initializes last_contact
     3. Clearing frequency clears last_contact
     """
-    tag = Tag(
-        entity_id=TEST_UUID,
-        entity_type=EntityType.CONTACT,
-        name="#test"
-    )
+    tag = Tag(entity_id=TEST_UUID, entity_type=EntityType.CONTACT, name="#test")
 
     # Test invalid frequencies
     error_msg = "Frequency must be between 1 and 365 days"
@@ -115,11 +96,7 @@ def test_tag_last_contact():
     2. Defaults to current time if no timestamp provided
     3. Can be cleared by disabling frequency
     """
-    tag = Tag(
-        entity_id=TEST_UUID,
-        entity_type=EntityType.CONTACT,
-        name="#test"
-    )
+    tag = Tag(entity_id=TEST_UUID, entity_type=EntityType.CONTACT, name="#test")
     tag.set_frequency(7)  # Enable frequency tracking
 
     # Test specific timestamp
@@ -146,11 +123,7 @@ def test_tag_staleness():
     2. Tag is stale if time since last contact > frequency
     3. Uses current time for comparison
     """
-    tag = Tag(
-        entity_id=TEST_UUID,
-        entity_type=EntityType.CONTACT,
-        name="#test"
-    )
+    tag = Tag(entity_id=TEST_UUID, entity_type=EntityType.CONTACT, name="#test")
 
     # No frequency = never stale
     assert not tag.is_stale()

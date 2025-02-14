@@ -1,4 +1,5 @@
 """Tag domain model."""
+
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
@@ -15,6 +16,7 @@ class EntityType(str, Enum):
     - Statements belong to notes
     All can have tags for categorization and reminders.
     """
+
     CONTACT = "contact"
     NOTE = "note"
     STATEMENT = "statement"
@@ -40,12 +42,7 @@ class Tag:
         last_contact: When the entity was last contacted
     """
 
-    def __init__(
-        self,
-        entity_id: UUID,
-        entity_type: EntityType,
-        name: str
-    ) -> None:
+    def __init__(self, entity_id: UUID, entity_type: EntityType, name: str) -> None:
         """Create a new tag.
 
         Args:
@@ -56,12 +53,14 @@ class Tag:
         Raises:
             ValueError: If tag name is invalid
         """
-        if not name.startswith('#'):
+        if not name.startswith("#"):
             raise ValueError("Tag name must start with '#'")
         if len(name) <= 1:
             raise ValueError("Tag name cannot be empty")
-        if not re.match(r'^#[\w]+$', name):
-            raise ValueError("Tag name can only contain letters, numbers, and underscores")
+        if not re.match(r"^#[\w]+$", name):
+            raise ValueError(
+                "Tag name can only contain letters, numbers, and underscores"
+            )
 
         self.id: UUID = uuid4()
         self.entity_id = entity_id
@@ -87,7 +86,9 @@ class Tag:
         Args:
             timestamp: Specific timestamp to set, or None to use current time
         """
-        self.last_contact = timestamp if timestamp is not None else Tag.get_current_time()
+        self.last_contact = (
+            timestamp if timestamp is not None else Tag.get_current_time()
+        )
 
     def set_frequency(self, days: Optional[int]) -> None:
         """Set the frequency for this tag.

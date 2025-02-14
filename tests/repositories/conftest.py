@@ -1,4 +1,5 @@
 """Test configuration for repository tests."""
+
 import pytest
 import logging
 from typing import Generator
@@ -30,7 +31,7 @@ def engine() -> Engine:
         pool_pre_ping=True,
         pool_recycle=3600,
         # Ensure proper transaction isolation
-        isolation_level="SERIALIZABLE"
+        isolation_level="SERIALIZABLE",
     )
     logger.info("Creating database tables...")
     Base.metadata.create_all(engine)

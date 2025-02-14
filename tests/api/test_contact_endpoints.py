@@ -417,10 +417,10 @@ def test_list_contacts_multiple(client: TestClient, db_session: Session):
 @pytest.mark.parametrize(
     "name_filter,expected_count",
     [
-        ("Alice", 1),      # Exact match
-        ("bob", 1),        # Case insensitive
-        ("li", 2),         # Partial match (Alice, Charlie)
-        ("David", 0),      # No matches
+        ("Alice", 1),  # Exact match
+        ("bob", 1),  # Case insensitive
+        ("li", 2),  # Partial match (Alice, Charlie)
+        ("David", 0),  # No matches
     ],
 )
 def test_list_contacts_name_filter(
@@ -565,10 +565,7 @@ def test_contact_hashtags_validation(client: TestClient):
     3. Invalid hashtag format returns 400
     """
     # Test invalid hashtag format
-    contact_data = {
-        "name": "John Doe",
-        "hashtags": ["invalid"]  # Missing #
-    }
+    contact_data = {"name": "John Doe", "hashtags": ["invalid"]}  # Missing #
     response = client.post("/api/contacts", json=contact_data)
     assert response.status_code == HTTPStatus.BAD_REQUEST
     data = response.json()
@@ -576,10 +573,7 @@ def test_contact_hashtags_validation(client: TestClient):
     assert "each hashtag must be a string starting with #" in data["error"].lower()
 
     # Test valid hashtags with mixed case
-    contact_data = {
-        "name": "John Doe",
-        "hashtags": ["#TEST", "#Dev"]
-    }
+    contact_data = {"name": "John Doe", "hashtags": ["#TEST", "#Dev"]}
     response = client.post("/api/contacts", json=contact_data)
     assert response.status_code == HTTPStatus.CREATED
     data = response.json()
@@ -602,10 +596,7 @@ def test_update_contact_hashtags(client: TestClient, db_session: Session):
     db_session.commit()
 
     # Update with new hashtags
-    update_data = {
-        "name": "John Doe",
-        "hashtags": ["#NEW", "#tags"]
-    }
+    update_data = {"name": "John Doe", "hashtags": ["#NEW", "#tags"]}
     response = client.put(f"/api/contacts/{contact.id}", json=update_data)
     assert response.status_code == HTTPStatus.OK
     data = response.json()
