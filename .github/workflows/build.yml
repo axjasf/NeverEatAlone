@@ -1,4 +1,5 @@
 name: Build and Analysis
+
 on:
   push:
     branches:
@@ -9,20 +10,21 @@ on:
 
 jobs:
   build:
-    name: Build, Test, and Analyze
+    name: CI Build, Test, and SonarQube
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Check out the repository
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Shallow clones should be disabled for better analysis
+          fetch-depth: 0  # Required for full commit history in Sonar
 
-      # Backend setup and tests
+      # 2. Set up Python and install dependencies
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-          cache: 'pip'
+          cache: pip
 
       - name: Install Python dependencies
         run: |
@@ -30,19 +32,30 @@ jobs:
           pip install -r backend/requirements.txt
           pip install -r backend/requirements-dev.txt
 
-      - name: Run Python tests with coverage
+      # 3. Run Python tests with coverage
+      - name: Test Python
         run: |
-          cd backend
-          export PYTHONPATH=$PYTHONPATH:$(pwd)
-          cd ..
-          python -m pytest tests/models/domain/test_reminder.py tests/models/orm/test_reminder.py tests/repositories/test_reminder_repository.py --cov=backend/app --cov-report=xml:backend/coverage.xml --cov-report=term-missing --junitxml=backend/pytest-report.xml -v
+          python -m pytest tests \
+            --cov=backend/app \
+            --cov-report=xml:backend/coverage.xml \
+            --cov-report=term-missing \
+            --junitxml=backend/pytest-report.xml \
+            -v
 
-      # Frontend setup and tests
+      # 4. Lint and type-check (Python)
+      - name: Python Lint and Type Check
+        run: |
+          python -m black . --check
+          python -m isort . --check-only
+          python -m flake8 .
+          python -m mypy .
+
+      # 5. Set up Node and install dependencies
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-          cache: 'npm'
+          cache: npm
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install Node.js dependencies
@@ -51,55 +64,13 @@ jobs:
           npm ci
           npm install -g typescript
 
-      - name: Run TypeScript tests with coverage
+      # 6. Run TypeScript tests with coverage
+      - name: Test Frontend
         working-directory: ./frontend
         run: |
           npm run test -- --coverage --coverageReporters=lcov --coverageReporters=text-summary --passWithNoTests
 
-      # Code Quality Checks
-      - name: Run Python linting and formatting
-        working-directory: ./backend
-        run: |
-          # Format with black (check only)
-          python -m black . --check
-
-          # Sort imports (check only)
-          python -m isort . --check-only
-
-          # Run flake8 (excluding type errors)
-          python -m flake8 . --statistics --show-source --extend-ignore=F821,SIM
-
-      - name: Run Python type checking
-        working-directory: ./backend
-        continue-on-error: true  # Temporarily allow type errors
-        run: |
-          python -m mypy .
-
-      # SonarQube analysis
-      - name: Pre-Scan Debug Info
-        run: |
-          echo "=== Environment Info ==="
-          echo "Current branch: ${GITHUB_REF#refs/heads/}"
-          echo "GitHub event: ${{ github.event_name }}"
-          echo "Repository: ${{ github.repository }}"
-          echo "Workspace: ${{ github.workspace }}"
-
-          echo "=== Directory Structure ==="
-          pwd
-          ls -la
-
-          echo "=== Coverage Files ==="
-          ls -la backend/coverage.xml || echo "coverage.xml not found"
-          ls -la backend/pytest-report.xml || echo "pytest-report.xml not found"
-          ls -la frontend/coverage/lcov.info || echo "lcov.info not found"
-
-          echo "=== Git Info ==="
-          git branch
-          git status
-
-          echo "=== SonarQube Config ==="
-          cat sonar-project.properties
-
+      # 7. Run SonarQube analysis
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v2
         env:
@@ -115,29 +86,9 @@ jobs:
             -Dsonar.javascript.lcov.reportPaths=frontend/coverage/lcov.info
             -Dsonar.python.version=3.11
             -Dsonar.sourceEncoding=UTF-8
-            -Dsonar.verbose=true
-            -Dsonar.scm.provider=git
-            -Dsonar.branch.name=${GITHUB_REF#refs/heads/}
-            -Dsonar.github.oauth=${{ github.token }}
-            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }}
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
-            -X
 
-      - name: Post-Scan Debug Info
-        if: always()
-        run: |
-          echo "=== SonarQube Scan Complete ==="
-          echo "Checking for analysis reports..."
-          find . -name ".scannerwork" -type d -exec ls -la {} \;
-
-          echo "=== Environment Variables ==="
-          env | grep -i sonar || true
-
-          echo "=== Testing SonarQube Connection ==="
-          curl -I ${{ secrets.SONAR_HOST_URL }} || echo "Failed to connect to SonarQube server"
-
-      # Upload test results as artifacts
-      - name: Upload test results
+      # 8. Upload coverage and test artifacts (optional)
+      - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
