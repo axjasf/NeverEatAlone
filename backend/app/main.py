@@ -13,7 +13,9 @@ from http import HTTPStatus
 import sqlalchemy as sa
 import logging
 
-from backend.app.models.contact import Contact, Hashtag, EntityType, contact_hashtags
+from backend.app.models.domain.contact import Contact
+from backend.app.models.domain.tag import Tag as Hashtag
+from backend.app.models.orm.contact_tag import contact_tags as contact_hashtags
 
 app = FastAPI(title="Contact Management API")
 
@@ -201,22 +203,22 @@ async def update_contact(
     contact: ContactCreate,
     db: Annotated[Session, Depends(get_test_db)],
 ) -> ContactResponse:
-    """Update an existing contact.
+    """Update a contact.
 
     Args:
-        contact_id (UUID): The unique identifier of the contact to update.
-        contact (ContactCreate): The new contact data.
-        db (Session): The database session.
+        contact_id: The contact's ID
+        contact: The updated contact data
+        db: The database session
 
     Returns:
-        ContactResponse: The updated contact data.
+        The updated contact
 
     Raises:
-        HTTPException: 404 if contact is not found, 400 if data is invalid.
+        HTTPException: If the contact is not found or there's a database error
     """
-    db_contact = db.query(Contact).filter(Contact.id == contact_id).first()
-    if db_contact is None:
-        raise HTTPException(status_code=404, detail={"error": "Contact not found"})
+    db_contact = db.query(Contact).filter(Contact.id == contact_id).first()  # type: ignore
+    if not db_contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
 
     try:
         # Prepare and validate all data before making changes
@@ -269,21 +271,18 @@ async def update_contact(
 async def delete_contact(
     contact_id: UUID, db: Annotated[Session, Depends(get_test_db)]
 ) -> None:
-    """Delete a contact by its ID.
+    """Delete a contact.
 
     Args:
-        contact_id (UUID): The unique identifier of the contact to delete.
-        db (Session): The database session.
-
-    Returns:
-        None: Returns no content on successful deletion.
+        contact_id: The contact's ID
+        db: The database session
 
     Raises:
-        HTTPException: 404 if contact is not found.
+        HTTPException: If the contact is not found
     """
-    contact = db.query(Contact).filter(Contact.id == contact_id).first()
-    if contact is None:
-        raise HTTPException(status_code=404, detail={"error": "Contact not found"})
+    contact = db.query(Contact).filter(Contact.id == contact_id).first()  # type: ignore
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
 
     db.delete(contact)
     db.commit()
