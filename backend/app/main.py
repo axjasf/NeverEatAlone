@@ -12,9 +12,9 @@ from typing import Iterator
 from http import HTTPStatus
 import sqlalchemy as sa
 
-from backend.app.models.domain.contact import Contact
-from backend.app.models.domain.tag import Tag as Hashtag, EntityType
-from backend.app.models.orm.contact_tag import contact_tags as contact_hashtags
+from .models.domain.contact import Contact
+from .models.domain.tag import Tag as Hashtag, EntityType
+from .models.orm.contact_tag import contact_tags as contact_hashtags
 
 app = FastAPI(title="Contact Management API")
 
