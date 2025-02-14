@@ -6,6 +6,92 @@
 
 This document explains the architectural decisions and design patterns used in the model layer of NeverEatAlone.
 
+## File Organization
+
+### Directory Structure
+```
+backend/app/models/
+├── domain/                 # Domain models (business logic)
+│   ├── __init__.py
+│   ├── base.py            # BaseModel
+│   ├── contact.py         # Contact domain model
+│   ├── note.py           # Note and Statement models
+│   └── tag.py            # Tag model and EntityType
+│
+├── orm/                   # ORM models (persistence)
+│   ├── __init__.py
+│   ├── base.py           # BaseORMModel
+│   ├── contact.py        # ContactORM
+│   ├── note.py          # NoteORM
+│   ├── statement.py     # StatementORM
+│   ├── tag.py           # TagORM
+│   ├── contact_tag.py   # Association table
+│   ├── note_tag.py      # Association table
+│   └── statement_tag.py # Association table
+│
+└── repositories/          # Repository implementations
+    ├── __init__.py
+    ├── interfaces.py     # Repository protocols
+    ├── sqlalchemy_contact_repository.py
+    ├── sqlalchemy_note_repository.py
+    └── sqlalchemy_tag_repository.py
+```
+
+### Component Dependencies
+```mermaid
+graph TD
+    subgraph Domain ["Domain Layer"]
+        B[BaseModel] --> C[Contact]
+        B --> N[Note]
+        B --> S[Statement]
+        B --> T[Tag]
+        N --> S
+        C --> N
+    end
+
+    subgraph Repositories ["Repository Layer"]
+        I[Repository Interfaces] --> CR[Contact Repository]
+        I --> NR[Note Repository]
+        I --> TR[Tag Repository]
+    end
+
+    subgraph ORM ["ORM Layer"]
+        BO[BaseORMModel] --> CO[ContactORM]
+        BO --> NO[NoteORM]
+        BO --> SO[StatementORM]
+        BO --> TO[TagORM]
+        CO <--> NO
+        NO <--> SO
+        CO <-.-> TO
+        NO <-.-> TO
+        SO <-.-> TO
+    end
+
+    Domain --> Repositories
+    Repositories --> ORM
+
+    classDef domain fill:#f9f,stroke:#333,stroke-width:2px
+    classDef repo fill:#bbf,stroke:#333,stroke-width:2px
+    classDef orm fill:#bfb,stroke:#333,stroke-width:2px
+
+    class B,C,N,S,T domain
+    class I,CR,NR,TR repo
+    class BO,CO,NO,SO,TO orm
+
+    %% Legend
+    style Domain fill:#f9f,stroke:#333,stroke-width:4px
+    style Repositories fill:#bbf,stroke:#333,stroke-width:4px
+    style ORM fill:#bfb,stroke:#333,stroke-width:4px
+```
+
+### Key Relationships
+- Solid lines represent inheritance
+- Dashed lines represent many-to-many relationships
+- Solid arrows represent one-to-many relationships
+- Each layer depends only on the layers above it
+- Domain models have no knowledge of ORM or repositories
+- Repositories translate between domain and ORM models
+
 ## Core Design Decisions
 
 ### 1. Domain-Driven Design
