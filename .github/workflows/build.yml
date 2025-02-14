@@ -2,9 +2,9 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
 
 env:
   PYTHON_VERSION: '3.11'
@@ -14,8 +14,8 @@ env:
   # Test Configuration
   COVERAGE_THRESHOLD: 80
   PYTEST_ADDOPTS: '--color=yes'
-  # Environment Detection
-  ENVIRONMENT: ${{ github.ref == 'refs/heads/main' && 'production' || github.ref == 'refs/heads/develop' && 'staging' || 'development' }}
+  # Debug Mode for Verbose Logging
+  DEBUG: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   backend-lint:
@@ -24,18 +24,14 @@ jobs:
     defaults:
       run:
         working-directory: ${{ env.PYTHON_ROOT }}
-    environment: ${{ github.ref == 'refs/heads/main' && 'production' || github.ref == 'refs/heads/develop' && 'staging' || 'development' }}
-    env:
-      DATABASE_URL: sqlite:///./dev.db
-      TEST_DATABASE_URL: sqlite:///./test.db
-      SECRET_KEY: ${{ secrets.SECRET_KEY || 'dev-secret-key-123' }}
-      CORS_ORIGINS: ${{ secrets.CORS_ORIGINS || 'http://localhost:3000' }}
+
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Set up Python
+        id: setup-python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -44,6 +40,13 @@ jobs:
       - name: Install dependencies
         id: install
         run: |
+          echo "::group::Environment Information"
+          python --version
+          pip --version
+          echo "Working directory: $(pwd)"
+          echo "Python location: $(which python)"
+          echo "::endgroup::"
+
           echo "::group::Upgrade pip"
           python -m pip install --upgrade pip
           echo "::endgroup::"
@@ -56,35 +59,65 @@ jobs:
           pip install -r requirements-dev.txt
           echo "::endgroup::"
 
-      - name: Run linting
-        if: success() || failure()  # Run even if install step fails
+      - name: Run Black formatter
+        id: black
+        if: success() || failure()  # Run even if previous steps failed
         run: |
           echo "::group::Running Black formatter check"
-          python -m black . --check || echo "::warning::Black formatting issues found"
+          python -m black . --check --diff || {
+            echo "::error::Black formatting issues found"
+            exit 1
+          }
           echo "::endgroup::"
 
+      - name: Run Flake8
+        id: flake8
+        if: success() || failure()
+        run: |
           echo "::group::Running Flake8"
-          python -m flake8 . || echo "::warning::Flake8 issues found"
+          python -m flake8 . --count --statistics --show-source || {
+            echo "::error::Flake8 issues found"
+            exit 1
+          }
           echo "::endgroup::"
 
+      - name: Run MyPy
+        id: mypy
+        if: success() || failure()
+        run: |
           echo "::group::Running MyPy"
-          python -m mypy . || echo "::warning::Type checking issues found"
+          python -m mypy . --show-error-codes || {
+            echo "::error::Type checking issues found"
+            exit 1
+          }
           echo "::endgroup::"
+
+      - name: Upload lint results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-results
+          path: |
+            ${{ env.PYTHON_ROOT }}/**/*.txt
+            ${{ env.PYTHON_ROOT }}/**/*.log
+          retention-days: 14
+          if-no-files-found: ignore
 
   backend-test:
     name: Backend Tests
     needs: backend-lint
     runs-on: ubuntu-latest
-    environment: ${{ github.ref == 'refs/heads/main' && 'production' || github.ref == 'refs/heads/develop' && 'staging' || 'development' }}
     env:
       DATABASE_URL: sqlite:///./test.db
       TEST_DATABASE_URL: sqlite:///./test.db
-      SECRET_KEY: ${{ secrets.SECRET_KEY || 'test-secret-key-123' }}
+      SECRET_KEY: test-secret-key-123
       CORS_ORIGINS: http://localhost:3000
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Python
+        id: setup-python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -97,6 +130,12 @@ jobs:
         id: install
         working-directory: ${{ env.PYTHON_ROOT }}
         run: |
+          echo "::group::Environment Setup"
+          python --version
+          pip --version
+          echo "Working directory: $(pwd)"
+          echo "::endgroup::"
+
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
@@ -107,25 +146,36 @@ jobs:
         env:
           COVERAGE_FAIL_UNDER: ${{ env.COVERAGE_THRESHOLD }}
         run: |
-          echo "::group::Running pytest with coverage"
-          # Ensure we're in the correct directory and show structure
-          cd ${{ env.PYTHON_ROOT }}
-          echo "Environment: ${{ env.ENVIRONMENT }}"
-          echo "Current directory: $(pwd)"
-          echo "Project root: $(cd .. && pwd)"
-          echo "Directory structure:"
-          ls -la
-          echo "Tests directory structure:"
-          ls -la ../tests
+          echo "::group::Test Environment"
+          echo "Python path: $PYTHONPATH"
+          echo "Coverage threshold: $COVERAGE_FAIL_UNDER"
+          echo "::endgroup::"
 
-          # Run tests from backend directory but point to tests in root
+          echo "::group::Running pytest with coverage"
+          cd ${{ env.PYTHON_ROOT }}
           python -m pytest \
             --cov=app \
             --cov-report=xml:coverage.xml \
+            --cov-report=html:coverage_html \
             --cov-report=term-missing \
             --junitxml=pytest-report.xml \
             -v \
-            ../tests
+            ../tests || {
+              echo "::error::Tests failed"
+              exit 1
+            }
+          echo "::endgroup::"
+
+      - name: Process test results
+        if: always()
+        run: |
+          echo "::group::Test Summary"
+          if [ -f "${{ env.PYTHON_ROOT }}/pytest-report.xml" ]; then
+            echo "Test report generated successfully"
+            echo "Coverage report available in artifacts"
+          else
+            echo "::error::Test report generation failed"
+          fi
           echo "::endgroup::"
 
       - name: Upload test results
@@ -135,7 +185,9 @@ jobs:
           name: backend-test-results
           path: |
             ${{ env.PYTHON_ROOT }}/coverage.xml
+            ${{ env.PYTHON_ROOT }}/coverage_html/**
             ${{ env.PYTHON_ROOT }}/pytest-report.xml
+            ${{ env.PYTHON_ROOT }}/.coverage
           retention-days: 14
 
   frontend-lint:
@@ -144,14 +196,12 @@ jobs:
     defaults:
       run:
         working-directory: ${{ env.NODE_ROOT }}
-    environment: ${{ github.ref == 'refs/heads/main' && 'production' || github.ref == 'refs/heads/develop' && 'staging' || 'development' }}
-    env:
-      REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL || 'http://localhost:8000' }}
-      REACT_APP_ENVIRONMENT: ${{ github.event.ref == 'refs/heads/main' && 'production' || github.event.ref == 'refs/heads/develop' && 'staging' || 'development' }}
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Node.js
+        id: setup-node
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -161,16 +211,48 @@ jobs:
       - name: Install dependencies
         id: install
         run: |
+          echo "::group::Environment Information"
+          node --version
+          npm --version
+          echo "Working directory: $(pwd)"
+          echo "::endgroup::"
+
           echo "::group::Install npm dependencies"
           npm ci
           echo "::endgroup::"
 
       - name: Run ESLint
+        id: eslint
         if: success() || failure()
         run: |
           echo "::group::Running ESLint"
-          npm run lint || echo "::warning::ESLint issues found"
+          npm run lint || {
+            echo "::error::ESLint issues found"
+            exit 1
+          }
           echo "::endgroup::"
+
+      - name: Run Type Check
+        id: typecheck
+        if: success() || failure()
+        run: |
+          echo "::group::Running TypeScript Check"
+          npm run type-check || {
+            echo "::error::Type check failed"
+            exit 1
+          }
+          echo "::endgroup::"
+
+      - name: Upload lint results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-lint-results
+          path: |
+            ${{ env.NODE_ROOT }}/eslint-report.json
+            ${{ env.NODE_ROOT }}/tsconfig.tsbuildinfo
+          retention-days: 14
+          if-no-files-found: ignore
 
   frontend-test:
     name: Frontend Tests
@@ -179,15 +261,15 @@ jobs:
     defaults:
       run:
         working-directory: ${{ env.NODE_ROOT }}
-    environment: ${{ github.ref == 'refs/heads/main' && 'production' || github.ref == 'refs/heads/develop' && 'staging' || 'development' }}
     env:
-      REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL || 'http://localhost:8000' }}
-      REACT_APP_ENVIRONMENT: ${{ github.event.ref == 'refs/heads/main' && 'production' || github.event.ref == 'refs/heads/develop' && 'staging' || 'development' }}
+      REACT_APP_API_URL: http://localhost:8000
       REACT_APP_VERSION: ${{ github.sha }}
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Node.js
+        id: setup-node
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -195,14 +277,24 @@ jobs:
           cache-dependency-path: ${{ env.NODE_ROOT }}/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        id: install
+        run: |
+          echo "::group::Environment Setup"
+          node --version
+          npm --version
+          echo "Working directory: $(pwd)"
+          echo "::endgroup::"
+          npm ci
 
       - name: Run tests
         id: tests
         run: |
           echo "::group::Running Jest tests with coverage"
           mkdir -p coverage
-          npm run test:ci || echo "::warning::No tests found or tests failed"
+          npm run test:ci || {
+            echo "::error::Tests failed"
+            exit 1
+          }
           echo "::endgroup::"
 
       - name: Upload test results
@@ -210,7 +302,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: frontend-test-results
-          path: ${{ env.NODE_ROOT }}/coverage
+          path: |
+            ${{ env.NODE_ROOT }}/coverage/**
+            ${{ env.NODE_ROOT }}/junit.xml
           retention-days: 14
           if-no-files-found: warn
 
@@ -218,15 +312,15 @@ jobs:
     name: Build
     needs: [backend-test, frontend-test]
     runs-on: ubuntu-latest
-    environment: ${{ github.ref == 'refs/heads/main' && 'production' || github.ref == 'refs/heads/develop' && 'staging' || 'development' }}
     env:
-      REACT_APP_API_URL: ${{ github.ref == 'refs/heads/main' && secrets.PROD_API_URL || github.ref == 'refs/heads/develop' && secrets.STAGING_API_URL || 'http://localhost:8000' }}
-      REACT_APP_ENVIRONMENT: ${{ github.event.ref == 'refs/heads/main' && 'production' || github.event.ref == 'refs/heads/develop' && 'staging' || 'development' }}
+      REACT_APP_API_URL: http://localhost:8000
       REACT_APP_VERSION: ${{ github.sha }}
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Node.js
+        id: setup-node
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -234,14 +328,25 @@ jobs:
           cache-dependency-path: ${{ env.NODE_ROOT }}/package-lock.json
 
       - name: Build frontend
+        id: build
         working-directory: ${{ env.NODE_ROOT }}
         run: |
+          echo "::group::Environment Information"
+          node --version
+          npm --version
+          echo "Working directory: $(pwd)"
+          echo "Build version: $REACT_APP_VERSION"
+          echo "::endgroup::"
+
           echo "::group::Install dependencies"
           npm ci
           echo "::endgroup::"
 
           echo "::group::Build frontend"
-          npm run build
+          npm run build || {
+            echo "::error::Build failed"
+            exit 1
+          }
           echo "::endgroup::"
 
       - name: Upload build artifacts
