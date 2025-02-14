@@ -130,17 +130,21 @@ main
 
 ### For Each Change:
 1. Create feature branch from parent
-2. Implement changes with detailed commits
-3. Test in isolation
-4. Create PR with detailed description
-5. Require review and approval
+2. Make changes in small, focused commits
+3. Push changes and monitor workflow
+4. Create PR with:
+   - Workflow run evidence
+   - Screenshots of critical steps
+   - Performance metrics
+5. Address any workflow failures immediately
 6. Merge only when all checks pass
 
 ### Testing Protocol:
-1. Local testing first
-2. PR preview deployment
-3. Staging verification
-4. Production deployment
+1. Push to feature branch
+2. Monitor workflow execution
+3. Review logs and artifacts
+4. Verify in staging environment
+5. Deploy to production
 
 ### Rollback Protocol:
 1. Keep backup of original state
