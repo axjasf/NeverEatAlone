@@ -179,9 +179,7 @@ async def get_contact(
         HTTPException: 404 if contact is not found.
     """
     db_contact = (
-        db.query(Contact)
-        .filter(Contact.id == contact_id)
-        .first()  # type: ignore
+        db.query(Contact).filter(Contact.id == contact_id).first()  # type: ignore
     )
     if db_contact is None:
         raise HTTPException(status_code=404, detail={"error": "Contact not found"})
@@ -220,9 +218,7 @@ async def update_contact(
         HTTPException: If the contact is not found or there's a database error
     """
     db_contact = (
-        db.query(Contact)
-        .filter(Contact.id == contact_id)
-        .first()  # type: ignore
+        db.query(Contact).filter(Contact.id == contact_id).first()  # type: ignore
     )
     if not db_contact:
         raise HTTPException(status_code=404, detail="Contact not found")
@@ -288,9 +284,7 @@ async def delete_contact(
         HTTPException: If the contact is not found
     """
     db_contact = (
-        db.query(Contact)
-        .filter(Contact.id == contact_id)
-        .first()  # type: ignore
+        db.query(Contact).filter(Contact.id == contact_id).first()  # type: ignore
     )
     if not db_contact:
         raise HTTPException(status_code=404, detail="Contact not found")
