@@ -75,6 +75,9 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
+          cache-dependency-path: |
+            ${{ env.PYTHON_ROOT }}/requirements.txt
+            ${{ env.PYTHON_ROOT }}/requirements-dev.txt
 
       - name: Install dependencies
         id: install
@@ -82,17 +85,23 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
+          pip install -e .
 
       - name: Run tests
         id: tests
         run: |
           echo "::group::Running pytest with coverage"
-          python -m pytest tests \
+          # Ensure we're in the correct directory
+          pwd
+          ls -la
+          echo "Running tests from directory: $(pwd)"
+          python -m pytest \
             --cov=app \
             --cov-report=xml:coverage.xml \
             --cov-report=term-missing \
             --junitxml=pytest-report.xml \
-            -v
+            -v \
+            tests/
           echo "::endgroup::"
 
       - name: Upload test results
