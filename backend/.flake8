@@ -1,12 +1,13 @@
 [flake8]
 max-line-length = 100
 max-complexity = 10
-extend-ignore =
-    E203,  # Whitespace before ':'
-    W503,  # Line break before binary operator
-    F821,  # Undefined name (for FastAPI and Pydantic types)
-    E704,  # Multiple statements on one line
-    F722   # Syntax error in forward annotation
+# Error codes:
+# E203 - Whitespace before ':'
+# W503 - Line break before binary operator
+# F821 - Undefined name (for FastAPI and Pydantic types)
+# E704 - Multiple statements on one line
+# F722 - Syntax error in forward annotation
+extend-ignore = E203,W503,F821,E704,F722
 exclude =
     .git,
     __pycache__,
@@ -19,7 +20,7 @@ exclude =
 per-file-ignores =
     __init__.py: F401
     tests/*: S101
-    app/main.py: F821, F722  # Ignore FastAPI/Pydantic type errors in main.py
+    app/main.py: F821,F722
 statistics = True
 count = True
 show-source = True
