@@ -60,17 +60,15 @@ jobs:
       - name: Run Python linting
         working-directory: ./backend
         run: |
-          # Format with black first
-          black .
+          # Format with black
+          python -m black .
 
-          # Run isort to sort imports
-          isort .
+          # Sort imports
+          python -m isort .
 
-          # Run flake8 with new config
-          flake8 . --config ../.flake8 --statistics --show-source
-
-          # Show what files were modified
-          git status
+          # Run flake8
+          python -m flake8 . --statistics --show-source
+        continue-on-error: false
 
       - name: Run TypeScript linting
         working-directory: ./frontend
