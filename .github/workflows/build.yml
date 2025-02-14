@@ -33,11 +33,13 @@ jobs:
       - name: Run Python tests with coverage
         working-directory: ./backend
         run: |
-          python -m pytest tests \
-            --cov=app \
-            --cov-report=xml:coverage.xml \
+          export PYTHONPATH=$PWD
+          cd ..
+          python -m pytest backend/tests \
+            --cov=backend/app \
+            --cov-report=xml:backend/coverage.xml \
             --cov-report=term-missing \
-            --junitxml=pytest-report.xml \
+            --junitxml=backend/pytest-report.xml \
             -v
 
       # Frontend setup and tests
