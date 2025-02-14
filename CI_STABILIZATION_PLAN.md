@@ -126,110 +126,25 @@ main
   - Performance tracking
   - Automated alerts
 
-## Local Testing Protocol
-### Setup Local Testing Environment
-1. Install `act` for local GitHub Actions testing:
-   ```powershell
-   # Using Chocolatey
-   choco install act-cli
-
-   # Or download directly from GitHub
-   # https://github.com/nektos/act/releases
-   ```
-
-2. Create test secrets file `.secrets`:
-   ```env
-   PYTHON_VERSION=3.11
-   NODE_VERSION=18
-   # Add other required secrets
-   ```
-
-3. Create local workflow test script `test-workflow.ps1`:
-   ```powershell
-   # Test specific job
-   function Test-Job {
-       param (
-           [string]$JobName
-       )
-       act -j $JobName --secret-file .secrets --artifact-server-path ./artifacts
-   }
-
-   # Test full workflow
-   function Test-Workflow {
-       act --secret-file .secrets --artifact-server-path ./artifacts
-   }
-   ```
-
-### Testing Process for Each Change
-1. **Local Environment Check**:
-   ```powershell
-   # Verify tools
-   act --version
-   python --version
-   node --version
-   ```
-
-2. **Individual Job Testing**:
-   ```powershell
-   # Test jobs individually
-   act -j backend-lint
-   act -j backend-test
-   act -j frontend-lint
-   act -j frontend-test
-   act -j build
-   ```
-
-3. **Artifact Verification**:
-   - Check `./artifacts` directory after each job
-   - Verify correct paths and content
-
-4. **Full Workflow Test**:
-   ```powershell
-   # Run entire workflow
-   act --artifact-server-path ./artifacts
-   ```
-
-### Workflow Change Process
-1. Make changes to `.github/workflows/build.yml`
-2. Run local tests using `act`
-3. Fix any issues found locally
-4. Commit changes only after local verification
-5. Create PR with evidence of local testing
-
-### Common Issues and Solutions
-1. **Docker Issues**:
-   - Ensure Docker Desktop is running
-   - Use `-P ubuntu-latest=node:16-buster` for lighter images
-
-2. **Path Issues**:
-   - Use absolute paths in workflow
-   - Verify working-directory settings
-
-3. **Artifact Issues**:
-   - Check permissions on artifact directory
-   - Verify paths are consistent with OS
-
 ## Execution Strategy
 
 ### For Each Change:
 1. Create feature branch from parent
-2. **Local Testing** (NEW):
-   - Run individual job tests
-   - Verify artifacts locally
-   - Test full workflow
-3. Implement changes with detailed commits
+2. Make changes in small, focused commits
+3. Push changes and monitor workflow
 4. Create PR with:
-   - Local testing evidence
-   - Screenshots of `act` output
-   - Artifact verification
-5. Require review and approval
+   - Workflow run evidence
+   - Screenshots of critical steps
+   - Performance metrics
+5. Address any workflow failures immediately
 6. Merge only when all checks pass
 
 ### Testing Protocol:
-1. Local testing first
-2. PR preview deployment
-3. Staging verification
-4. Production deployment
+1. Push to feature branch
+2. Monitor workflow execution
+3. Review logs and artifacts
+4. Verify in staging environment
+5. Deploy to production
 
 ### Rollback Protocol:
 1. Keep backup of original state
