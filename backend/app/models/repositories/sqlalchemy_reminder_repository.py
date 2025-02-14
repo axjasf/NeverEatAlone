@@ -6,7 +6,12 @@ from datetime import datetime, timezone
 from sqlalchemy import select, and_
 from sqlalchemy.orm import Session, selectinload
 
-from ..domain.reminder import Reminder, ReminderStatus, RecurrencePattern, RecurrenceUnit
+from ..domain.reminder import (
+    Reminder,
+    ReminderStatus,
+    RecurrencePattern,
+    RecurrenceUnit,
+)
 from ..orm.reminder import ReminderORM
 from .interfaces import ReminderRepository
 
@@ -136,7 +141,7 @@ class SQLAlchemyReminderRepository(ReminderRepository):
             .where(
                 and_(
                     ReminderORM.status == ReminderStatus.PENDING,
-                    ReminderORM.due_date < now
+                    ReminderORM.due_date < now,
                 )
             )
         )
@@ -165,11 +170,14 @@ class SQLAlchemyReminderRepository(ReminderRepository):
         """
         # Create recurrence pattern if present
         recurrence_pattern = None
-        if reminder_orm.recurrence_interval is not None and reminder_orm.recurrence_unit is not None:
+        if (
+            reminder_orm.recurrence_interval is not None
+            and reminder_orm.recurrence_unit is not None
+        ):
             recurrence_pattern = RecurrencePattern(
                 interval=reminder_orm.recurrence_interval,
                 unit=reminder_orm.recurrence_unit,
-                end_date=reminder_orm.recurrence_end_date
+                end_date=reminder_orm.recurrence_end_date,
             )
 
         # Create domain model
@@ -179,12 +187,15 @@ class SQLAlchemyReminderRepository(ReminderRepository):
             due_date=reminder_orm.due_date,
             description=reminder_orm.description,
             recurrence_pattern=recurrence_pattern,
-            note_id=reminder_orm.note_id
+            note_id=reminder_orm.note_id,
         )
         reminder.id = reminder_orm.id
 
         # Set status and completion date if completed
-        if reminder_orm.status == ReminderStatus.COMPLETED and reminder_orm.completion_date:
+        if (
+            reminder_orm.status == ReminderStatus.COMPLETED
+            and reminder_orm.completion_date
+        ):
             reminder.complete(reminder_orm.completion_date)
         elif reminder_orm.status == ReminderStatus.CANCELLED:
             reminder.cancel()

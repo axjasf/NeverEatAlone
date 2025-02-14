@@ -138,15 +138,19 @@ class SQLAlchemyContactRepository:
         now = datetime.now(UTC)
 
         # Find all contact IDs with stale tags using SQLite's datetime functions
-        tag_stmt = select(TagORM.entity_id).where(
-            and_(
-                TagORM.entity_type == EntityType.CONTACT,
-                TagORM.frequency_days.is_not(None),
-                TagORM.last_contact.is_not(None),
-                # Use SQLite's julianday function to calculate date differences
-                text("julianday(:now) - julianday(last_contact) > frequency_days"),
+        tag_stmt = (
+            select(TagORM.entity_id)
+            .where(
+                and_(
+                    TagORM.entity_type == EntityType.CONTACT,
+                    TagORM.frequency_days.is_not(None),
+                    TagORM.last_contact.is_not(None),
+                    # Use SQLite's julianday function to calculate date differences
+                    text("julianday(:now) - julianday(last_contact) > frequency_days"),
+                )
             )
-        ).params(now=now.isoformat())
+            .params(now=now.isoformat())
+        )
 
         # Execute the query
         contact_ids = self._session.execute(tag_stmt).scalars().all()

@@ -9,23 +9,25 @@ from backend.app.models.domain.reminder import (
     Reminder,
     ReminderStatus,
     RecurrencePattern,
-    RecurrenceUnit
+    RecurrenceUnit,
 )
 from backend.app.models.orm.contact import ContactORM
 from backend.app.models.orm.note import NoteORM
 from backend.app.models.repositories.sqlalchemy_reminder_repository import (
-    SQLAlchemyReminderRepository
+    SQLAlchemyReminderRepository,
 )
 
 # Test data
 TEST_UUID = UUID("11111111-1111-1111-1111-111111111111")
 TEST_DATETIME = datetime(2024, 1, 1, tzinfo=timezone.utc)
 
+
 # Fixtures
 @pytest.fixture
 def reminder_repository(db_session: Session) -> SQLAlchemyReminderRepository:
     """Create a reminder repository for testing."""
     return SQLAlchemyReminderRepository(db_session)
+
 
 @pytest.fixture
 def contact(db_session: Session) -> ContactORM:
@@ -35,6 +37,7 @@ def contact(db_session: Session) -> ContactORM:
     db_session.commit()
     return contact
 
+
 @pytest.fixture
 def note(db_session: Session, contact: ContactORM) -> NoteORM:
     """Create a test note."""
@@ -43,11 +46,12 @@ def note(db_session: Session, contact: ContactORM) -> NoteORM:
     db_session.commit()
     return note
 
+
 # Basic CRUD Operations
 def test_save_and_find_by_id(
     reminder_repository: SQLAlchemyReminderRepository,
     contact: ContactORM,
-    db_session: Session
+    db_session: Session,
 ) -> None:
     """Test basic save and find operations.
 
@@ -58,9 +62,7 @@ def test_save_and_find_by_id(
     """
     # Create and save
     reminder = Reminder(
-        contact_id=contact.id,
-        title="Test reminder",
-        due_date=TEST_DATETIME
+        contact_id=contact.id, title="Test reminder", due_date=TEST_DATETIME
     )
     saved = reminder_repository.save(reminder)
     db_session.commit()
@@ -79,7 +81,7 @@ def test_save_and_find_by_id(
 def test_update_existing_reminder(
     reminder_repository: SQLAlchemyReminderRepository,
     contact: ContactORM,
-    db_session: Session
+    db_session: Session,
 ) -> None:
     """Test updating an existing reminder.
 
@@ -93,7 +95,7 @@ def test_update_existing_reminder(
         contact_id=contact.id,
         title="Original title",
         description="Original description",
-        due_date=TEST_DATETIME
+        due_date=TEST_DATETIME,
     )
     saved = reminder_repository.save(reminder)
     db_session.commit()
@@ -103,7 +105,7 @@ def test_update_existing_reminder(
         contact_id=contact.id,
         title="Updated title",
         description="Updated description",
-        due_date=TEST_DATETIME + timedelta(days=1)
+        due_date=TEST_DATETIME + timedelta(days=1),
     )
     updated.id = saved.id
     result = reminder_repository.save(updated)
@@ -120,7 +122,7 @@ def test_update_existing_reminder(
 def test_delete_reminder(
     reminder_repository: SQLAlchemyReminderRepository,
     contact: ContactORM,
-    db_session: Session
+    db_session: Session,
 ) -> None:
     """Test deleting a reminder.
 
@@ -131,14 +133,10 @@ def test_delete_reminder(
     """
     # Create reminders
     reminder1 = Reminder(
-        contact_id=contact.id,
-        title="Reminder 1",
-        due_date=TEST_DATETIME
+        contact_id=contact.id, title="Reminder 1", due_date=TEST_DATETIME
     )
     reminder2 = Reminder(
-        contact_id=contact.id,
-        title="Reminder 2",
-        due_date=TEST_DATETIME
+        contact_id=contact.id, title="Reminder 2", due_date=TEST_DATETIME
     )
     saved1 = reminder_repository.save(reminder1)
     saved2 = reminder_repository.save(reminder2)
@@ -161,7 +159,7 @@ def test_delete_reminder(
 def test_find_by_contact(
     reminder_repository: SQLAlchemyReminderRepository,
     contact: ContactORM,
-    db_session: Session
+    db_session: Session,
 ) -> None:
     """Test finding reminders by contact.
 
@@ -177,14 +175,10 @@ def test_find_by_contact(
 
     # Create reminders for both contacts
     reminder1 = Reminder(
-        contact_id=contact.id,
-        title="Contact 1 Reminder",
-        due_date=TEST_DATETIME
+        contact_id=contact.id, title="Contact 1 Reminder", due_date=TEST_DATETIME
     )
     reminder2 = Reminder(
-        contact_id=other_contact.id,
-        title="Contact 2 Reminder",
-        due_date=TEST_DATETIME
+        contact_id=other_contact.id, title="Contact 2 Reminder", due_date=TEST_DATETIME
     )
     reminder_repository.save(reminder1)
     reminder_repository.save(reminder2)
@@ -204,7 +198,7 @@ def test_find_by_note(
     reminder_repository: SQLAlchemyReminderRepository,
     contact: ContactORM,
     note: NoteORM,
-    db_session: Session
+    db_session: Session,
 ) -> None:
     """Test finding reminders by note.
 
@@ -218,12 +212,10 @@ def test_find_by_note(
         contact_id=contact.id,
         title="Linked Reminder",
         due_date=TEST_DATETIME,
-        note_id=note.id
+        note_id=note.id,
     )
     unlinked = Reminder(
-        contact_id=contact.id,
-        title="Unlinked Reminder",
-        due_date=TEST_DATETIME
+        contact_id=contact.id, title="Unlinked Reminder", due_date=TEST_DATETIME
     )
     reminder_repository.save(linked)
     reminder_repository.save(unlinked)
@@ -242,7 +234,7 @@ def test_find_by_note(
 def test_find_pending(
     reminder_repository: SQLAlchemyReminderRepository,
     contact: ContactORM,
-    db_session: Session
+    db_session: Session,
 ) -> None:
     """Test finding pending reminders.
 
@@ -253,20 +245,14 @@ def test_find_pending(
     """
     # Create reminders in different states
     pending = Reminder(
-        contact_id=contact.id,
-        title="Pending Reminder",
-        due_date=TEST_DATETIME
+        contact_id=contact.id, title="Pending Reminder", due_date=TEST_DATETIME
     )
     completed = Reminder(
-        contact_id=contact.id,
-        title="Completed Reminder",
-        due_date=TEST_DATETIME
+        contact_id=contact.id, title="Completed Reminder", due_date=TEST_DATETIME
     )
     completed.complete(TEST_DATETIME + timedelta(hours=1))
     cancelled = Reminder(
-        contact_id=contact.id,
-        title="Cancelled Reminder",
-        due_date=TEST_DATETIME
+        contact_id=contact.id, title="Cancelled Reminder", due_date=TEST_DATETIME
     )
     cancelled.cancel()
 
@@ -285,7 +271,7 @@ def test_find_pending(
 def test_find_overdue(
     reminder_repository: SQLAlchemyReminderRepository,
     contact: ContactORM,
-    db_session: Session
+    db_session: Session,
 ) -> None:
     """Test finding overdue reminders.
 
@@ -299,20 +285,12 @@ def test_find_overdue(
     future = now + timedelta(days=1)
 
     # Create reminders
-    overdue = Reminder(
-        contact_id=contact.id,
-        title="Overdue Reminder",
-        due_date=past
-    )
+    overdue = Reminder(contact_id=contact.id, title="Overdue Reminder", due_date=past)
     future_reminder = Reminder(
-        contact_id=contact.id,
-        title="Future Reminder",
-        due_date=future
+        contact_id=contact.id, title="Future Reminder", due_date=future
     )
     completed = Reminder(
-        contact_id=contact.id,
-        title="Completed Reminder",
-        due_date=past
+        contact_id=contact.id, title="Completed Reminder", due_date=past
     )
     completed.complete(now)
 
@@ -332,7 +310,7 @@ def test_find_overdue(
 def test_save_recurring_reminder(
     reminder_repository: SQLAlchemyReminderRepository,
     contact: ContactORM,
-    db_session: Session
+    db_session: Session,
 ) -> None:
     """Test saving recurring reminders.
 
@@ -345,13 +323,13 @@ def test_save_recurring_reminder(
     pattern = RecurrencePattern(
         interval=1,
         unit=RecurrenceUnit.WEEK.value,
-        end_date=TEST_DATETIME + timedelta(days=30)
+        end_date=TEST_DATETIME + timedelta(days=30),
     )
     reminder = Reminder(
         contact_id=contact.id,
         title="Weekly Reminder",
         due_date=TEST_DATETIME,
-        recurrence_pattern=pattern
+        recurrence_pattern=pattern,
     )
     saved = reminder_repository.save(reminder)
     db_session.commit()
@@ -365,10 +343,7 @@ def test_save_recurring_reminder(
     assert found.recurrence_pattern.end_date == TEST_DATETIME + timedelta(days=30)
 
     # Update pattern
-    new_pattern = RecurrencePattern(
-        interval=2,
-        unit=RecurrenceUnit.WEEK.value
-    )
+    new_pattern = RecurrencePattern(interval=2, unit=RecurrenceUnit.WEEK.value)
     found.recurrence_pattern = new_pattern
     updated = reminder_repository.save(found)
     db_session.commit()
@@ -384,7 +359,7 @@ def test_save_recurring_reminder(
 def test_complete_recurring_reminder(
     reminder_repository: SQLAlchemyReminderRepository,
     contact: ContactORM,
-    db_session: Session
+    db_session: Session,
 ) -> None:
     """Test completing recurring reminders.
 
@@ -397,13 +372,13 @@ def test_complete_recurring_reminder(
     pattern = RecurrencePattern(
         interval=1,
         unit=RecurrenceUnit.WEEK.value,
-        end_date=TEST_DATETIME + timedelta(days=10)
+        end_date=TEST_DATETIME + timedelta(days=10),
     )
     reminder = Reminder(
         contact_id=contact.id,
         title="Weekly Reminder",
         due_date=TEST_DATETIME,
-        recurrence_pattern=pattern
+        recurrence_pattern=pattern,
     )
     saved = reminder_repository.save(reminder)
     db_session.commit()

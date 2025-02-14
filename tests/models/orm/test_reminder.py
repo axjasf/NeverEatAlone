@@ -121,20 +121,22 @@ def test_complete_reminder(db_session: Session, contact: ContactORM) -> None:
     # Update using raw SQL to avoid constraint issues
     with db_session.begin_nested():
         result = db_session.execute(
-            text("""
+            text(
+                """
                 UPDATE reminders
                 SET status = :status,
                     completion_date = :completion_date,
                     updated_at = :updated_at
                 WHERE id = :id
                 RETURNING status, completion_date
-            """),
+            """
+            ),
             {
                 "id": str(reminder.id),  # Convert UUID to string
                 "status": ReminderStatus.COMPLETED.value,  # Use enum value
                 "completion_date": completion_date,
-                "updated_at": updated_at
-            }
+                "updated_at": updated_at,
+            },
         )
         print("Update result:", result.fetchone())  # Debug output
     db_session.commit()
@@ -159,7 +161,7 @@ def test_link_reminder_to_note(
         contact_id=contact.id,
         note_id=note.id,
         title="Follow up",
-        due_date=datetime(2024, 3, 1, tzinfo=timezone.utc)
+        due_date=datetime(2024, 3, 1, tzinfo=timezone.utc),
     )
     db_session.add(reminder)
     db_session.commit()
@@ -175,7 +177,9 @@ def test_link_reminder_to_note(
     assert reminder in note.reminders
 
 
-def test_note_relationship(db_session: Session, contact: ContactORM, note: NoteORM) -> None:
+def test_note_relationship(
+    db_session: Session, contact: ContactORM, note: NoteORM
+) -> None:
     """Test reminder-note relationship behavior.
 
     Should:
@@ -188,7 +192,7 @@ def test_note_relationship(db_session: Session, contact: ContactORM, note: NoteO
         contact_id=contact.id,
         note_id=note.id,
         title="Test reminder",
-        due_date=datetime.now(timezone.utc)
+        due_date=datetime.now(timezone.utc),
     )
     db_session.add(reminder)
     db_session.commit()
@@ -219,7 +223,7 @@ def test_delete_note_doesnt_cascade_to_reminders(
         contact_id=contact.id,
         note_id=note.id,
         title="Test reminder",
-        due_date=datetime(2024, 3, 1, tzinfo=timezone.utc)
+        due_date=datetime(2024, 3, 1, tzinfo=timezone.utc),
     )
     db_session.add(reminder)
     db_session.commit()
@@ -247,7 +251,7 @@ def test_delete_contact_cascades_to_reminders(
         reminder = ReminderORM(
             contact_id=contact.id,
             title=f"Reminder {i}",
-            due_date=datetime(2024, 3, 1, tzinfo=timezone.utc)
+            due_date=datetime(2024, 3, 1, tzinfo=timezone.utc),
         )
         db_session.add(reminder)
     db_session.commit()
@@ -281,12 +285,12 @@ def test_cascade_delete_from_contact(db_session: Session, contact: ContactORM) -
     reminder1 = ReminderORM(
         contact_id=contact.id,
         title="Test reminder 1",
-        due_date=datetime.now(timezone.utc)
+        due_date=datetime.now(timezone.utc),
     )
     reminder2 = ReminderORM(
         contact_id=other_contact.id,
         title="Test reminder 2",
-        due_date=datetime.now(timezone.utc)
+        due_date=datetime.now(timezone.utc),
     )
     db_session.add_all([reminder1, reminder2])
     db_session.commit()
@@ -319,7 +323,7 @@ def test_constraint_violations(db_session: Session) -> None:
             contact_id=contact1_id,
             title="Test reminder",
             due_date=datetime(2024, 3, 1, tzinfo=timezone.utc),
-            recurrence_interval=1  # Missing unit
+            recurrence_interval=1,  # Missing unit
         )
         db_session.add(reminder)
         db_session.commit()
@@ -336,7 +340,9 @@ def test_constraint_violations(db_session: Session) -> None:
             contact_id=contact2_id,
             title="Test reminder",
             due_date=datetime(2024, 3, 1, tzinfo=timezone.utc),
-            completion_date=datetime(2024, 3, 1, tzinfo=timezone.utc)  # Status still PENDING
+            completion_date=datetime(
+                2024, 3, 1, tzinfo=timezone.utc
+            ),  # Status still PENDING
         )
         db_session.add(reminder)
         db_session.commit()
@@ -355,7 +361,9 @@ def test_constraint_violations(db_session: Session) -> None:
             due_date=datetime(2024, 3, 1, tzinfo=timezone.utc),
             recurrence_interval=1,
             recurrence_unit=RecurrenceUnit.WEEK,
-            recurrence_end_date=datetime(2024, 2, 28, tzinfo=timezone.utc)  # Before due_date
+            recurrence_end_date=datetime(
+                2024, 2, 28, tzinfo=timezone.utc
+            ),  # Before due_date
         )
         db_session.add(reminder)
         db_session.commit()
@@ -364,11 +372,7 @@ def test_constraint_violations(db_session: Session) -> None:
     # Clean up - use raw SQL to avoid relationship loading issues
     db_session.execute(
         text("DELETE FROM contacts WHERE id = :id1 OR id = :id2 OR id = :id3"),
-        {
-            "id1": str(contact1_id),
-            "id2": str(contact2_id),
-            "id3": str(contact3_id)
-        }
+        {"id1": str(contact1_id), "id2": str(contact2_id), "id3": str(contact3_id)},
     )
     db_session.commit()
 
@@ -384,9 +388,7 @@ def test_timezone_handling(db_session: Session, contact: ContactORM) -> None:
     # Create reminder with specific timezone
     due_date = datetime(2024, 6, 1, 12, 0, tzinfo=timezone.utc)
     reminder = ReminderORM(
-        contact_id=contact.id,
-        title="Test reminder",
-        due_date=due_date
+        contact_id=contact.id, title="Test reminder", due_date=due_date
     )
     db_session.add(reminder)
     db_session.commit()
@@ -415,7 +417,7 @@ def test_recurrence_constraints(db_session: Session, contact: ContactORM) -> Non
             contact_id=contact.id,
             title="Test reminder",
             due_date=due_date,
-            recurrence_interval=1  # Missing unit
+            recurrence_interval=1,  # Missing unit
         )
         db_session.add(reminder)
         with pytest.raises(IntegrityError):
@@ -428,7 +430,7 @@ def test_recurrence_constraints(db_session: Session, contact: ContactORM) -> Non
             title="Test reminder",
             due_date=due_date,
             recurrence_interval=-1,
-            recurrence_unit=RecurrenceUnit.DAY
+            recurrence_unit=RecurrenceUnit.DAY,
         )
         db_session.add(reminder)
         with pytest.raises(IntegrityError):
@@ -442,7 +444,7 @@ def test_recurrence_constraints(db_session: Session, contact: ContactORM) -> Non
             due_date=due_date,
             recurrence_interval=1,
             recurrence_unit=RecurrenceUnit.DAY,
-            recurrence_end_date=due_date - timedelta(days=1)
+            recurrence_end_date=due_date - timedelta(days=1),
         )
         db_session.add(reminder)
         with pytest.raises(IntegrityError):
@@ -466,7 +468,7 @@ def test_completion_constraints(db_session: Session, contact: ContactORM) -> Non
             title="Test reminder",
             due_date=due_date,
             status=ReminderStatus.PENDING,
-            completion_date=completion_date
+            completion_date=completion_date,
         )
         db_session.add(reminder)
         with pytest.raises(IntegrityError):
@@ -479,7 +481,7 @@ def test_completion_constraints(db_session: Session, contact: ContactORM) -> Non
             title="Test reminder",
             due_date=due_date,
             status=ReminderStatus.COMPLETED,
-            completion_date=None
+            completion_date=None,
         )
         db_session.add(reminder)
         with pytest.raises(IntegrityError):
@@ -499,7 +501,7 @@ def test_eager_loading(db_session: Session, contact: ContactORM, note: NoteORM) 
         contact_id=contact.id,
         note_id=note.id,
         title="Test reminder",
-        due_date=datetime.now(timezone.utc)
+        due_date=datetime.now(timezone.utc),
     )
     db_session.add(reminder)
     db_session.commit()

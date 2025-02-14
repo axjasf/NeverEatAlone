@@ -3,11 +3,17 @@
 from datetime import datetime, timezone, timedelta
 from uuid import UUID
 import pytest
-from backend.app.models.domain.reminder import Reminder, RecurrencePattern, ReminderStatus, RecurrenceUnit
+from backend.app.models.domain.reminder import (
+    Reminder,
+    RecurrencePattern,
+    ReminderStatus,
+    RecurrenceUnit,
+)
 
 # Test data
 TEST_UUID = UUID("11111111-1111-1111-1111-111111111111")
 TEST_DATETIME = datetime(2024, 1, 1, tzinfo=timezone.utc)
+
 
 def test_reminder_minimum_fields() -> None:
     """Test reminder creation with minimum required fields.
@@ -19,9 +25,7 @@ def test_reminder_minimum_fields() -> None:
     """
     # Test minimum valid fields
     reminder = Reminder(
-        contact_id=TEST_UUID,
-        title="Test reminder",
-        due_date=TEST_DATETIME
+        contact_id=TEST_UUID, title="Test reminder", due_date=TEST_DATETIME
     )
     assert reminder.title == "Test reminder"
     assert reminder.due_date == TEST_DATETIME
@@ -33,19 +37,11 @@ def test_reminder_minimum_fields() -> None:
 
     # Test empty title
     with pytest.raises(ValueError, match="Title cannot be empty"):
-        Reminder(
-            contact_id=TEST_UUID,
-            title="",
-            due_date=TEST_DATETIME
-        )
+        Reminder(contact_id=TEST_UUID, title="", due_date=TEST_DATETIME)
 
     # Test whitespace title
     with pytest.raises(ValueError, match="Title cannot be empty"):
-        Reminder(
-            contact_id=TEST_UUID,
-            title="   ",
-            due_date=TEST_DATETIME
-        )
+        Reminder(contact_id=TEST_UUID, title="   ", due_date=TEST_DATETIME)
 
 
 def test_reminder_requires_timezone() -> None:
@@ -61,14 +57,12 @@ def test_reminder_requires_timezone() -> None:
         Reminder(
             contact_id=TEST_UUID,
             title="Test reminder",
-            due_date=datetime(2024, 1, 1)  # No timezone
+            due_date=datetime(2024, 1, 1),  # No timezone
         )
 
     # Accept timezone-aware datetime
     reminder = Reminder(
-        contact_id=TEST_UUID,
-        title="Test reminder",
-        due_date=TEST_DATETIME
+        contact_id=TEST_UUID, title="Test reminder", due_date=TEST_DATETIME
     )
     assert reminder.due_date.tzinfo == timezone.utc
 
@@ -87,7 +81,7 @@ def test_create_one_off_reminder() -> None:
         contact_id=contact_id,
         title="Call John",
         description="Discuss project status",
-        due_date=due_date
+        due_date=due_date,
     )
 
     assert reminder.contact_id == contact_id
@@ -109,9 +103,7 @@ def test_create_recurring_reminder() -> None:
     contact_id = UUID("11111111-1111-1111-1111-111111111111")
     start_date = datetime(2024, 3, 1, tzinfo=timezone.utc)
     pattern = RecurrencePattern(
-        interval=1,
-        unit="MONTH",
-        end_date=datetime(2024, 12, 31, tzinfo=timezone.utc)
+        interval=1, unit="MONTH", end_date=datetime(2024, 12, 31, tzinfo=timezone.utc)
     )
 
     reminder = Reminder(
@@ -119,7 +111,7 @@ def test_create_recurring_reminder() -> None:
         title="Monthly check-in",
         description="Regular status update",
         due_date=start_date,
-        recurrence_pattern=pattern
+        recurrence_pattern=pattern,
     )
 
     assert reminder.recurrence_pattern == pattern
@@ -141,7 +133,7 @@ def test_link_reminder_to_note() -> None:
         contact_id=contact_id,
         title="Follow up on discussion",
         due_date=due_date,
-        note_id=note_id
+        note_id=note_id,
     )
 
     assert reminder.note_id == note_id
@@ -157,9 +149,7 @@ def test_reminder_status_transitions() -> None:
     - Prevent invalid transitions
     """
     reminder = Reminder(
-        contact_id=TEST_UUID,
-        title="Test reminder",
-        due_date=TEST_DATETIME
+        contact_id=TEST_UUID, title="Test reminder", due_date=TEST_DATETIME
     )
     assert reminder.status == ReminderStatus.PENDING
 
@@ -170,20 +160,22 @@ def test_reminder_status_transitions() -> None:
     assert reminder.completion_date == completion_date
 
     # Test completing already completed reminder
-    with pytest.raises(ValueError, match="Cannot complete reminder in COMPLETED status"):
+    with pytest.raises(
+        ValueError, match="Cannot complete reminder in COMPLETED status"
+    ):
         reminder.complete(completion_date)
 
     # Test cancellation
     reminder = Reminder(
-        contact_id=TEST_UUID,
-        title="Test reminder",
-        due_date=TEST_DATETIME
+        contact_id=TEST_UUID, title="Test reminder", due_date=TEST_DATETIME
     )
     reminder.cancel()
     assert reminder.status == ReminderStatus.CANCELLED
 
     # Test completing cancelled reminder
-    with pytest.raises(ValueError, match="Cannot complete reminder in CANCELLED status"):
+    with pytest.raises(
+        ValueError, match="Cannot complete reminder in CANCELLED status"
+    ):
         reminder.complete(completion_date)
 
 
@@ -197,11 +189,7 @@ def test_reminder_cancellation() -> None:
     contact_id = UUID("11111111-1111-1111-1111-111111111111")
     due_date = datetime(2024, 3, 1, tzinfo=timezone.utc)
 
-    reminder = Reminder(
-        contact_id=contact_id,
-        title="Test reminder",
-        due_date=due_date
-    )
+    reminder = Reminder(contact_id=contact_id, title="Test reminder", due_date=due_date)
 
     # Test valid transitions
     reminder.cancel()
@@ -209,7 +197,9 @@ def test_reminder_cancellation() -> None:
 
     # Test invalid transitions
     with pytest.raises(ValueError):
-        reminder.complete(datetime.now(timezone.utc))  # Can't complete cancelled reminder
+        reminder.complete(
+            datetime.now(timezone.utc)
+        )  # Can't complete cancelled reminder
 
 
 def test_complete_reminder() -> None:
@@ -224,11 +214,7 @@ def test_complete_reminder() -> None:
     due_date = datetime(2024, 3, 1, tzinfo=timezone.utc)
     completion_date = datetime(2024, 3, 1, 12, 0, tzinfo=timezone.utc)
 
-    reminder = Reminder(
-        contact_id=contact_id,
-        title="Call John",
-        due_date=due_date
-    )
+    reminder = Reminder(contact_id=contact_id, title="Call John", due_date=due_date)
 
     reminder.complete(completion_date)
 
@@ -246,9 +232,7 @@ def test_reminder_completion_date_validation() -> None:
     - Require timezone-aware completion date
     """
     reminder = Reminder(
-        contact_id=TEST_UUID,
-        title="Test reminder",
-        due_date=TEST_DATETIME
+        contact_id=TEST_UUID, title="Test reminder", due_date=TEST_DATETIME
     )
 
     # Test completion before due date
@@ -263,9 +247,7 @@ def test_reminder_completion_date_validation() -> None:
 
     # Test naive completion date
     reminder = Reminder(
-        contact_id=TEST_UUID,
-        title="Test reminder",
-        due_date=TEST_DATETIME
+        contact_id=TEST_UUID, title="Test reminder", due_date=TEST_DATETIME
     )
     with pytest.raises(ValueError, match="must be timezone-aware"):
         reminder.complete(datetime(2024, 1, 1))
@@ -291,19 +273,12 @@ def test_recurrence_pattern_validation() -> None:
     end_date = TEST_DATETIME - timedelta(days=1)
     with pytest.raises(ValueError, match="End date must be after start date"):
         RecurrencePattern(
-            interval=1,
-            unit="DAY",
-            start_date=TEST_DATETIME,
-            end_date=end_date
+            interval=1, unit="DAY", start_date=TEST_DATETIME, end_date=end_date
         )
 
     # Test naive end date
     with pytest.raises(ValueError, match="must be timezone-aware"):
-        RecurrencePattern(
-            interval=1,
-            unit="DAY",
-            end_date=datetime(2024, 1, 1)
-        )
+        RecurrencePattern(interval=1, unit="DAY", end_date=datetime(2024, 1, 1))
 
 
 def test_recurrence_next_occurrence() -> None:
@@ -337,9 +312,7 @@ def test_recurrence_next_occurrence() -> None:
 
     # With end date
     pattern = RecurrencePattern(
-        interval=1,
-        unit="DAY",
-        end_date=TEST_DATETIME + timedelta(days=1)
+        interval=1, unit="DAY", end_date=TEST_DATETIME + timedelta(days=1)
     )
     next_date = pattern.get_next_date(TEST_DATETIME)
     assert next_date == TEST_DATETIME + timedelta(days=1)
@@ -360,7 +333,7 @@ def test_recurring_reminder_completion() -> None:
         contact_id=TEST_UUID,
         title="Weekly reminder",
         due_date=TEST_DATETIME,
-        recurrence_pattern=pattern
+        recurrence_pattern=pattern,
     )
 
     # Complete and get next occurrence
@@ -373,15 +346,13 @@ def test_recurring_reminder_completion() -> None:
 
     # Test with end date
     pattern_with_end = RecurrencePattern(
-        interval=1,
-        unit="WEEK",
-        end_date=TEST_DATETIME + timedelta(days=1)
+        interval=1, unit="WEEK", end_date=TEST_DATETIME + timedelta(days=1)
     )
     reminder = Reminder(
         contact_id=TEST_UUID,
         title="Limited reminder",
         due_date=TEST_DATETIME,
-        recurrence_pattern=pattern_with_end
+        recurrence_pattern=pattern_with_end,
     )
     next_reminder = reminder.complete(completion_date)
     assert next_reminder is None  # No next occurrence as it would be past end date
@@ -397,11 +368,7 @@ def test_invalid_reminder_dates() -> None:
     contact_id = UUID("11111111-1111-1111-1111-111111111111")
     due_date = datetime(2024, 3, 1, tzinfo=timezone.utc)
 
-    reminder = Reminder(
-        contact_id=contact_id,
-        title="Test reminder",
-        due_date=due_date
-    )
+    reminder = Reminder(contact_id=contact_id, title="Test reminder", due_date=due_date)
 
     # Test completing with earlier date
     with pytest.raises(ValueError):
@@ -413,5 +380,5 @@ def test_invalid_reminder_dates() -> None:
             interval=1,
             unit="WEEK",
             start_date=datetime(2024, 3, 1, tzinfo=timezone.utc),
-            end_date=datetime(2024, 2, 28, tzinfo=timezone.utc)
+            end_date=datetime(2024, 2, 28, tzinfo=timezone.utc),
         )

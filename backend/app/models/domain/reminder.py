@@ -32,7 +32,7 @@ class RecurrencePattern:
         interval: int,
         unit: str,
         end_date: Optional[datetime] = None,
-        start_date: Optional[datetime] = None
+        start_date: Optional[datetime] = None,
     ) -> None:
         """Initialize a recurrence pattern.
 
@@ -99,9 +99,7 @@ class RecurrencePattern:
 
         # Normalize time to midnight UTC
         from_date = datetime.combine(
-            from_date.date(),
-            datetime.min.time(),
-            tzinfo=timezone.utc
+            from_date.date(), datetime.min.time(), tzinfo=timezone.utc
         )
 
         if self.unit == RecurrenceUnit.DAY:
@@ -122,14 +120,29 @@ class RecurrencePattern:
                     year -= 1
 
             # Handle day-of-month issues (e.g., Jan 31 -> Feb 28)
-            day = min(from_date.day, [31, 29 if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1])
-
-            next_date = datetime(
-                year,
-                month,
-                day,
-                tzinfo=timezone.utc
+            day = min(
+                from_date.day,
+                [
+                    31,
+                    (
+                        29
+                        if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+                        else 28
+                    ),
+                    31,
+                    30,
+                    31,
+                    30,
+                    31,
+                    31,
+                    30,
+                    31,
+                    30,
+                    31,
+                ][month - 1],
             )
+
+            next_date = datetime(year, month, day, tzinfo=timezone.utc)
         else:  # YEAR
             next_date = from_date.replace(year=from_date.year + self.interval)
 
@@ -149,7 +162,7 @@ class Reminder(BaseModel):
         due_date: datetime,
         description: Optional[str] = None,
         recurrence_pattern: Optional[RecurrencePattern] = None,
-        note_id: Optional[UUID] = None
+        note_id: Optional[UUID] = None,
     ) -> None:
         """Initialize a reminder.
 
@@ -196,7 +209,9 @@ class Reminder(BaseModel):
             ValueError: If reminder is already completed/cancelled or completion_date is invalid
         """
         if self.status != ReminderStatus.PENDING:
-            raise ValueError(f"Cannot complete reminder in {self.status.value.upper()} status")
+            raise ValueError(
+                f"Cannot complete reminder in {self.status.value.upper()} status"
+            )
 
         if not completion_date.tzinfo:
             raise ValueError("Completion date must be timezone-aware")
@@ -218,7 +233,7 @@ class Reminder(BaseModel):
                     description=self.description,
                     due_date=next_date,
                     recurrence_pattern=self.recurrence_pattern,
-                    note_id=self.note_id
+                    note_id=self.note_id,
                 )
         return None
 
