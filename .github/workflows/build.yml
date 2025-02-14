@@ -24,6 +24,7 @@ jobs:
     defaults:
       run:
         working-directory: ${{ env.PYTHON_ROOT }}
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || github.ref == 'refs/heads/develop' && 'staging' || 'development' }}
     env:
       DATABASE_URL: sqlite:///./dev.db
       TEST_DATABASE_URL: sqlite:///./test.db
@@ -74,6 +75,7 @@ jobs:
     name: Backend Tests
     needs: backend-lint
     runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || github.ref == 'refs/heads/develop' && 'staging' || 'development' }}
     env:
       DATABASE_URL: sqlite:///./test.db
       TEST_DATABASE_URL: sqlite:///./test.db
@@ -142,9 +144,10 @@ jobs:
     defaults:
       run:
         working-directory: ${{ env.NODE_ROOT }}
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || github.ref == 'refs/heads/develop' && 'staging' || 'development' }}
     env:
       REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL || 'http://localhost:8000' }}
-      REACT_APP_ENVIRONMENT: ${{ env.ENVIRONMENT }}
+      REACT_APP_ENVIRONMENT: ${{ github.event.ref == 'refs/heads/main' && 'production' || github.event.ref == 'refs/heads/develop' && 'staging' || 'development' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -176,9 +179,10 @@ jobs:
     defaults:
       run:
         working-directory: ${{ env.NODE_ROOT }}
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || github.ref == 'refs/heads/develop' && 'staging' || 'development' }}
     env:
       REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL || 'http://localhost:8000' }}
-      REACT_APP_ENVIRONMENT: ${{ env.ENVIRONMENT }}
+      REACT_APP_ENVIRONMENT: ${{ github.event.ref == 'refs/heads/main' && 'production' || github.event.ref == 'refs/heads/develop' && 'staging' || 'development' }}
       REACT_APP_VERSION: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
@@ -214,9 +218,10 @@ jobs:
     name: Build
     needs: [backend-test, frontend-test]
     runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || github.ref == 'refs/heads/develop' && 'staging' || 'development' }}
     env:
       REACT_APP_API_URL: ${{ github.ref == 'refs/heads/main' && secrets.PROD_API_URL || github.ref == 'refs/heads/develop' && secrets.STAGING_API_URL || 'http://localhost:8000' }}
-      REACT_APP_ENVIRONMENT: ${{ env.ENVIRONMENT }}
+      REACT_APP_ENVIRONMENT: ${{ github.event.ref == 'refs/heads/main' && 'production' || github.event.ref == 'refs/heads/develop' && 'staging' || 'development' }}
       REACT_APP_VERSION: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
