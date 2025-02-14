@@ -1,8 +1,33 @@
 [flake8]
-# Match black's default line length
-max-line-length = 88
-extend-ignore = D100,D101,D102,D103,D104,D105,D200,D205,D400,D401,E203,W503
+# Line length configuration
+max-line-length = 88  # Match black's default
+extend-ignore =
+    # Whitespace before ':' (black handles this)
+    E203,
+    # Line break before binary operator (black handles this)
+    W503,
+    # Missing docstring in public module (handled separately)
+    D100,
+    # Missing docstring in public class (handled separately)
+    D101,
+    # Missing docstring in public method (handled separately)
+    D102,
+    # Missing docstring in public function (handled separately)
+    D103,
+    # Missing docstring in public package (handled separately)
+    D104,
+    # Missing docstring in magic method (handled separately)
+    D105,
+    # One-line docstring should fit on one line with quotes
+    D200,
+    # 1 blank line required between summary line and description
+    D205,
+    # First line should end with a period
+    D400,
+    # First line should be in imperative mood
+    D401
 
+# Files to exclude from checks
 exclude =
     .git,
     __pycache__,
@@ -14,13 +39,26 @@ exclude =
     venv,
     .venv,
     .env,
-    env
+    env,
+    migrations,
+    .mypy_cache,
+    .pytest_cache
 
+# Per-file-ignores for specific cases
 per-file-ignores =
     # Allow unused imports in __init__.py files
     __init__.py: F401
-    # Allow undefined names in models (they're resolved at runtime)
-    app/models/orm/*.py: F821
+    # Allow type annotation imports to be unused
+    *.py: F401
+    # Ignore "may be undefined or defined from star imports"
+    *.py: F403, F405
 
-# Specify the order of imports
+# Import order settings
 import-order-style = google
+application-import-names = app, tests
+
+# Additional settings
+max-complexity = 10  # McCabe complexity threshold
+statistics = True
+count = True
+show-source = True

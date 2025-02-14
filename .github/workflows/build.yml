@@ -31,11 +31,14 @@ jobs:
           pip install -r backend/requirements-dev.txt
 
       - name: Run Python tests with coverage
+        working-directory: ./backend
         run: |
-          cd backend
-          export PYTHONPATH=$PYTHONPATH:$(pwd)
-          cd ..
-          python -m pytest tests/models/domain/test_reminder.py tests/models/orm/test_reminder.py tests/repositories/test_reminder_repository.py --cov=backend/app --cov-report=xml:backend/coverage.xml --cov-report=term-missing --junitxml=backend/pytest-report.xml -v
+          python -m pytest tests \
+            --cov=app \
+            --cov-report=xml:coverage.xml \
+            --cov-report=term-missing \
+            --junitxml=pytest-report.xml \
+            -v
 
       # Frontend setup and tests
       - name: Set up Node.js
@@ -57,18 +60,22 @@ jobs:
           npm run test -- --coverage --coverageReporters=lcov --coverageReporters=text-summary --passWithNoTests
 
       # Code Quality Checks
-      - name: Run Python linting
+      - name: Run Python linting and formatting
         working-directory: ./backend
         run: |
-          # Format with black
-          python -m black .
+          # Format with black (check only)
+          python -m black . --check
 
-          # Sort imports
-          python -m isort .
+          # Sort imports (check only)
+          python -m isort . --check-only --profile black
 
           # Run flake8
-          python -m flake8 . --statistics --show-source
-        continue-on-error: false
+          python -m flake8 . --config=../.flake8
+
+      - name: Run Python type checking
+        working-directory: ./backend
+        run: |
+          python -m mypy . --config-file=../mypy.ini --show-error-codes
 
       - name: Run TypeScript linting
         working-directory: ./frontend

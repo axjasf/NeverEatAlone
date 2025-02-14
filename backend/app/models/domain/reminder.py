@@ -52,7 +52,8 @@ class RecurrencePattern:
             self.unit = RecurrenceUnit(unit)
         except ValueError:
             raise ValueError(
-                f"Invalid recurrence unit. Must be one of: {', '.join(u.value for u in RecurrenceUnit)}"
+                "Invalid recurrence unit. Must be one of: "
+                f"{', '.join(u.value for u in RecurrenceUnit)}"
             )
 
         self.interval = interval
@@ -206,7 +207,8 @@ class Reminder(BaseModel):
             New reminder instance if this was recurring, None otherwise
 
         Raises:
-            ValueError: If reminder is already completed/cancelled or completion_date is invalid
+            ValueError: If reminder is already completed/cancelled or
+                completion_date is invalid
         """
         if self.status != ReminderStatus.PENDING:
             raise ValueError(
