@@ -1,200 +1,170 @@
 # Model Layer Design
 
+> For implementation details and API reference, see [Model Layer Implementation](../../implementation/backend/MODEL_LAYER.md)
+
 ## Overview
-This document outlines the architecture of the model layer in NeverEatAlone, using a Domain-Driven Design approach with the Repository pattern. See below.
 
-## Architecture
+This document explains the architectural decisions and design patterns used in the model layer of NeverEatAlone.
 
-### Layer Structure
+## Core Design Decisions
+
+### 1. Domain-Driven Design
+We chose DDD to ensure the codebase accurately reflects the business domain and rules:
+
+- **Rich Domain Models**: Business logic lives in the domain models
+- **Ubiquitous Language**: Code terminology matches business concepts
+- **Bounded Contexts**: Clear separation between different parts of the system
+
+Example of rich domain model with business rules:
+```python
+class Tag:
+    def set_frequency(self, days: Optional[int]) -> None:
+        """Set contact frequency with validation."""
+        if days is not None and not (1 <= days <= 365):
+            raise ValueError("Frequency must be between 1 and 365 days")
+        self.frequency_days = days
+        self.last_contact = None if days is None else self.get_current_time()
+```
+
+### 2. Repository Pattern
+We use repositories to abstract persistence details:
+
+- **Interface-Based**: Repository interfaces define persistence contracts
+- **Implementation-Agnostic**: Domain models don't know about storage
+- **Single Responsibility**: Each repository handles one aggregate
+
+Example of repository interface:
+```python
+class TagRepository(Protocol):
+    """Repository interface focused on domain operations."""
+    def find_stale(self) -> List[Tag]:
+        """Find tags that need attention based on frequency."""
+        ...
+```
+
+### 3. Clean Architecture
+Our layered approach ensures separation of concerns:
+
 ```
 [Domain Models] → [Repository Interfaces] → [Repository Implementations] → [Database]
      ↑                    ↑                           ↑                        ↑
 Business Logic     Persistence Contract      Storage Implementation     Actual Storage
 ```
 
-### Components
+Benefits:
+- Domain logic is isolated from infrastructure
+- Easy to test business rules
+- Can change storage without affecting domain
+- Clear dependencies between layers
 
-#### 1. Domain Models
-Pure Python classes that encapsulate business logic without persistence concerns.
+### 4. Base Classes
+We use base classes to share common functionality:
 
-Example (Tag):
+- **Domain Base**: Handles identity and timestamps
+- **ORM Base**: Provides SQLAlchemy integration
+- **Reduces Duplication**: Common patterns in one place
+- **Consistent Behavior**: All entities handle basics the same way
+
+### 5. Natural Keys and Relationships
+Our relationship design prioritizes data integrity:
+
+- **Natural Keys**: Tags use composite keys for uniqueness
+- **Cascade Deletes**: Child records are removed with parents
+- **Lazy Loading Control**: Explicit loading strategies
+- **Bidirectional Navigation**: Easy to traverse relationships
+
+Example of relationship configuration:
 ```python
-class Tag:
-    def __init__(self, entity_id: UUID, entity_type: EntityType, name: str):
-        if not name.startswith("#"):
-            raise ValueError("Tag must start with '#'")
-        self.entity_id = entity_id
-        self.name = name.lower()
-        # ... business logic only ...
-
-    def is_stale(self) -> bool:
-        # Pure business logic
-        return self._calculate_staleness()
-```
-
-#### 2. Repository Interfaces
-Define contracts for persistence operations using Protocol classes.
-
-```python
-from typing import Protocol, Optional, List
-
-class TagRepository(Protocol):
-    def save(self, tag: Tag) -> None: ...
-    def find_by_name(self, name: str) -> Optional[Tag]: ...
-    def find_by_entity(self, entity_id: UUID) -> List[Tag]: ...
-    def delete(self, tag: Tag) -> None: ...
-
-class ContactRepository(Protocol):
-    def save(self, contact: Contact) -> None: ...
-    def find_by_id(self, id: UUID) -> Optional[Contact]: ...
-    def find_by_name(self, name: str) -> List[Contact]: ...
-    def delete(self, contact: Contact) -> None: ...
-```
-
-#### 3. Repository Implementations
-Concrete implementations for different storage backends.
-
-```python
-class SQLAlchemyTagRepository:
-    def __init__(self, session: Session):
-        self.session = session
-
-    def save(self, tag: Tag) -> None:
-        tag_orm = TagORM(
-            entity_id=tag.entity_id,
-            name=tag.name
-        )
-        self.session.add(tag_orm)
-        self.session.commit()
-```
-
-### Design Principles
-
-1. **Separation of Concerns**
-   - Domain Models: Business logic only
-   - Repositories: Persistence logic only
-   - Services: Orchestration and transaction management
-
-2. **Dependency Inversion**
-   - High-level modules (domain models) don't depend on low-level modules (database)
-   - Both depend on abstractions (repository interfaces)
-
-3. **Single Responsibility**
-   - Each class has one reason to change
-   - Domain models change for business rules
-   - Repositories change for persistence logic
-
-## Implementation Guide
-
-### 1. Domain Models
-- Keep models pure Python classes
-- Validate in constructors
-- Use type hints
-- Document with docstrings
-- Include only business logic
-
-```python
-class Contact:
-    def __init__(self, name: str):
-        """Create a new contact.
-
-        Args:
-            name: The contact's name
-        """
-        self.name = name
-        self.tags: List[Tag] = []
-
-    def add_tag(self, tag: Tag) -> None:
-        """Add a tag to this contact."""
-        self.tags.append(tag)
-```
-
-### 2. Repository Interfaces
-- Define clear contracts
-- Use Protocol classes
-- Include common CRUD operations
-- Add domain-specific queries
-
-### 3. SQLAlchemy Implementation
-- Create ORM models separately
-- Map between domain and ORM models
-- Handle transactions
-- Implement error handling
-
-```python
-class TagORM(Base):
-    __tablename__ = "tags"
-
-    id = Column(UUID, primary_key=True)
-    entity_id = Column(UUID, nullable=False)
-    name = Column(String, nullable=False)
+class NoteORM(BaseORMModel):
+    """ORM model with carefully chosen relationship settings."""
+    statements = relationship(
+        StatementORM,
+        back_populates="note",
+        cascade="all, delete-orphan",  # Automatic cleanup
+        lazy="joined",                 # Performance optimization
+        order_by="StatementORM.sequence_number"  # Consistent ordering
+    )
 ```
 
 ## Testing Strategy
 
-### 1. Domain Model Tests
-- Pure unit tests
-- No database needed
-- Fast execution
-- Focus on business rules
-
+### 1. Pure Domain Tests
+Testing business logic in isolation:
 ```python
 def test_tag_validation():
+    """Domain rules tested without infrastructure."""
     with pytest.raises(ValueError):
-        Tag(entity_id=uuid4(), name="invalid")  # Missing #
+        Tag(entity_id=uuid4(), name="invalid")  # Must start with #
 ```
 
 ### 2. Repository Tests
-- Integration tests
-- Test with real database
-- Focus on persistence
-- Test edge cases
-
+Testing persistence with real database:
 ```python
-def test_tag_repository(db_session):
+def test_find_stale_tags(db_session: Session):
+    """Full repository behavior tested."""
     repo = SQLAlchemyTagRepository(db_session)
-    tag = Tag(entity_id=uuid4(), name="#test")
+    tag = create_stale_tag()
     repo.save(tag)
-
-    found = repo.find_by_name("#test")
-    assert found is not None
+    assert len(repo.find_stale()) == 1
 ```
 
-## Migration Path
+### 3. Test Infrastructure
+Reliable test environment:
+```python
+@pytest.fixture(scope="session")
+def db_session():
+    """Isolated database testing."""
+    engine = create_engine("sqlite:///:memory:")
+    connection = engine.connect()
+    transaction = connection.begin()
+    session = Session(connection)
+    yield session
+    session.close()
+    transaction.rollback()
+```
 
-1. **Phase 1: Domain Models**
-   - Create pure domain models
-   - Move business logic from existing models
-   - Add comprehensive tests
+## Performance Considerations
 
-2. **Phase 2: Repositories**
-   - Define repository interfaces
-   - Create SQLAlchemy implementations
-   - Add integration tests
+### 1. Lazy Loading
+- Default to joined loading for common relationships
+- Use lazy loading for rarely accessed data
+- Explicit loading strategies in repository methods
 
-3. **Phase 3: Services**
-   - Create service layer
-   - Move orchestration logic
-   - Update API endpoints
+### 2. Caching Opportunities
+- Repository layer can add caching
+- Natural keys enable efficient cache invalidation
+- Session-level caching with SQLAlchemy
 
-## Benefits
+### 3. Transaction Management
+- Repository methods handle transactions
+- Consistent transaction boundaries
+- Proper cleanup on failures
 
-1. **Maintainability**
-   - Clear separation of concerns
-   - Easy to understand components
-   - Isolated changes
+## Security Considerations
 
-2. **Testability**
-   - Fast unit tests
-   - No database for business logic
-   - Comprehensive test coverage
+### 1. Input Validation
+- Domain models validate all input
+- Type hints enforce basic constraints
+- Business rules checked in constructors
 
-3. **Flexibility**
-   - Easy to change storage
-   - Easy to add caching
-   - Easy to add logging
+### 2. Data Access
+- Repositories control data access
+- No direct database access from higher layers
+- Clear audit trail with timestamps
 
-4. **Scalability**
-   - Can optimize each layer
-   - Can cache at repository level
-   - Can distribute components
+## Evolution and Maintenance
+
+### 1. Adding Features
+- Add methods to domain models for new behavior
+- Extend repository interfaces for new queries
+- Keep layers synchronized
+
+### 2. Schema Changes
+- Update ORM models first
+- Migrate database schema
+- Update domain models last
+
+### 3. Testing Changes
+- Start with domain model tests
+- Add repository tests for new queries
+- Update integration tests last
