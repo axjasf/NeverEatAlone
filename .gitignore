@@ -64,6 +64,9 @@ backend/coverage.xml
 frontend/coverage/
 logs/
 tmp/
+doctmp/
+**/nevereatalone.egg-info/
+**/.pytest_cache/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

@@ -15,7 +15,7 @@ Authorization: Bearer {token}
     "first_name": "string",
     "sub_information": {},
     "hashtags": ["string"],
-    "last_contact": "datetime"
+    "contact_briefing_text": "string"
 }
 
 Response 201:
@@ -25,7 +25,7 @@ Response 201:
     "first_name": "string",
     "sub_information": {},
     "hashtags": ["string"],
-    "last_contact": "datetime",
+    "contact_briefing_text": "string",
     "created_at": "datetime",
     "updated_at": "datetime"
 }
@@ -43,7 +43,7 @@ Response 200:
     "first_name": "string",
     "sub_information": {},
     "hashtags": ["string"],
-    "last_contact": "datetime",
+    "contact_briefing_text": "string",
     "created_at": "datetime",
     "updated_at": "datetime"
 }
@@ -60,7 +60,7 @@ Authorization: Bearer {token}
     "first_name": "string",
     "sub_information": {},
     "hashtags": ["string"],
-    "last_contact": "datetime"
+    "contact_briefing_text": "string"
 }
 
 Response 200:
@@ -70,7 +70,7 @@ Response 200:
     "first_name": "string",
     "sub_information": {},
     "hashtags": ["string"],
-    "last_contact": "datetime",
+    "contact_briefing_text": "string",
     "created_at": "datetime",
     "updated_at": "datetime"
 }
@@ -84,7 +84,71 @@ Authorization: Bearer {token}
 Response 204
 ```
 
-### 1.2 Template Management
+### 1.2 Tag Management
+
+#### List Tags
+```http
+GET /api/tags
+Authorization: Bearer {token}
+
+Response 200:
+{
+    "items": [
+        {
+            "name": "string",
+            "frequency_days": "number?",
+            "entity_type": "string",
+            "created_at": "datetime"
+        }
+    ],
+    "total_count": "number"
+}
+```
+
+#### Update Tag
+```http
+PUT /api/tags/{name}
+Content-Type: application/json
+Authorization: Bearer {token}
+
+{
+    "frequency_days": "number?"
+}
+
+Response 200:
+{
+    "name": "string",
+    "frequency_days": "number?",
+    "entity_type": "string",
+    "created_at": "datetime"
+}
+```
+
+#### List Contacts by Tag
+```http
+GET /api/tags/{name}/contacts
+Authorization: Bearer {token}
+
+Response 200:
+{
+    "items": [
+        {
+            "id": "uuid",
+            "name": "string",
+            "first_name": "string",
+            "sub_information": {},
+            "hashtags": ["string"],
+            "contact_briefing_text": "string",
+            "created_at": "datetime",
+            "updated_at": "datetime",
+            "staleness_days": "number?"
+        }
+    ],
+    "total_count": "number"
+}
+```
+
+### 1.3 Template Management
 
 #### Get Template
 ```http
@@ -98,11 +162,16 @@ Response 200:
             "fields": {
                 "field_name": {
                     "type": "string",
-                    "description": "string"
+                    "description": "string",
+                    "display_format": "string?",
+                    "reminder_template": "string?",
+                    "validators": ["string"]
                 }
             }
         }
-    }
+    },
+    "version": "number",
+    "updated_at": "datetime"
 }
 ```
 
@@ -118,7 +187,10 @@ Authorization: Bearer {token}
             "fields": {
                 "field_name": {
                     "type": "string",
-                    "description": "string"
+                    "description": "string",
+                    "display_format": "string?",
+                    "reminder_template": "string?",
+                    "validators": ["string"]
                 }
             }
         }
@@ -132,11 +204,16 @@ Response 200:
             "fields": {
                 "field_name": {
                     "type": "string",
-                    "description": "string"
+                    "description": "string",
+                    "display_format": "string?",
+                    "reminder_template": "string?",
+                    "validators": ["string"]
                 }
             }
         }
-    }
+    },
+    "version": "number",
+    "updated_at": "datetime"
 }
 ```
 
@@ -150,14 +227,21 @@ type Contact {
     firstName: String
     subInformation: JSON
     hashtags: [String!]
-    briefingText: String
-    lastContact: DateTime
+    contactBriefingText: String
     createdAt: DateTime!
     updatedAt: DateTime!
 }
 
+type Tag {
+    name: String!
+    frequencyDays: Int
+    entityType: String!
+    createdAt: DateTime!
+}
+
 type Template {
     categories: JSON!
+    version: Int!
     updatedAt: DateTime!
 }
 
@@ -169,6 +253,8 @@ type Query {
         page: Int
         pageSize: Int
     ): [Contact!]!
+    tags: [Tag!]!
+    tagContacts(name: String!): [Contact!]!
     template: Template!
 }
 
@@ -176,6 +262,7 @@ type Mutation {
     createContact(input: CreateContactInput!): Contact!
     updateContact(id: ID!, input: UpdateContactInput!): Contact!
     deleteContact(id: ID!): Boolean!
+    updateTag(name: String!, input: UpdateTagInput!): Tag!
     updateTemplate(input: UpdateTemplateInput!): Template!
 }
 
@@ -184,8 +271,7 @@ input CreateContactInput {
     firstName: String
     subInformation: JSON
     hashtags: [String!]
-    briefingText: String
-    lastContact: DateTime
+    contactBriefingText: String
 }
 
 input UpdateContactInput {
@@ -193,8 +279,11 @@ input UpdateContactInput {
     firstName: String
     subInformation: JSON
     hashtags: [String!]
-    briefingText: String
-    lastContact: DateTime
+    contactBriefingText: String
+}
+
+input UpdateTagInput {
+    frequencyDays: Int
 }
 
 input UpdateTemplateInput {
@@ -217,14 +306,43 @@ interface ContactEvent {
 }
 ```
 
-### 3.2 Template Events
+### 3.2 Tag Events
+```typescript
+interface TagEvent {
+    type: "FREQUENCY_ENABLED" | "FREQUENCY_DISABLED" | "FREQUENCY_UPDATED" | "TAGGED" | "UNTAGGED";
+    tagName: string;
+    timestamp: string;
+    entityType: "contact" | "note" | "statement";
+    entityId: string;
+    data: {
+        before?: Tag;
+        after?: Tag;
+    };
+}
+```
+
+### 3.3 Template Events
 ```typescript
 interface TemplateEvent {
     type: "UPDATED";
     timestamp: string;
+    version: number;
     data: {
         before?: Template;
         after?: Template;
+    };
+}
+```
+
+### 3.4 Statement Events
+```typescript
+interface StatementEvent {
+    type: "CREATED" | "UPDATED";
+    statementId: string;
+    timestamp: string;
+    data: {
+        before?: Statement;
+        after?: Statement;
     };
 }
 ```

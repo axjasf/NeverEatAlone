@@ -53,11 +53,13 @@ graph TD
 ```mermaid
 erDiagram
     Contact ||--o{ Note : has
-    Contact ||--o{ Ring : belongs_to
+    Contact ||--o{ Tag : has
     Contact ||--o{ Reminder : has
-    Ring ||--o{ Reminder : generates
+    Tag ||--o{ Reminder : suggests
     Note ||--o{ Statement : contains
     Statement ||--o{ SuggestedUpdate : generates
+    Statement ||--o{ Tag : has
+    Note ||--o{ Tag : has
 ```
 
 ### 2.2 Data Flow
@@ -69,11 +71,12 @@ sequenceDiagram
     participant D as Database
     participant S as Search Engine
 
-    U->>A: Create Contact
+    U->>A: Create/Update Contact
     A->>T: Validate Template
-    T->>D: Store Contact
-    D->>S: Update Index
-    S->>A: Confirm Update
+    T-->>D: Store Contact
+    D-->>S: Update Index
+    A->>D: Update Tags
+    D->>A: Return Updated State
     A->>U: Return Result
 ```
 
@@ -85,25 +88,28 @@ class Contact(BaseModel):
     id: UUID
     name: str
     first_name: Optional[str]
-    sub_information: Dict[str, Any]
-    hashtags: List[str]
+    sub_information: Dict[str, Any]  # Template-validated JSON
+    hashtags: List[str]  # Normalized, lowercase tags
     briefing_text: Optional[str]
-    last_met: Optional[datetime]
     created_at: datetime
     updated_at: datetime
 ```
 
-### 3.2 Template Model
+### 3.2 Tag Model
+```python
+class Tag(BaseModel):
+    name: str  # Normalized, lowercase
+    frequency_days: Optional[int]  # Optional contact frequency
+    entity_type: str  # 'contact', 'note', or 'statement'
+    created_at: datetime
+```
+
+### 3.3 Template Model
 ```python
 class Template(BaseModel):
     categories: Dict[str, CategoryDefinition]
     updated_at: datetime
-```
-
-### 3.3 Category Definition
-```python
-class CategoryDefinition(BaseModel):
-    fields: Dict[str, FieldDefinition]
+    version: int  # For tracking template evolution
 ```
 
 ### 3.4 Field Definition
@@ -111,20 +117,30 @@ class CategoryDefinition(BaseModel):
 class FieldDefinition(BaseModel):
     type: str  # string, number, date, boolean
     description: str
-    validators: Optional[List[str]] = None
+    display_format: Optional[str]
+    reminder_template: Optional[str]
+    validators: Optional[List[str]]
 ```
 
 ## 4. API Design
 
 ### 4.1 REST Endpoints
 ```plaintext
+# Contact Management
 POST   /api/contacts              # Create contact
 GET    /api/contacts/{id}         # Get contact
 PUT    /api/contacts/{id}         # Update contact
 DELETE /api/contacts/{id}         # Delete contact
 GET    /api/contacts/search       # Search contacts
-GET    /api/template             # Get template
-PUT    /api/template             # Update template
+
+# Tag Management
+GET    /api/tags                  # List all tags
+PUT    /api/tags/{name}          # Update tag (e.g., enable frequency)
+GET    /api/tags/{name}/contacts # List contacts with tag
+
+# Template Management
+GET    /api/template             # Get current template
+PUT    /api/template             # Update template with version
 ```
 
 ### 4.2 GraphQL Schema

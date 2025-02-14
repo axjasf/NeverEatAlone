@@ -86,6 +86,7 @@ class ContactResponse(ContactCreate):
 
 class ContactList(BaseModel):
     """Response model for paginated contact list."""
+
     items: List[ContactResponse]
     total_count: int
     limit: int = 10
@@ -319,16 +320,21 @@ async def list_contacts(
     if hashtags:
         print("\n=== HASHTAG FILTERING DEBUG ===")
         print(f"Input hashtags: {hashtags}")
-        tag_list = [tag.strip().lower() for tag in hashtags.split(",") if tag.strip().startswith("#")]
+        tag_list = [
+            tag.strip().lower()
+            for tag in hashtags.split(",")
+            if tag.strip().startswith("#")
+        ]
         print(f"Normalized tags: {tag_list}")
 
         # Find contacts that have ALL requested hashtags.
         matching_ids = (
             sa.select(contact_hashtags.c.contact_id)
-            .join(Hashtag, contact_hashtags.c.hashtag_id == Hashtag.id)  # Explicit join condition.
+            .join(
+                Hashtag, contact_hashtags.c.hashtag_id == Hashtag.id
+            )  # Explicit join condition.
             .filter(
-                Hashtag.entity_type == EntityType.CONTACT,
-                Hashtag.name.in_(tag_list)
+                Hashtag.entity_type == EntityType.CONTACT, Hashtag.name.in_(tag_list)
             )
             .group_by(contact_hashtags.c.contact_id)
             .having(sa.func.count(sa.distinct(Hashtag.name)) == len(tag_list))
@@ -372,9 +378,4 @@ async def list_contacts(
             )
         )
 
-    return ContactList(
-        items=items,
-        total_count=total_count,
-        limit=limit,
-        offset=offset
-    )
+    return ContactList(items=items, total_count=total_count, limit=limit, offset=offset)

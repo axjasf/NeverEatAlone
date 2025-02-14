@@ -13,6 +13,25 @@ cd backend
 python -m pytest -v  # Should show contact tests
 ```
 
+## Test Structure and Independence
+```
+tests/
+├── models/              # Model tests (independent of API)
+│   ├── conftest.py     # Database setup only
+│   └── test_*.py       # Pure model tests
+├── api/                # API tests (builds on model tests)
+│   ├── conftest.py     # FastAPI client setup
+│   └── test_*.py       # Endpoint tests
+└── conftest.py         # Re-exports fixtures
+```
+
+Key principles:
+- Model tests NEVER depend on API layer
+- API tests can use model test fixtures
+- Each test type has its own configuration
+- Use `tests/models/conftest.py` for database tests
+- Use `tests/api/conftest.py` for endpoint tests
+
 ## Running Tests
 ```bash
 # From project root (recommended)
@@ -23,6 +42,12 @@ python -m pytest tests/api/test_contact_endpoints.py -v  # Specific test file
 
 # Run with print statements visible (useful for debugging)
 python -m pytest -v -s
+
+# Debug on failure
+python -m pytest --pdb
+
+# Show local variables on failure
+python -m pytest -l
 
 # Run specific test function
 python -m pytest tests/api/test_contact_endpoints.py -v -k "test_create_contact"
@@ -209,3 +234,51 @@ git commit -m "feat(api): Add contact creation endpoint"
 # Push changes
 git push origin feature/contact-management-core
 ```
+
+## Documentation Update Sequence
+
+### Propagating Functional Changes
+When making significant changes to functional requirements, update documentation in this sequence:
+
+1. **Functional Requirements** (`docs/brd/modules/contact_management/requirements/functional.md`)
+   - Core requirements and behaviors
+   - System capabilities and constraints
+   - Create feature branch for changes
+
+2. **Architecture** (`docs/brd/modules/contact_management/technical/architecture.md`)
+   - How the system will deliver these requirements
+   - Component relationships
+   - Data flows
+
+3. **Interfaces** (`docs/brd/modules/contact_management/technical/interfaces.md`)
+   - API contracts that implement the architecture
+   - Data structures
+   - Operations
+
+4. **Non-Functional Requirements** (`docs/brd/modules/contact_management/requirements/non_functional.md`)
+   - Performance implications
+   - Scalability considerations
+   - Security requirements
+
+5. **User Stories** (`docs/brd/modules/contact_management/requirements/user_stories.md`)
+   - Concrete usage scenarios
+   - Acceptance criteria
+   - User interactions
+
+6. **Data Model** (`docs/brd/modules/contact_management/technical/data_model.md`)
+   - Database schema
+   - Entity relationships
+   - Data integrity rules
+
+7. **Implementation Details**
+   - Implementation plan (`docs/implementation/IMPLEMENTATION_PLAN.md`)
+   - Working notes (`docs/implementation/WORKING_NOTES.md`)
+   - Development guides
+   - Test plans
+
+### Best Practices for Doc Updates
+- Create feature branch for documentation changes
+- Update documents in sequence to maintain consistency
+- Commit changes per document with clear messages
+- Review cross-document dependencies
+- Update examples and code snippets to match new requirements

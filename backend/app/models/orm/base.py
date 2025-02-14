@@ -1,25 +1,23 @@
-from sqlalchemy.orm import declarative_base
+"""Base ORM model."""
+
+from datetime import datetime, timezone
 from sqlalchemy import Column, DateTime, String
 from sqlalchemy.types import TypeDecorator
-import uuid
-from datetime import datetime, UTC
 from typing import Any, Optional
-
-
-Base = declarative_base()
+import uuid
+from ...database import Base
 
 
 class GUID(TypeDecorator[uuid.UUID]):
     """Platform-independent GUID type.
     Uses String(36) internally for SQLite compatibility.
     """
+
     impl = String(36)
     cache_ok = True
 
     def process_bind_param(
-        self,
-        value: Optional[uuid.UUID | str],
-        dialect: Any
+        self, value: Optional[uuid.UUID | str], dialect: Any
     ) -> Optional[str]:
         if value is None:
             return value
@@ -29,9 +27,7 @@ class GUID(TypeDecorator[uuid.UUID]):
             return str(value)
 
     def process_result_value(
-        self,
-        value: Optional[str],
-        dialect: Any
+        self, value: Optional[str], dialect: Any
     ) -> Optional[uuid.UUID]:
         if value is None:
             return value
@@ -39,7 +35,7 @@ class GUID(TypeDecorator[uuid.UUID]):
             return uuid.UUID(value)
 
 
-class BaseModel(Base):
+class BaseORMModel(Base):
     """Base model class that includes common fields and methods.
 
     This class serves as the foundation for all database models in
@@ -54,19 +50,15 @@ class BaseModel(Base):
 
     __abstract__ = True
 
-    id = Column(
-        GUID,
-        primary_key=True,
-        default=lambda: str(uuid.uuid4())
-    )
+    id = Column(GUID, primary_key=True, default=lambda: str(uuid.uuid4()))
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(UTC)
+        default=lambda: datetime.now(timezone.utc),
     )
     updated_at = Column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC)
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
     )

@@ -1,100 +1,108 @@
 # Contact Management System - Implementation Plan
+Version: 2024.02.13-1
 
-## Active Sprint: Backend Core - Part 2
+## Version History
+- 2024.02.13-1: Updated focus to Tag value objects implementation
+- 2024.02.13-0: Initial version, model layer refactoring plan
+
+## Active Sprint: Tag Value Objects Implementation
 
 ### Currently Working On 🔨
-- Remaining CRUD Endpoints Implementation:
-  - PUT /api/contacts/{id} (Update) - Status: IN PROGRESS
-  - DELETE /api/contacts/{id} (Delete) - Status: IN PROGRESS
-  - GET /api/contacts (List/Search) - Status: IN PROGRESS
+- Tag Value Objects:
+  - Creating TagName value object
+  - Creating Frequency value object
+  - Unit tests for both
+  - Integration with Tag model
 
 ### Just Finished ✅
-- Contact Model Implementation:
-  - Basic contact information structure
-  - JSON sub-information support
-  - Hashtag support
-  - Test coverage
-- Basic API Endpoints:
-  - POST /api/contacts (Create)
-  - GET /api/contacts/{id} (Read)
-  - Error handling
-  - Input validation
+- Initial domain model design for Tag
+- Basic test suite for Tag business logic
+- Separation of Tag model from database concerns
+- Basic CRUD API implementation
+- Error handling standardization
 
 ### Active Sprint Backlog 📋
-1. **Complete Contact API** (`backend/app/api/endpoints/contacts.py`)
-   - Update endpoint implementation
-   - Delete endpoint implementation
-   - List endpoint with filtering
-   - Test coverage for new endpoints
-   - OpenAPI documentation
+1. **Tag Value Objects**
+   - Create TagName value object
+     - Validation rules
+     - Case normalization
+     - Immutability
+   - Create Frequency value object
+     - Range validation
+     - Business rules
+   - Write comprehensive tests
+   - Update Tag model to use them
 
-2. **Search Implementation**
-   - Name-based search
-   - Hashtag filtering
-   - Last contact date sorting
-   - Pagination support
-   - Test coverage
+2. **Tag Domain Model**
+   - Remove SQLAlchemy dependencies
+   - Use new value objects
+   - Update validation logic
+   - Add comprehensive tests
 
-3. **API Documentation**
-   - OpenAPI specs
-   - Usage examples
-   - Error handling documentation
-   - Postman collection
+3. **Tag Repository** (Moved to next sprint)
+   - Create repository interface
+   - Implement SQLAlchemy repository
+   - Add integration tests
+   - Handle transactions
+   - Add error handling
 
 ### Sprint Success Criteria
-- All CRUD operations implemented and tested
-- Search functionality working
-- Test coverage > 80% for new code
-- OpenAPI documentation complete
-- Error handling for all scenarios
+- Value objects implemented and tested
+- Tag model using value objects
+- No SQLAlchemy dependencies in domain model
+- Test coverage > 80%
+- Clear validation messages
 
 ## Product Backlog
 
-### Sprint 3: Ring Management
-1. **Ring Features**
-   - Ring model implementation
-   - Contact-Ring relationships
-   - Ring CRUD operations
-   - Test coverage
+### Sprint: Tag Repository Implementation (Next)
+1. **Repository Pattern**
+   - Create repository interfaces
+   - Implement SQLAlchemy repositories
+   - Add integration tests
+   - Handle transactions
+   - Add error handling
 
-2. **Ring Integration**
-   - Contact assignment to rings
-   - Ring-based filtering
-   - Ring-based reminders
-   - Test coverage
+2. **Contact and Note Models**
+   - Apply same pattern to Contact
+   - Apply pattern to Note
+   - Update tests
+   - Add repositories
 
-### Sprint 4: AI Integration
-1. **Voice Processing**
-   - Voice-to-text integration
-   - Audio file handling
-   - Test infrastructure
+### Sprint: Enhanced Tag System
+1. **Tag Features**
+   - Add reminder capabilities to tags
+   - Migrate existing ring data to tags
+   - Update tag filtering logic
+   - Test coverage for new tag features
+   - Implement statement tagging support
+   - Add tag inheritance from notes to statements
 
-2. **AI Features**
-   - Contact analysis
-   - Statement extraction
-   - Contact briefing generation
-   - Information suggestions
+[Rest of backlog moved to BACKLOG.md]
+
+## Implementation Steps
+
+### Phase 1: Tag Value Objects (Current) ⏳
+1. Create value objects
+   - [ ] TagName value object
+   - [ ] Frequency value object
+   - [ ] Unit tests for both
+   - [ ] Integration tests
+
+2. Update Tag model
+   - [ ] Use new value objects
+   - [ ] Remove SQLAlchemy
+   - [ ] Update tests
+
+### Phase 2: Tag Repository (Next Sprint) 🔄
+1. Create repository interface
+   - [ ] Define contract
+   - [ ] Add CRUD operations
+   - [ ] Add domain-specific queries
+
+[Rest of phases moved to PHASES.md]
 
 ## Technical Requirements & Guidelines
-
-### API Design
-- RESTful principles
-- OpenAPI documentation
-- Proper error responses
-- Rate limiting
-- Authentication/Authorization
-
-### Data Management
-- ACID compliance
-- Proper indexing
-- Query optimization
-- Caching strategy
-
-### Testing
-- Minimum 80% coverage
-- Integration tests
-- Performance tests
-- Security tests
 
 ### Code Quality
 - Type hints required
@@ -102,115 +110,17 @@
 - Pre-commit hooks
 - Code review process
 
+### Testing
+- Minimum 80% coverage
+- Unit tests for value objects
+- Integration tests for repositories
+- Property-based testing where applicable
+
 ### Git Workflow
 - Feature branches
 - Pull request reviews
 - CI/CD integration
 - Version tagging
-
-## Dependencies
-
-### Current Requirements
-```plaintext
-fastapi
-uvicorn
-sqlalchemy
-pydantic
-alembic
-pytest
-pytest-asyncio
-black
-flake8
-mypy
-```
-
-## References
-1. [Contact Management BRD](../../brd/modules/contact_management/README.md)
-2. [Technical Architecture](../../brd/modules/contact_management/technical/architecture.md)
-3. [API Interfaces](../../brd/modules/contact_management/technical/interfaces.md)
-4. [Data Model](../../brd/modules/contact_management/technical/data_model.md)
-
-# Implementation Plan
-
-## Phase 1: Core Infrastructure ✅
-1. Set up project structure ✅
-2. Configure SQLite database ✅
-3. Set up test infrastructure ✅
-4. Create base models with UUID support ✅
-
-## Phase 2: Contact Model ✅
-1. Define Contact model fields ✅
-2. Implement validation rules ✅
-3. Add type hints and documentation ✅
-4. Set up Pydantic schemas ✅
-5. Implement field validation with Pydantic ✅
-
-## Phase 3: Basic CRUD API ⏳
-1. Create endpoint (POST /api/contacts) ✅
-   - Accept required fields ✅
-   - Handle optional fields ✅
-   - Validate input ✅
-   - Return proper status codes ✅
-
-2. Read endpoint (GET /api/contacts/{id}) ✅
-   - Retrieve by UUID ✅
-   - Handle not found case ✅
-   - Return proper status codes ✅
-
-3. Update endpoint (PUT /api/contacts/{id}) ✅
-   - Update existing contact ✅
-   - Validate all fields ✅
-   - Handle not found case ✅
-   - Return proper status codes ✅
-
-4. Delete endpoint (DELETE /api/contacts/{id}) 🔄
-   - Delete by UUID
-   - Handle not found case
-   - Return proper status codes
-
-5. List endpoint (GET /api/contacts) 🔄
-   - Basic listing functionality
-   - Implement pagination
-   - Add sorting options
-
-## Phase 4: Error Handling ✅
-1. Standardize error response format ✅
-2. Implement validation error handling ✅
-3. Add malformed JSON handling ✅
-4. Add not found handling ✅
-5. Improve validation error messages ✅
-6. Add proper error handling for hashtag validation ✅
-
-## Phase 5: Search and Filter 🔄
-1. Implement name search
-2. Add hashtag filtering
-3. Add date range filtering
-4. Implement sorting
-5. Add pagination support
-
-## Phase 6: Documentation 🔄
-1. Add OpenAPI documentation
-2. Document error responses
-3. Add usage examples
-4. Document search/filter parameters
-
-## Phase 7: Testing ⏳
-1. Unit tests for models ✅
-2. Integration tests for API endpoints ✅
-   - Create tests ✅
-   - Read tests ✅
-   - Update tests ✅
-   - Delete tests 🔄
-   - List tests 🔄
-3. Error handling tests ✅
-4. Search/filter tests 🔄
-5. Edge case tests ✅
-
-## Phase 8: Final Polish 🔄
-1. Code cleanup
-2. Performance optimization
-3. Final documentation review
-4. Security review
 
 ## Legend
 - ✅ Complete
@@ -240,3 +150,107 @@ None currently blocking progress.
 - Using type hints throughout
 - Following PEP 8 style guide
 - Using Pydantic for validation
+
+# Model Layer Implementation Plan
+
+## Current Sprint: Model Layer Refactoring
+
+### Currently Working On 🔨
+- Tag Model Refactoring:
+  - Converting to pure domain model
+  - Implementing repository pattern
+  - Updating test suite
+
+### Just Finished ✅
+- Initial domain model design for Tag
+- Basic test suite for Tag business logic
+- Separation of Tag model from database concerns
+
+### Active Sprint Backlog 📋
+1. **Tag Domain Model**
+   - Remove SQLAlchemy dependencies
+   - Create pure domain model
+   - Add value objects for complex properties
+   - Update validation logic
+   - Add comprehensive tests
+
+2. **Tag Repository**
+   - Create repository interface
+   - Implement SQLAlchemy repository
+   - Add integration tests
+   - Handle transactions
+   - Add error handling
+
+3. **Contact and Note Models**
+   - Apply same pattern to Contact
+   - Apply pattern to Note
+   - Update tests
+   - Add repositories
+
+### Sprint Success Criteria
+- All models are pure domain models
+- Repository pattern implemented
+- Test coverage > 80%
+- No database dependencies in domain models
+- Clean separation of concerns
+
+## Implementation Steps
+
+### Phase 1: Tag Domain Model (Current) ⏳
+1. Create pure Tag domain model
+   - [x] Basic structure
+   - [x] Business logic methods
+   - [ ] Remove SQLAlchemy dependencies
+   - [ ] Add value objects for complex properties
+
+2. Update Tag tests
+   - [x] Basic validation tests
+   - [x] Business logic tests
+   - [ ] Remove database dependencies
+   - [ ] Add test doubles
+
+### Phase 2: Tag Repository 🔄
+1. Create repository interface
+   - [ ] Define contract
+   - [ ] Add CRUD operations
+   - [ ] Add domain-specific queries
+
+2. Implement SQLAlchemy repository
+   - [ ] Create TagORM model
+   - [ ] Implement CRUD operations
+   - [ ] Add domain-specific queries
+   - [ ] Handle transactions
+
+3. Update integration tests
+   - [ ] Test repository operations
+   - [ ] Test edge cases
+   - [ ] Test transactions
+
+### Phase 3: Contact and Note Models 🔄
+1. Apply same pattern to Contact
+   - [ ] Create pure domain model
+   - [ ] Create repository interface
+   - [ ] Implement SQLAlchemy repository
+   - [ ] Update tests
+
+2. Apply pattern to Note
+   - [ ] Create pure domain model
+   - [ ] Create repository interface
+   - [ ] Implement SQLAlchemy repository
+   - [ ] Update tests
+
+### Phase 4: Service Layer 🔄
+1. Create service interfaces
+   - [ ] Define service contracts
+   - [ ] Plan transaction boundaries
+   - [ ] Design error handling
+
+2. Implement services
+   - [ ] TagService
+   - [ ] ContactService
+   - [ ] NoteService
+
+## Legend
+- ✅ Complete
+- ⏳ In Progress
+- 🔄 Pending
