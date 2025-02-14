@@ -104,9 +104,9 @@ class ReminderORM(Base):
         # Ensure completion_date is only set for completed reminders
         CheckConstraint(
             """
-            (status != 'completed' AND completion_date IS NULL)
+            (status != 'COMPLETED' AND completion_date IS NULL)
             OR
-            (status = 'completed' AND completion_date IS NOT NULL)
+            (status = 'COMPLETED' AND completion_date IS NOT NULL)
             """,
             name="valid_completion"
         ),

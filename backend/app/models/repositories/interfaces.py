@@ -4,6 +4,7 @@ from typing import Protocol, Optional, List
 from uuid import UUID
 from ..domain.note import Note
 from ..domain.tag import Tag, EntityType
+from ..domain.reminder import Reminder
 
 
 class NoteRepository(Protocol):
@@ -123,5 +124,77 @@ class TagRepository(Protocol):
 
         Args:
             tag: The tag to delete
+        """
+        ...
+
+
+class ReminderRepository(Protocol):
+    """Interface for reminder persistence operations."""
+
+    def save(self, reminder: Reminder) -> Reminder:
+        """Save a reminder.
+
+        Args:
+            reminder: The reminder to save
+
+        Returns:
+            The saved reminder with any updates from the database
+        """
+        ...
+
+    def find_by_id(self, reminder_id: UUID) -> Optional[Reminder]:
+        """Find a reminder by its ID.
+
+        Args:
+            reminder_id: The ID to search for
+
+        Returns:
+            The reminder if found, None otherwise
+        """
+        ...
+
+    def find_by_contact(self, contact_id: UUID) -> List[Reminder]:
+        """Find all reminders for a contact.
+
+        Args:
+            contact_id: The contact's ID
+
+        Returns:
+            List of reminders for the contact
+        """
+        ...
+
+    def find_by_note(self, note_id: UUID) -> List[Reminder]:
+        """Find all reminders linked to a note.
+
+        Args:
+            note_id: The note's ID
+
+        Returns:
+            List of reminders linked to the note
+        """
+        ...
+
+    def find_pending(self) -> List[Reminder]:
+        """Find all pending reminders.
+
+        Returns:
+            List of reminders in PENDING status
+        """
+        ...
+
+    def find_overdue(self) -> List[Reminder]:
+        """Find all overdue reminders.
+
+        Returns:
+            List of reminders past their due date
+        """
+        ...
+
+    def delete(self, reminder: Reminder) -> None:
+        """Delete a reminder.
+
+        Args:
+            reminder: The reminder to delete
         """
         ...
