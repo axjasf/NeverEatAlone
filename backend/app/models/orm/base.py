@@ -1,7 +1,8 @@
 """Base ORM model."""
 
 from datetime import datetime, timezone
-from sqlalchemy import Column, DateTime, String
+from sqlalchemy import DateTime, String
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import TypeDecorator
 from typing import Any, Optional
 import uuid
@@ -19,20 +20,16 @@ class GUID(TypeDecorator[uuid.UUID]):
     def process_bind_param(
         self, value: Optional[uuid.UUID | str], dialect: Any
     ) -> Optional[str]:
-        if value is None:
-            return value
-        elif isinstance(value, str):
-            return value
-        else:
-            return str(value)
+        """Process the value before binding to database."""
+        return str(value) if value is not None else None
 
     def process_result_value(
         self, value: Optional[str], dialect: Any
     ) -> Optional[uuid.UUID]:
+        """Process the value after retrieving from database."""
         if value is None:
             return value
-        else:
-            return uuid.UUID(value)
+        return uuid.UUID(value)
 
 
 class BaseORMModel(Base):
@@ -50,13 +47,13 @@ class BaseORMModel(Base):
 
     __abstract__ = True
 
-    id = Column(GUID, primary_key=True, default=lambda: str(uuid.uuid4()))
-    created_at = Column(
+    id: Mapped[uuid.UUID] = mapped_column(GUID, primary_key=True, default=uuid.uuid4)
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         default=lambda: datetime.now(timezone.utc),
     )
-    updated_at = Column(
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         default=lambda: datetime.now(timezone.utc),

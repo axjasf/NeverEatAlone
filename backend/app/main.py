@@ -11,10 +11,9 @@ from contextlib import contextmanager
 from typing import Iterator
 from http import HTTPStatus
 import sqlalchemy as sa
-import logging
 
 from backend.app.models.domain.contact import Contact
-from backend.app.models.domain.tag import Tag as Hashtag
+from backend.app.models.domain.tag import Tag as Hashtag, EntityType
 from backend.app.models.orm.contact_tag import contact_tags as contact_hashtags
 
 app = FastAPI(title="Contact Management API")
@@ -179,21 +178,23 @@ async def get_contact(
     Raises:
         HTTPException: 404 if contact is not found.
     """
-    contact = db.query(Contact).filter(Contact.id == contact_id).first()
-    if contact is None:
+    db_contact = (
+        db.query(Contact).filter(Contact.id == contact_id).first()  # type: ignore
+    )
+    if db_contact is None:
         raise HTTPException(status_code=404, detail={"error": "Contact not found"})
 
-    db_id = getattr(contact.id, "_value", contact.id)
+    db_id = getattr(db_contact.id, "_value", db_contact.id)
     return ContactResponse(
         id=UUID(str(db_id)) if not isinstance(db_id, UUID) else db_id,
-        name=str(contact.name),
-        first_name=(str(contact.first_name) if contact.first_name else None),
-        sub_information=dict(contact.sub_information),
-        hashtags=contact.hashtag_names,
-        last_contact=contact.last_contact,
-        contact_briefing_text=contact.contact_briefing_text,
-        created_at=contact.created_at.replace(tzinfo=None),
-        updated_at=contact.updated_at.replace(tzinfo=None),
+        name=str(db_contact.name),
+        first_name=(str(db_contact.first_name) if db_contact.first_name else None),
+        sub_information=dict(db_contact.sub_information),
+        hashtags=db_contact.hashtag_names,
+        last_contact=db_contact.last_contact,
+        contact_briefing_text=db_contact.contact_briefing_text,
+        created_at=db_contact.created_at.replace(tzinfo=None),
+        updated_at=db_contact.updated_at.replace(tzinfo=None),
     )
 
 
@@ -216,7 +217,9 @@ async def update_contact(
     Raises:
         HTTPException: If the contact is not found or there's a database error
     """
-    db_contact = db.query(Contact).filter(Contact.id == contact_id).first()  # type: ignore
+    db_contact = (
+        db.query(Contact).filter(Contact.id == contact_id).first()  # type: ignore
+    )
     if not db_contact:
         raise HTTPException(status_code=404, detail="Contact not found")
 
@@ -280,11 +283,13 @@ async def delete_contact(
     Raises:
         HTTPException: If the contact is not found
     """
-    contact = db.query(Contact).filter(Contact.id == contact_id).first()  # type: ignore
-    if not contact:
+    db_contact = (
+        db.query(Contact).filter(Contact.id == contact_id).first()  # type: ignore
+    )
+    if not db_contact:
         raise HTTPException(status_code=404, detail="Contact not found")
 
-    db.delete(contact)
+    db.delete(db_contact)
     db.commit()
 
 

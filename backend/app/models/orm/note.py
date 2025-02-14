@@ -8,6 +8,7 @@ from sqlalchemy import Text, ForeignKey
 from ...database import Base
 from .statement import StatementORM
 from .tag import TagORM
+from .reminder import ReminderORM
 
 
 class NoteORM(Base):
@@ -38,6 +39,12 @@ class NoteORM(Base):
     )
     tags: Mapped[List[TagORM]] = relationship(
         TagORM, secondary="note_tags", lazy="joined"
+    )
+    # Reminders referencing this note
+    reminders: Mapped[List[ReminderORM]] = relationship(  # type: ignore
+        ReminderORM,
+        back_populates="note",
+        lazy="joined",
     )
 
     def set_tags(self, tag_names: List[str]) -> None:

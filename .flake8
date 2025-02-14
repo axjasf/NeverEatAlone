@@ -1,0 +1,38 @@
+[flake8]
+# Line length configuration - Match black's default
+max-line-length = 88
+extend-ignore = E203
+
+# Files to exclude from checks
+exclude =
+    .git,
+    __pycache__,
+    build,
+    dist,
+    *.pyc,
+    *.egg-info,
+    .eggs,
+    venv,
+    .venv,
+    .env,
+    env,
+    migrations,
+    .mypy_cache,
+    .pytest_cache
+
+# Per-file-ignores for specific cases
+per-file-ignores =
+    # Allow unused imports in __init__.py
+    __init__.py: F401
+    # Allow undefined names in conftest.py
+    conftest.py: F821
+
+# Import order settings
+import-order-style = google
+application-import-names = app, tests
+
+# Additional settings
+max-complexity = 10  # McCabe complexity threshold
+statistics = True
+count = True
+show-source = True

@@ -1,6 +1,6 @@
 """SQLAlchemy ORM model for tags."""
 
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
 from uuid import UUID, uuid4
 from sqlalchemy.orm import Mapped, mapped_column
