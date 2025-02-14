@@ -1,6 +1,6 @@
 [flake8]
-# Line length configuration
-max-line-length = 88  # Match black's default
+# Line length configuration - Match black's default
+max-line-length = 88
 extend-ignore = E203
 
 # Files to exclude from checks
