@@ -69,13 +69,29 @@ jobs:
           npm run type-check
 
       # SonarQube analysis
-      - name: Debug Info
+      - name: Pre-Scan Debug Info
         run: |
+          echo "=== Environment Info ==="
           echo "Current branch: ${GITHUB_REF#refs/heads/}"
           echo "GitHub event: ${{ github.event_name }}"
           echo "Repository: ${{ github.repository }}"
+          echo "Workspace: ${{ github.workspace }}"
+
+          echo "=== Directory Structure ==="
           pwd
           ls -la
+
+          echo "=== Coverage Files ==="
+          ls -la backend/coverage.xml || echo "coverage.xml not found"
+          ls -la backend/pytest-report.xml || echo "pytest-report.xml not found"
+          ls -la frontend/coverage/lcov.info || echo "lcov.info not found"
+
+          echo "=== Git Info ==="
+          git branch
+          git status
+
+          echo "=== SonarQube Config ==="
+          cat sonar-project.properties
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v2
@@ -96,7 +112,22 @@ jobs:
             -Dsonar.scm.provider=git
             -Dsonar.branch.name=${GITHUB_REF#refs/heads/}
             -Dsonar.github.oauth=${{ github.token }}
+            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }}
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
             -X
+
+      - name: Post-Scan Debug Info
+        if: always()
+        run: |
+          echo "=== SonarQube Scan Complete ==="
+          echo "Checking for analysis reports..."
+          find . -name ".scannerwork" -type d -exec ls -la {} \;
+
+          echo "=== Environment Variables ==="
+          env | grep -i sonar || true
+
+          echo "=== Testing SonarQube Connection ==="
+          curl -I ${{ secrets.SONAR_HOST_URL }} || echo "Failed to connect to SonarQube server"
 
       # Upload test results as artifacts
       - name: Upload test results
