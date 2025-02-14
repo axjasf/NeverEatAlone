@@ -1,11 +1,8 @@
 """Tests for the Contact repository."""
 
-import pytest
 from datetime import datetime, UTC, timedelta
 from sqlalchemy.orm import Session
 from backend.app.models.domain.contact import Contact
-from backend.app.models.domain.tag import Tag, EntityType
-from backend.app.models.orm.contact import ContactORM
 from backend.app.models.repositories.sqlalchemy_contact_repository import (
     SQLAlchemyContactRepository,
 )
@@ -147,3 +144,16 @@ def test_contact_find_all(db_session: Session) -> None:
     all_contacts = repo.find_all()
     assert len(all_contacts) == 3
     assert {c.name for c in all_contacts} == {"John Doe", "Jane Doe", "Bob Smith"}
+
+
+def test_error_handling_verification() -> None:
+    """Should: Intentionally fail to verify CI error handling.
+
+    This test is designed to fail in order to verify that our CI pipeline
+    properly captures and reports test failures. It helps ensure that:
+    1. Test failures are properly logged
+    2. Error artifacts are collected
+    3. The pipeline marks the job as failed
+    4. Error information is included in the workflow summary
+    """
+    assert False, "This test is intentionally failing to verify error handling"

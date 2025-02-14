@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, Any, Annotated, List
+from typing import Optional, Any, Annotated, List, Dict
 from uuid import UUID
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -12,9 +12,9 @@ from typing import Iterator
 from http import HTTPStatus
 import sqlalchemy as sa
 
-from backend.app.models.domain.contact import Contact
-from backend.app.models.domain.tag import Tag as Hashtag, EntityType
-from backend.app.models.orm.contact_tag import contact_tags as contact_hashtags
+from .models.domain.contact import Contact
+from .models.domain.tag import Tag as Hashtag, EntityType
+from .models.orm.contact_tag import contact_tags as contact_hashtags
 
 app = FastAPI(title="Contact Management API")
 
@@ -383,3 +383,8 @@ async def list_contacts(
         )
 
     return ContactList(items=items, total_count=total_count, limit=limit, offset=offset)
+
+
+@app.get("/")
+def read_root() -> Dict[str, str]:
+    return {"message": "Hello World"}

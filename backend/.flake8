@@ -1,0 +1,33 @@
+[flake8]
+max-line-length = 100
+max-complexity = 10
+# Error codes:
+# E203 - Whitespace before ':'
+# W503 - Line break before binary operator
+# F821 - Undefined name (for FastAPI and Pydantic types)
+# E704 - Multiple statements on one line
+# F722 - Syntax error in forward annotation
+# D100 - Missing docstring in public module
+# D103 - Missing docstring in public function
+# D104 - Missing docstring in public package
+# D200 - One-line docstring should fit on one line with quotes
+# D205 - 1 blank line required between summary line and description
+# D400 - First line should end with a period
+# B011 - Do not call assert False
+extend-ignore = E203,W503,F821,E704,F722,D100,D103,D104,D200,D205,D400,B011
+exclude =
+    .git,
+    __pycache__,
+    build,
+    dist,
+    *.pyc,
+    *.egg-info,
+    .eggs,
+    venv
+per-file-ignores =
+    __init__.py: F401
+    tests/*: S101
+    app/main.py: F821,F722
+statistics = True
+count = True
+show-source = True
