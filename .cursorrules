@@ -16,6 +16,7 @@
       "prefix": "You are writing tests for a contact management and note-taking application. Follow these guidelines:",
       "rules": [
         "Write tests before implementation",
+        "Explain the purpose of each test and let the test be reviewed by the user first",
         "Cover edge cases and error states",
         "Mock external dependencies",
         "Maintain test isolation",
@@ -60,6 +61,40 @@
     "testing": {
       "coverageThreshold": 80,
       "requireMocks": true
+    }
+  },
+  "shellRules": {
+    "powershell": {
+      "commandSeparator": ";",
+      "lineEnding": "CRLF",
+      "pipeOperator": "|",
+      "alternatives": {
+        "cat": "Get-Content",
+        "ls": "Get-ChildItem",
+        "grep": "Select-String",
+        "rm": "Remove-Item",
+        "cp": "Copy-Item",
+        "mv": "Move-Item",
+        "echo": "Write-Output",
+        "pwd": "Get-Location"
+      },
+      "testCommands": {
+        "setup": [
+          "cd .",
+          "cd backend",
+          ".\\venv\\Scripts\\Activate.ps1"
+        ],
+        "runTest": "python -m pytest {path} -v",
+        "runSpecificTest": "python -m pytest {path}::{test_name} -v",
+        "runWithPrints": "python -m pytest {path} -v -s",
+        "debugOnFailure": "python -m pytest {path} --pdb",
+        "fullCommand": "cd .; cd backend; .\\venv\\Scripts\\Activate.ps1; python -m pytest {path} -v"
+      }
+    },
+    "bash": {
+      "commandSeparator": "&&",
+      "lineEnding": "LF",
+      "pipeOperator": "|"
     }
   },
   "fileTemplates": {
