@@ -31,9 +31,11 @@ jobs:
           pip install -r backend/requirements-dev.txt
 
       - name: Run Python tests with coverage
-        working-directory: ./backend
         run: |
-          pytest --cov=app --cov-report=xml:coverage.xml --cov-report=term-missing --junitxml=pytest-report.xml
+          cd backend
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
+          cd ..
+          python -m pytest tests/models/domain/test_reminder.py tests/models/orm/test_reminder.py tests/repositories/test_reminder_repository.py --cov=backend/app --cov-report=xml:backend/coverage.xml --cov-report=term-missing --junitxml=backend/pytest-report.xml -v
 
       # Frontend setup and tests
       - name: Set up Node.js
