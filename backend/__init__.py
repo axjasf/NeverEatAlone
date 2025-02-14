@@ -1,3 +1,5 @@
 """
-Backend package for the Never Eat Alone application.
+NeverEatAlone Backend Package
 """
+
+__version__ = "0.1.0"

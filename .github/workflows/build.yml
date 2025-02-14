@@ -86,7 +86,8 @@ jobs:
         if: success() || failure()
         run: |
           echo "::group::Running MyPy"
-          python -m mypy . --show-error-codes || {
+          cd ${{ env.PYTHON_ROOT }}
+          python -m mypy --config-file mypy.ini . || {
             echo "::error::Type checking issues found"
             exit 1
           }

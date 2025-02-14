@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, Any, Annotated, List
+from typing import Optional, Any, Annotated, List, Dict
 from uuid import UUID
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -383,3 +383,8 @@ async def list_contacts(
         )
 
     return ContactList(items=items, total_count=total_count, limit=limit, offset=offset)
+
+
+@app.get("/")
+def read_root() -> Dict[str, str]:
+    return {"message": "Hello World"}
