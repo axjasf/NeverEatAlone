@@ -131,6 +131,14 @@
     {
       "filePath": "backend\\app\\models",
       "group": "Default"
+    },
+    {
+      "filePath": "tests",
+      "group": "Default"
+    },
+    {
+      "filePath": "backend/app",
+      "group": "Default"
     }
   ]
 }
