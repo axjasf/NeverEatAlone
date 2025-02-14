@@ -7,9 +7,11 @@ from sqlalchemy.engine import Engine
 from backend.app.database import Base
 
 # Import all models to ensure they are registered with SQLAlchemy
-from backend.app.models.contact import Contact
-from backend.app.models.note import Note
-from backend.app.models.tag import Tag
+from backend.app.models.domain.contact import Contact  # noqa: F401
+from backend.app.models.domain.note import Note  # noqa: F401
+from backend.app.models.domain.tag import Tag  # noqa: F401
+
+
 
 @pytest.fixture(scope="session")
 def engine() -> Engine:

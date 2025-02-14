@@ -127,6 +127,10 @@
     {
       "filePath": "docs\\implementation\\WORKING_NOTES.md",
       "group": "Default"
+    },
+    {
+      "filePath": "backend\\app\\models",
+      "group": "Default"
     }
   ]
 }

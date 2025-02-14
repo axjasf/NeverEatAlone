@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from .tag import Tag
 
 
-class Statement:
+class Statement(BaseModel):
     """A single statement within a note.
 
     Statements allow breaking down notes into smaller, taggable pieces
@@ -23,10 +23,43 @@ class Statement:
         Raises:
             ValueError: If content is empty
         """
+        super().__init__()
         if not content.strip():
             raise ValueError("Statement content cannot be empty")
         self.content = content.strip()
         self.tags: List["Tag"] = []
+
+    def add_tag(self, tag_name: str) -> None:
+        """Add a tag to the statement.
+
+        Args:
+            tag_name: Name of the tag (must start with #)
+
+        Raises:
+            ValueError: If tag_name doesn't start with #
+        """
+        if not tag_name.startswith("#"):
+            raise ValueError("Tag must start with #")
+
+        # Import here to avoid circular dependency
+        from .tag import Tag, EntityType
+
+        tag_name = tag_name.lower()
+        # Check if tag already exists
+        if not any(t.name == tag_name for t in self.tags):
+            tag = Tag(self.id, EntityType.STATEMENT, tag_name)
+            self.tags.append(tag)
+            self._update_timestamp()
+
+    def remove_tag(self, tag: "Tag") -> None:
+        """Remove a tag from the statement.
+
+        Args:
+            tag: The tag to remove
+        """
+        if tag in self.tags:
+            self.tags.remove(tag)
+            self._update_timestamp()
 
 
 class Note(BaseModel):
