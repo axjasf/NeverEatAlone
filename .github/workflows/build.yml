@@ -187,22 +187,26 @@ jobs:
           echo "::group::Running pytest with coverage"
           python -m pytest \
             --cov=app \
-            --cov-report=xml:../coverage.xml \
-            --cov-report=html:../coverage_html \
+            --cov-report=xml:coverage.xml \
+            --cov-report=html:coverage_html \
             --cov-report=term-missing \
-            --junitxml=../pytest-report.xml \
+            --junitxml=test-results.xml \
             -v \
             ../tests || {
               echo "::error::Tests failed"
               exit 1
             }
+          # Move reports to root directory
+          mv coverage.xml ../coverage.xml || true
+          mv test-results.xml ../test-results.xml || true
+          mv coverage_html ../coverage_html || true
           echo "::endgroup::"
 
       - name: Process test results
         if: always()
         run: |
           echo "::group::Test Summary"
-          if [ -f "pytest-report.xml" ]; then
+          if [ -f "test-results.xml" ]; then
             echo "Test report generated successfully"
             echo "Coverage report available in artifacts"
 
@@ -218,10 +222,10 @@ jobs:
               grep -A 5 "<coverage" "coverage.xml" >> test_summary.txt
             fi
 
-            if [ -f "pytest-report.xml" ]; then
+            if [ -f "test-results.xml" ]; then
               echo "" >> test_summary.txt
               echo "Test Results:" >> test_summary.txt
-              grep -A 5 "<testsuite" "pytest-report.xml" >> test_summary.txt
+              grep -A 5 "<testsuite" "test-results.xml" >> test_summary.txt
             fi
           else
             echo "::error::Test report generation failed"
@@ -238,7 +242,7 @@ jobs:
           path: |
             ${{ env.PYTHON_ROOT }}/coverage.xml
             ${{ env.PYTHON_ROOT }}/coverage_html/**
-            ${{ env.PYTHON_ROOT }}/pytest-report.xml
+            ${{ env.PYTHON_ROOT }}/test-results.xml
             ${{ env.PYTHON_ROOT }}/.coverage
             test_summary.txt
           retention-days: 14
