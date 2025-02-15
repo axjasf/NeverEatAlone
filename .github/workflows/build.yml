@@ -240,10 +240,10 @@ jobs:
         with:
           name: backend-test-results
           path: |
-            ${{ env.PYTHON_ROOT }}/coverage.xml
-            ${{ env.PYTHON_ROOT }}/coverage_html/**
-            ${{ env.PYTHON_ROOT }}/test-results.xml
-            ${{ env.PYTHON_ROOT }}/.coverage
+            coverage.xml
+            coverage_html/**
+            test-results.xml
+            .coverage
             test_summary.txt
           retention-days: 14
           if-no-files-found: warn
@@ -348,7 +348,14 @@ jobs:
         continue-on-error: true  # Continue if artifacts are missing
         with:
           name: backend-test-results
-          path: backend
+
+      - name: Debug file locations
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Files in current directory:"
+          ls -la
+          echo "Files in backend directory (if exists):"
+          ls -la backend || true
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
@@ -363,8 +370,8 @@ jobs:
             -Dsonar.tests=tests,frontend/src
             -Dsonar.test.inclusions=frontend/src/**/*.test.tsx,frontend/src/**/*.test.ts,tests/**/*_test.py
             -Dsonar.test.exclusions=frontend/src/setupTests.ts
-            -Dsonar.python.coverage.reportPaths=backend/coverage.xml
-            -Dsonar.python.xunit.reportPath=backend/test-results.xml
+            -Dsonar.python.coverage.reportPaths=coverage.xml
+            -Dsonar.python.xunit.reportPath=test-results.xml
             -Dsonar.javascript.lcov.reportPaths=frontend/coverage/lcov.info
             -Dsonar.coverage.exclusions=frontend/src/**/*.test.tsx,frontend/src/**/*.test.ts,tests/**/*_test.py
             -Dsonar.cpd.exclusions=frontend/src/**/*.test.tsx,frontend/src/**/*.test.ts
