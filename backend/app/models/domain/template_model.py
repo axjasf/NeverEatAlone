@@ -5,6 +5,7 @@ from datetime import datetime, UTC
 from uuid import UUID
 from copy import deepcopy
 from pydantic import BaseModel, Field, field_validator
+import re
 
 
 class FieldDefinition(BaseModel):
@@ -146,50 +147,159 @@ class Template(BaseModel):
             ValueError: If validation fails, with field name and reason in message
         """
         for category_name, category_data in data.items():
-            if category_name not in self.categories:
-                raise ValueError(f"Unknown category: {category_name}")
-
-            category = self.categories[category_name]
-
-            for field_name, field_value in category_data.items():
-                # Skip validation for removed fields
-                if (
-                    category_name in self.removed_fields
-                    and field_name in self.removed_fields[category_name]
-                ):
-                    continue
-
-                if field_name not in category.fields:
-                    raise ValueError(
-                        f"Unknown field '{field_name}' in category '{category_name}'"
-                    )
-
-                field = category.fields[field_name]
-
-                # All values must be strings for our simplified types
-                if not isinstance(field_value, str):
-                    raise ValueError(f"Field '{field_name}' must be a string")
-
-                # Validate based on field type
-                if field.type == "date":
-                    try:
-                        datetime.fromisoformat(field_value)
-                    except ValueError:
-                        raise ValueError(
-                            f"Field '{field_name}' must be a valid ISO date string (YYYY-MM-DD)"
-                        )
-                elif field.type == "phone":
-                    if not self._validate_phone_number(field_value):
-                        raise ValueError(
-                            f"Field '{field_name}' must be a valid phone number (+X XXX-XXX-XXXX)"
-                        )
-                elif field.type == "email":
-                    if not self._validate_email(field_value):
-                        raise ValueError(
-                            f"Field '{field_name}' must be a valid email address"
-                        )
-
+            self._validate_category(category_name, category_data)
         return True
+
+    def _validate_category(self, category_name: str, category_data: Dict[str, Any]) -> None:
+        """Validate a single category of data.
+
+        Args:
+            category_name: Name of the category
+            category_data: Data for the category
+
+        Raises:
+            ValueError: If validation fails
+        """
+        if category_name not in self.categories:
+            raise ValueError(f"Unknown category: {category_name}")
+
+        category = self.categories[category_name]
+        for field_name, field_value in category_data.items():
+            self._validate_field(category_name, category, field_name, field_value)
+
+    def _validate_field(
+        self,
+        category_name: str,
+        category: CategoryDefinition,
+        field_name: str,
+        field_value: Any
+    ) -> None:
+        """Validate a single field value.
+
+        Args:
+            category_name: Name of the category
+            category: Category definition
+            field_name: Name of the field
+            field_value: Value to validate
+
+        Raises:
+            ValueError: If validation fails
+        """
+        # Skip validation for removed fields
+        if self._is_removed_field(category_name, field_name):
+            return
+
+        if field_name not in category.fields:
+            raise ValueError(
+                f"Unknown field '{field_name}' in category '{category_name}'"
+            )
+
+        field = category.fields[field_name]
+        self._validate_field_type(field_name, field_value)
+        self._validate_field_format(field_name, field, field_value)
+
+    def _is_removed_field(self, category_name: str, field_name: str) -> bool:
+        """Check if a field has been removed.
+
+        Args:
+            category_name: Name of the category
+            field_name: Name of the field
+
+        Returns:
+            bool: True if the field has been removed
+        """
+        return (
+            category_name in self.removed_fields
+            and field_name in self.removed_fields[category_name]
+        )
+
+    def _validate_field_type(self, field_name: str, field_value: Any) -> None:
+        """Validate that a field value is a string.
+
+        Args:
+            field_name: Name of the field
+            field_value: Value to validate
+
+        Raises:
+            ValueError: If validation fails
+        """
+        if not isinstance(field_value, str):
+            raise ValueError(f"Field '{field_name}' must be a string")
+
+    def _validate_field_format(self, field_name: str, field: FieldDefinition, field_value: str) -> None:
+        """Validate the format of a field value based on its type.
+
+        Args:
+            field_name: Name of the field
+            field: Field definition
+            field_value: Value to validate
+
+        Raises:
+            ValueError: If validation fails
+        """
+        if field.type == "date":
+            self._validate_date_format(field_name, field_value)
+        elif field.type == "phone":
+            self._validate_phone_format(field_name, field_value)
+        elif field.type == "email":
+            self._validate_email_format(field_name, field_value)
+
+    def _validate_date_format(self, field_name: str, field_value: str) -> None:
+        """Validate a date field.
+
+        Args:
+            field_name: Name of the field
+            field_value: Value to validate
+
+        Raises:
+            ValueError: If validation fails
+        """
+        try:
+            datetime.fromisoformat(field_value)
+        except ValueError:
+            raise ValueError(
+                f"Field '{field_name}' must be a valid ISO date string (YYYY-MM-DD)"
+            )
+
+    def _validate_phone_format(self, field_name: str, field_value: str) -> None:
+        """Validate a phone number field.
+
+        Args:
+            field_name: Name of the field
+            field_value: Value to validate
+
+        Raises:
+            ValueError: If validation fails
+        """
+        if not self._validate_phone_number(field_value):
+            raise ValueError(
+                f"Field '{field_name}' must be a valid phone number (+X XXX-XXX-XXXX)"
+            )
+
+    def _validate_email_format(self, field_name: str, field_value: str) -> None:
+        """Validate an email field.
+
+        Args:
+            field_name: Name of the field
+            field_value: Value to validate
+
+        Raises:
+            ValueError: If validation fails
+        """
+        if not self._validate_email(field_value):
+            raise ValueError(
+                f"Field '{field_name}' must be a valid email address"
+            )
+
+    def _validate_phone_number(self, value: str) -> bool:
+        """Validate phone number format (+X XXX-XXX-XXXX)."""
+        pattern = r"^\+\d{1,3}[\s-]\d{3}[\s-]\d{3}[\s-]\d{4}$"
+        return bool(re.match(pattern, value))
+
+    def _validate_email(self, value: str) -> bool:
+        """Validate email format."""
+        pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+        return bool(re.match(pattern, value))
 
     def get_filled_fields(
         self, data: Dict[str, Dict[str, Any]]
@@ -217,17 +327,3 @@ class Template(BaseModel):
                     filled[category_name] = category_filled
 
         return filled
-
-    def _validate_phone_number(self, value: str) -> bool:
-        """Validate phone number format (+X XXX-XXX-XXXX)."""
-        import re
-
-        pattern = r"^\+\d{1,3}[\s-]\d{3}[\s-]\d{3}[\s-]\d{4}$"
-        return bool(re.match(pattern, value))
-
-    def _validate_email(self, value: str) -> bool:
-        """Validate email format."""
-        import re
-
-        pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-        return bool(re.match(pattern, value))
