@@ -92,62 +92,67 @@ class RecurrencePattern:
         Returns:
             Next occurrence date, or None if recurrence has ended
         """
-        if not from_date.tzinfo:
-            raise ValueError("From date must be timezone-aware")
-
-        if self.end_date and from_date >= self.end_date:
+        if not self._is_valid_date(from_date):
             return None
 
-        # Normalize time to midnight UTC
-        from_date = datetime.combine(
-            from_date.date(), datetime.min.time(), tzinfo=timezone.utc
+        normalized_date = self._normalize_to_midnight_utc(from_date)
+        next_date = self._calculate_next_date(normalized_date)
+
+        return next_date if self._is_within_bounds(next_date) else None
+
+    def _is_valid_date(self, date: datetime) -> bool:
+        """Check if date is valid for calculation."""
+        if not date.tzinfo:
+            raise ValueError("From date must be timezone-aware")
+        return not (self.end_date and date >= self.end_date)
+
+    def _normalize_to_midnight_utc(self, date: datetime) -> datetime:
+        """Normalize date to midnight UTC."""
+        return datetime.combine(
+            date.date(),
+            datetime.min.time(),
+            tzinfo=timezone.utc
         )
 
+    def _calculate_next_date(self, date: datetime) -> datetime:
+        """Calculate next date based on recurrence unit."""
         if self.unit == RecurrenceUnit.DAY:
-            next_date = from_date + timedelta(days=self.interval)
-        elif self.unit == RecurrenceUnit.WEEK:
-            next_date = from_date + timedelta(weeks=self.interval)
-        elif self.unit == RecurrenceUnit.MONTH:
-            # Add months by replacing the month component
-            year = from_date.year
-            month = from_date.month + self.interval
+            return date + timedelta(days=self.interval)
+        if self.unit == RecurrenceUnit.WEEK:
+            return date + timedelta(weeks=self.interval)
+        if self.unit == RecurrenceUnit.YEAR:
+            return date.replace(year=date.year + self.interval)
 
-            # Handle year rollover
-            if month > 12:
-                year += month // 12
-                month = month % 12
-                if month == 0:
-                    month = 12
-                    year -= 1
+        # Handle monthly recurrence
+        return self._calculate_next_month_date(date)
 
-            # Handle day-of-month issues (e.g., Jan 31 -> Feb 28)
-            day = min(
-                from_date.day,
-                [
-                    31,
-                    (
-                        29
-                        if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
-                        else 28
-                    ),
-                    31,
-                    30,
-                    31,
-                    30,
-                    31,
-                    31,
-                    30,
-                    31,
-                    30,
-                    31,
-                ][month - 1],
-            )
+    def _calculate_next_month_date(self, date: datetime) -> datetime:
+        """Handle the complex case of monthly recurrence."""
+        year, month = self._get_next_year_and_month(date)
+        day = min(date.day, self._get_days_in_month(year, month))
+        return datetime(year, month, day, tzinfo=timezone.utc)
 
-            next_date = datetime(year, month, day, tzinfo=timezone.utc)
-        else:  # YEAR
-            next_date = from_date.replace(year=from_date.year + self.interval)
+    def _get_next_year_and_month(self, date: datetime) -> tuple[int, int]:
+        """Calculate the next year and month."""
+        year = date.year
+        month = date.month + self.interval
 
-        return None if self.end_date and next_date > self.end_date else next_date
+        # Adjust year and month if we've gone past December
+        year += (month - 1) // 12
+        month = ((month - 1) % 12) + 1
+
+        return year, month
+
+    def _get_days_in_month(self, year: int, month: int) -> int:
+        """Get number of days in the specified month."""
+        days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        if month == 2 and year % 4 == 0 and (year % 100 != 0 or year % 400 == 0):
+            return 29
+        return days[month - 1]
+
+    def _is_within_bounds(self, date: datetime) -> bool:
+        """Check if date is within the recurrence bounds."""
+        return not (self.end_date and date > self.end_date)
 
 
 class Reminder(BaseModel):
