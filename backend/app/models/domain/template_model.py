@@ -315,15 +315,35 @@ class Template(BaseModel):
         filled: Dict[str, Dict[str, Any]] = {}
 
         for category_name, category_data in data.items():
-            if category_name in self.categories:
-                category_filled = {
-                    k: v
-                    for k, v in category_data.items()
-                    if k in self.categories[category_name].fields
-                    and v is not None
-                    and (not isinstance(v, str) or v.strip())
-                }
-                if category_filled:
-                    filled[category_name] = category_filled
+            if category_name not in self.categories:
+                continue
+
+            filled_category = self._get_filled_category_fields(
+                category_name, category_data
+            )
+            if filled_category:
+                filled[category_name] = filled_category
 
         return filled
+
+    def _get_filled_category_fields(
+        self, category_name: str, category_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Get filled fields for a specific category.
+
+        Args:
+            category_name: Name of the category
+            category_data: Data for the category
+
+        Returns:
+            Dict containing only non-empty fields for the category
+        """
+        return {
+            field_name: value
+            for field_name, value in category_data.items()
+            if (
+                field_name in self.categories[category_name].fields
+                and value is not None
+                and (not isinstance(value, str) or value.strip())
+            )
+        }
