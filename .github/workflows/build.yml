@@ -461,8 +461,10 @@ jobs:
     name: SonarCloud Analysis
     needs: [backend-test, frontend-test, frontend-lint]  # Added frontend-lint dependency
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-
+    # Only run if all required jobs succeeded and it's either a push to main or a PR from the same repo
+    if: |
+      success() &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     steps:
       - uses: actions/checkout@v4
         with:
