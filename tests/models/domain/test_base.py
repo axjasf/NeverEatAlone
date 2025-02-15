@@ -2,7 +2,7 @@
 
 from datetime import datetime, UTC
 from uuid import UUID
-from backend.app.models.domain.base import BaseModel
+from backend.app.models.domain.base_model import BaseModel
 
 
 def test_base_model_initialization():
