@@ -98,14 +98,12 @@ class ContactBase(BaseModel):
     @classmethod
     def validate_hashtags(cls, v: List[str]) -> List[str]:
         """Validate that all hashtags start with #."""
-        return [
-            tag if tag.startswith("#") else f"#{tag}"
-            for tag in v
-        ]
+        return [tag if tag.startswith("#") else f"#{tag}" for tag in v]
 
 
 class ContactCreate(BaseModel):
     """Schema for creating a new contact."""
+
     name: str
     first_name: Optional[str] = None
     briefing_text: Optional[str] = None
@@ -120,15 +118,13 @@ class ContactCreate(BaseModel):
     def validate_hashtags(cls, v: Optional[List[str]]) -> Optional[List[str]]:
         """Validate that all hashtags start with #."""
         if v is not None:
-            return [
-                tag if tag.startswith("#") else f"#{tag}"
-                for tag in v
-            ]
+            return [tag if tag.startswith("#") else f"#{tag}" for tag in v]
         return v
 
 
 class ContactResponse(BaseModel):
     """Schema for contact response including system fields."""
+
     id: UUID
     name: str
     first_name: Optional[str] = None
@@ -174,9 +170,7 @@ async def validation_exception_handler(
 
 
 @app.exception_handler(HTTPException)
-async def http_exception_handler(
-    request: Request, exc: HTTPException
-) -> JSONResponse:
+async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
     """Handle HTTP exceptions.
 
     Args:
@@ -195,7 +189,9 @@ async def http_exception_handler(
     )
 
 
-@app.post("/api/contacts", response_model=ContactResponse, status_code=HTTPStatus.CREATED)
+@app.post(
+    "/api/contacts", response_model=ContactResponse, status_code=HTTPStatus.CREATED
+)
 async def create_contact(
     contact: ContactCreate,
     db: Annotated[Session, Depends(get_test_db)],
@@ -262,11 +258,7 @@ async def get_contact(
     db: Annotated[Session, Depends(get_test_db)],
 ) -> ContactResponse:
     """Get a contact by ID."""
-    db_contact = (
-        db.query(ContactORM)
-        .filter(ContactORM.id == contact_id)
-        .first()
-    )
+    db_contact = db.query(ContactORM).filter(ContactORM.id == contact_id).first()
     if db_contact is None:
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND,
@@ -283,11 +275,7 @@ async def update_contact(
     db: Annotated[Session, Depends(get_test_db)],
 ) -> ContactResponse:
     """Update a contact."""
-    db_contact = (
-        db.query(ContactORM)
-        .filter(ContactORM.id == contact_id)
-        .first()
-    )
+    db_contact = db.query(ContactORM).filter(ContactORM.id == contact_id).first()
     if not db_contact:
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND,
@@ -350,11 +338,7 @@ async def delete_contact(
     db: Annotated[Session, Depends(get_test_db)],
 ) -> None:
     """Delete a contact."""
-    db_contact = (
-        db.query(ContactORM)
-        .filter(ContactORM.id == contact_id)
-        .first()
-    )
+    db_contact = db.query(ContactORM).filter(ContactORM.id == contact_id).first()
     if not db_contact:
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND,
