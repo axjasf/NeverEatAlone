@@ -4,7 +4,7 @@
 from contextlib import contextmanager
 from datetime import datetime
 from http import HTTPStatus
-from typing import Annotated, Any, Dict, Iterator, List, Optional, TypeVar, cast
+from typing import Annotated, Any, Dict, Iterator, List, Optional, TypeVar, Union, cast
 from uuid import UUID
 
 # Third-party imports
@@ -26,6 +26,9 @@ from .models.orm.tag import TagORM
 
 # Type variables
 T = TypeVar("T")
+
+# Type definitions
+ErrorDetail = Union[str, Dict[str, Any], None]
 
 # FastAPI application
 app = FastAPI(
@@ -169,6 +172,34 @@ async def validation_exception_handler(
     )
 
 
+def _format_error_detail(detail: ErrorDetail) -> Dict[str, str]:
+    """Format error detail into a consistent structure.
+
+    Args:
+        detail: The error detail from an exception.
+
+    Returns:
+        A dictionary with an error message.
+    """
+    # Default error message
+    DEFAULT_ERROR = "Unknown error"
+
+    try:
+        # Handle None case
+        if detail is None:
+            return {"error": DEFAULT_ERROR}
+
+        # Handle dictionary case
+        if isinstance(detail, dict):
+            if "error" in detail and isinstance(detail["error"], str):
+                return {"error": detail["error"]}
+
+        # Handle string case (all other cases converted to string)
+        return {"error": str(detail)}
+    except Exception:
+        return {"error": DEFAULT_ERROR}
+
+
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
     """Handle HTTP exceptions.
@@ -180,17 +211,9 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
     Returns:
         A JSON response with the error details.
     """
-    detail = exc.detail
-    # Type guard to check if detail is a dict
-    if isinstance(detail, dict):
-        # Cast to Dict[str, Any] to help type checker
-        error_dict = cast(Dict[str, Any], detail)
-        if "error" in error_dict:
-            return JSONResponse(status_code=exc.status_code, content=error_dict)
-    # For all other cases, wrap the detail in an error object
     return JSONResponse(
         status_code=exc.status_code,
-        content={"error": str(detail)},
+        content=_format_error_detail(exc.detail),
     )
 
 
