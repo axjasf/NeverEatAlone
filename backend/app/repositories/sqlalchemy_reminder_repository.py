@@ -1,17 +1,19 @@
-"""SQLAlchemy implementation of the reminder repository."""
+"""SQLAlchemy implementation of reminder repository."""
 
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime, timezone
 from sqlalchemy import select, and_
 from sqlalchemy.orm import Session, selectinload
-from ..domain.reminder import (
+from ..models.domain.reminder import (
     RecurrencePattern,
     Reminder,
     ReminderStatus,
+    ReminderFrequency,
+    ReminderType
 )
 from .interfaces import ReminderRepository
-from ..orm.reminder import ReminderORM
+from ..models.orm.reminder import ReminderORM
 
 
 class SQLAlchemyReminderRepository(ReminderRepository):

@@ -1,4 +1,4 @@
-"""SQLAlchemy implementation of Contact repository."""
+"""SQLAlchemy implementation of contact repository."""
 
 from typing import List, Optional
 from uuid import UUID
@@ -6,10 +6,11 @@ from datetime import datetime, UTC
 from sqlalchemy import select, and_, text
 from sqlalchemy.orm import Session, selectinload
 
-from ..domain.contact import Contact
-from ..domain.tag import Tag, EntityType
-from ..orm.contact import ContactORM
-from ..orm.tag import TagORM
+from ..models.domain.contact import Contact
+from ..models.domain.tag import Tag, EntityType
+from .interfaces import ContactRepository
+from ..models.orm.contact import ContactORM
+from ..models.orm.tag import TagORM
 
 
 class SQLAlchemyContactRepository:

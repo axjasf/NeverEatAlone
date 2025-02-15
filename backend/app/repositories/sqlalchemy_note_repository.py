@@ -1,15 +1,16 @@
-"""SQLAlchemy implementation of the note repository."""
+"""SQLAlchemy implementation of note repository."""
 
-from typing import Optional, List
+from typing import List, Optional
 from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from ..domain.note import Note
-from ..domain.tag import EntityType
+
+from ..models.domain.note import Note
+from ..models.domain.tag import EntityType
 from .interfaces import NoteRepository
-from ..orm.note import NoteORM
-from ..orm.statement import StatementORM
-from ..orm.tag import TagORM
+from ..models.orm.note import NoteORM
+from ..models.orm.statement import StatementORM
+from ..models.orm.tag import TagORM
 
 
 class SQLAlchemyNoteRepository(NoteRepository):
