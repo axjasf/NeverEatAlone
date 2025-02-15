@@ -2,11 +2,9 @@ name: SonarQube Analysis
 
 on:
   push:
-    branches:
-      - main
-      - feature/*
+    branches: [ main ]
   pull_request:
-    types: [opened, synchronize, reopened]
+    branches: [ main ]
 
 jobs:
   sonarqube:
@@ -50,15 +48,15 @@ jobs:
         run: |
           npm run test:ci
 
-      - name: SonarQube Scan
-        uses: sonarsource/sonarqube-scan-action@master
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
-            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
-            -Dsonar.projectKey=NeverEatAlone
+            -Dsonar.organization=axjasf
+            -Dsonar.projectKey=axjasf_NeverEatAlone
             -Dsonar.sources=backend/app,frontend/src
             -Dsonar.tests=tests,frontend/src
             -Dsonar.test.inclusions=frontend/src/**/*.test.tsx,frontend/src/**/*.test.ts,tests/**/*_test.py
@@ -66,4 +64,3 @@ jobs:
             -Dsonar.python.coverage.reportPaths=backend/coverage.xml
             -Dsonar.python.xunit.reportPath=backend/test-results.xml
             -Dsonar.javascript.lcov.reportPaths=frontend/coverage/lcov.info
-            -Dsonar.host.url=https://sonarcloud.io
