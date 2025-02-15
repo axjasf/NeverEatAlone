@@ -1,6 +1,38 @@
 # NeverEatAlone
 
-A contact management and note-taking application with AI capabilities.
+A contact management and note-taking application with smart reminders.
+
+## Documentation
+
+Our documentation is organized into the following sections:
+
+### Development
+- [Development Guide](docs/development/guides/DEVELOPMENT.md) - Setup and development workflow
+- [CI/CD Stabilization Plan](docs/development/ci/CI_STABILIZATION_PLAN.md) - Continuous Integration improvements
+- [Environment Setup](docs/environment/ENVIRONMENT.md) - Environment configuration
+
+### Business Requirements
+- See [Business Requirements Documentation](docs/brd/)
+
+### Implementation Details
+- See [Implementation Documentation](docs/implementation/)
+
+## Project Structure
+
+```
+.
+├── backend/           # Python FastAPI backend
+│   ├── app/          # Application source code
+│   ├── tests/        # Test files
+│   └── config/       # Configuration files
+├── frontend/         # React TypeScript frontend
+│   ├── src/         # Application source code
+│   └── tests/       # Test files
+└── docs/            # Documentation
+    ├── development/ # Development guides and CI/CD
+    ├── brd/         # Business requirements
+    └── implementation/ # Implementation details
+```
 
 ## Project Status
 
@@ -32,50 +64,18 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed setup instructions.
 
 ### Quick Start
 
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd NeverEatAlone
-```
-
-2. Set up the backend:
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # or `venv\Scripts\activate` on Windows
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
-```
-
-3. Set up the frontend:
-```bash
-cd frontend
-npm install
-```
-
-4. Start the development servers:
-```bash
-# Terminal 1 (Backend)
-cd backend
-source venv/bin/activate
-uvicorn app.main:app --reload
-
-# Terminal 2 (Frontend)
-cd frontend
-npm start
-```
+1. Clone the repository
+2. Copy `.env.example` to `.env` and configure
+3. Follow the [Environment Setup Guide](docs/environment/ENVIRONMENT.md)
+4. Follow the [Development Guide](docs/development/guides/DEVELOPMENT.md)
 
 ## Contributing
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+Please read our [Development Guide](docs/development/guides/DEVELOPMENT.md) before contributing.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the terms of the [LICENSE](LICENSE) file.
 
 ## Acknowledgments
 

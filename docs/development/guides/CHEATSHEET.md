@@ -1,6 +1,7 @@
 # NeverEatAlone Development Quick Reference
 
 ## Daily Development Setup
+
 ```bash
 # 1. Start in project root
 cd C:/Users/D047951/Documents/GitHub/NeverEatAlone
@@ -14,6 +15,7 @@ python -m pytest -v  # Should show contact tests
 ```
 
 ## Test Structure and Independence
+
 ```
 tests/
 ├── models/              # Model tests (independent of API)
@@ -26,6 +28,7 @@ tests/
 ```
 
 Key principles:
+
 - Model tests NEVER depend on API layer
 - API tests can use model test fixtures
 - Each test type has its own configuration
@@ -33,6 +36,7 @@ Key principles:
 - Use `tests/api/conftest.py` for endpoint tests
 
 ## Running Tests
+
 ```bash
 # From project root (recommended)
 python -m pytest -v                              # All tests
@@ -57,6 +61,7 @@ python -m pytest -v -k "test_create or test_update"
 ```
 
 ## Test Database Setup
+
 ```python
 # In conftest.py:
 @pytest.fixture
@@ -78,6 +83,7 @@ def test_something(db_session: Session):
 ```
 
 ## VS Code Essential Tasks
+
 1. **Switch/Verify Python Environment**:
    - `Ctrl+Shift+P` → "Python: Select Interpreter"
    - Choose: `backend/venv/Scripts/python.exe`
@@ -96,6 +102,7 @@ def test_something(db_session: Session):
    - Debug output in "Debug Console"
 
 ## Manual API Development
+
 ```bash
 # Start API server for development
 cd backend
@@ -117,6 +124,7 @@ curl -X PUT http://localhost:8000/api/contacts/123e4567-e89b-12d3-a456-426614174
 ```
 
 ## API Testing Quick Reference
+
 ```python
 # Test client setup (in conftest.py)
 @pytest.fixture
@@ -147,6 +155,7 @@ def test_pattern(client: TestClient, db_session: Session):
 ## Common Issues & Solutions
 
 1. **"Import 'backend' could not be resolved" in VS Code**:
+
    ```bash
    cd backend
    pip install -e .
@@ -159,6 +168,7 @@ def test_pattern(client: TestClient, db_session: Session):
    - Check test functions start with "test_"
 
 3. **Wrong environment active**:
+
    ```bash
    # Check current Python
    where python  # Should show backend/venv/Scripts/python.exe
@@ -182,6 +192,7 @@ def test_pattern(client: TestClient, db_session: Session):
    - Remember to commit db changes before API calls
 
 ## Current Project Structure
+
 ```
 /backend
   /app
@@ -198,6 +209,7 @@ def test_pattern(client: TestClient, db_session: Session):
 ```
 
 ## Test Data Patterns
+
 ```python
 # Common test data
 VALID_CONTACT = {
@@ -222,6 +234,7 @@ def test_validation(client, invalid_data, expected_error):
 ```
 
 ## Git Workflow
+
 ```bash
 # Before starting work
 git checkout feature/contact-management-core
@@ -238,6 +251,7 @@ git push origin feature/contact-management-core
 ## Documentation Update Sequence
 
 ### Propagating Functional Changes
+
 When making significant changes to functional requirements, update documentation in this sequence:
 
 1. **Functional Requirements** (`docs/brd/modules/contact_management/requirements/functional.md`)
@@ -277,6 +291,7 @@ When making significant changes to functional requirements, update documentation
    - Test plans
 
 ### Best Practices for Doc Updates
+
 - Create feature branch for documentation changes
 - Update documents in sequence to maintain consistency
 - Commit changes per document with clear messages
@@ -284,6 +299,7 @@ When making significant changes to functional requirements, update documentation
 - Update examples and code snippets to match new requirements
 
 ### Implementation Documentation Updates
+
 When working on implementation tasks, update these documents in the following order:
 
 1. **Working Notes** (`docs/implementation/WORKING_NOTES.md`)
@@ -317,6 +333,7 @@ When working on implementation tasks, update these documents in the following or
    - Keep aligned with Implementation Plan
 
 When to Update:
+
 - **Working Notes**: Daily, as you work
 - **Implementation Plan**: Start of sprint, major changes
 - **History**: After completing features
@@ -324,6 +341,7 @@ When to Update:
 - **Phases**: When restructuring implementation sequence
 
 Version Number Rules:
+
 - Format: YYYY.MM.DD-N
 - Increment N when making multiple updates in one day
 - All implementation docs should share same version
