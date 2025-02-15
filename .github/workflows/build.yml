@@ -459,7 +459,7 @@ jobs:
 
   sonarcloud:
     name: SonarCloud Analysis
-    needs: [backend-test, frontend-test]  # Updated to wait for all tests
+    needs: [backend-test, frontend-test, frontend-lint]  # Added frontend-lint dependency
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
 
@@ -501,7 +501,7 @@ jobs:
 
   workflow-summary:
     name: Generate Workflow Summary
-    needs: [backend-lint, backend-test, frontend-lint, frontend-test, build]
+    needs: [backend-lint, backend-test, frontend-lint, frontend-test, build, sonarcloud]  # Added sonarcloud dependency
     if: always()
     runs-on: ubuntu-latest
     steps:
