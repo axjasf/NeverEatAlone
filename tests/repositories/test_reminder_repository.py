@@ -1,4 +1,4 @@
-"""Integration tests for reminder repository."""
+"""Tests for the Reminder repository."""
 
 import pytest
 from datetime import datetime, timezone, timedelta
@@ -13,7 +13,7 @@ from backend.app.models.domain.reminder import (
 )
 from backend.app.models.orm.contact import ContactORM
 from backend.app.models.orm.note import NoteORM
-from backend.app.models.repositories.sqlalchemy_reminder_repository import (
+from backend.app.repositories.sqlalchemy_reminder_repository import (
     SQLAlchemyReminderRepository,
 )
 

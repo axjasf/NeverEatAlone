@@ -1,12 +1,12 @@
-"""SQLAlchemy implementation of the tag repository."""
+"""SQLAlchemy implementation of tag repository."""
 
-from typing import Optional, List
+from typing import List, Optional
 from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from ..domain.tag import Tag, EntityType
+from ..models.domain.tag import Tag, EntityType
 from .interfaces import TagRepository
-from ..orm.tag import TagORM
+from ..models.orm.tag import TagORM
 from datetime import timezone
 
 

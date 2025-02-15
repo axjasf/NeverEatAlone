@@ -1,14 +1,15 @@
 """Tests for the Note repository."""
 
-from uuid import UUID
+from datetime import datetime, UTC
+from uuid import uuid4
 from sqlalchemy.orm import Session
 from backend.app.models.domain.note import Note
-from backend.app.models.repositories.sqlalchemy_note_repository import (
+from backend.app.repositories.sqlalchemy_note_repository import (
     SQLAlchemyNoteRepository,
 )
 
 
-TEST_UUID = UUID("11111111-1111-1111-1111-111111111111")
+TEST_UUID = uuid4()
 
 
 def test_note_save_and_find(db_session: Session) -> None:
@@ -34,7 +35,7 @@ def test_note_find_by_contact(db_session: Session) -> None:
     note1 = Note(contact_id=TEST_UUID, content="Note 1")
     note2 = Note(contact_id=TEST_UUID, content="Note 2")
     note3 = Note(
-        contact_id=UUID("22222222-2222-2222-2222-222222222222"), content="Note 3"
+        contact_id=uuid4(), content="Note 3"
     )
     repo.save(note1)
     repo.save(note2)

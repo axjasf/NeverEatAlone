@@ -1,15 +1,15 @@
-"""Integration tests for SQLAlchemy tag repository."""
+"""Tests for the Tag repository."""
 
 import pytest
 from datetime import datetime, UTC, timedelta
-from uuid import UUID
+from uuid import UUID, uuid4
 from sqlalchemy.orm import Session
 from sqlalchemy.engine import Engine
 from sqlalchemy import select, and_
 
 from backend.app.models.domain.tag import Tag, EntityType
 from backend.app.models.orm.tag import TagORM
-from backend.app.models.repositories.sqlalchemy_tag_repository import (
+from backend.app.repositories.sqlalchemy_tag_repository import (
     SQLAlchemyTagRepository,
 )
 
