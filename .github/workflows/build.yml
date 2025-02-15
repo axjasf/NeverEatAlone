@@ -78,7 +78,7 @@ jobs:
         if: success() || failure()
         run: |
           echo "::group::Running Flake8"
-          python -m flake8 . --count --statistics --show-source --tee --output-file=flake8_report.txt || {
+          python -m flake8 . --config config/.flake8 --count --statistics --show-source --tee --output-file=flake8_report.txt || {
             echo "::error::Flake8 issues found"
             exit 1
           }
@@ -89,7 +89,7 @@ jobs:
         if: success() || failure()
         run: |
           echo "::group::Running MyPy"
-          python -m mypy --config-file mypy.ini . || {
+          python -m mypy --config-file config/mypy.ini . || {
             echo "::error::Type checking issues found"
             exit 1
           }
@@ -165,7 +165,7 @@ jobs:
             --cov-report=term-missing \
             --junitxml=pytest-report.xml \
             -v \
-            ../tests || {
+            tests || {
               echo "::error::Tests failed"
               exit 1
             }
