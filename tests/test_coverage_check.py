@@ -59,7 +59,6 @@ def test_contact_creation_coverage():
     assert "#test" not in contact.hashtag_names
 
 
-def test_contact_validation_coverage():
     """Test contact validation scenarios for coverage."""
     # Test invalid sub_information
     try:
