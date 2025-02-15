@@ -6,21 +6,16 @@ from backend.app.models.domain.contact_model import Contact
 
 
 def test_contact_creation_coverage():
-    """Test creating a contact with all fields to ensure comprehensive coverage reporting.
-    This test verifies that all contact fields are properly set and handled."""
-    # Generate a unique identifier for this test contact
     contact_id = uuid4()
-    # Get current timestamp in UTC for last_contact field
     now = datetime.now(UTC)
 
-    # Create a new contact instance with all available fields populated
-    # This ensures we test the full range of the Contact model's capabilities
+    # Create contact with all possible fields
     contact = Contact(
-        name="Coverage Test",  # Main display name
-        first_name="Coverage", # First name component
-        briefing_text="Testing coverage reporting", # Main briefing text
-        sub_information={      # Nested information dictionary
-            "test": "value",   # Simple key-value pair
+        name="Coverage Test",
+        first_name="Coverage",
+        briefing_text="Testing coverage reporting",
+        sub_information={
+            "test": "value",
             "nested": {
                 "key": "value"
             }
