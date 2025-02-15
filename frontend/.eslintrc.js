@@ -7,17 +7,31 @@ module.exports = {
     ecmaFeatures: {
       jsx: true,
     },
-    project: './tsconfig.json',
+    project: './tsconfig.eslint.json',
+    tsconfigRootDir: __dirname,
   },
   settings: {
     react: {
       version: 'detect',
+    },
+    'import/parsers': {
+      '@typescript-eslint/parser': ['.ts', '.tsx'],
+    },
+    'import/resolver': {
+      typescript: {
+        alwaysTryTypes: true,
+        project: './tsconfig.eslint.json',
+      },
+      node: {
+        extensions: ['.js', '.jsx', '.ts', '.tsx'],
+      },
     },
   },
   env: {
     browser: true,
     es2020: true,
     node: true,
+    jest: true,
   },
   extends: [
     'eslint:recommended',
@@ -96,7 +110,9 @@ module.exports = {
     'no-console': ['warn', {
       allow: ['warn', 'error'],
     }],
-    'prettier/prettier': 'error',
+    'prettier/prettier': ['error', {
+      endOfLine: 'auto',
+    }],
   },
   overrides: [
     {
@@ -118,13 +134,16 @@ module.exports = {
         'testing-library/no-debugging-utils': 'warn',
       },
     },
-  ],
-  settings: {
-    'import/resolver': {
-      typescript: {},
-      node: {
-        extensions: ['.js', '.jsx', '.ts', '.tsx'],
+    {
+      files: ['.eslintrc.js', '*.config.js'],
+      env: {
+        node: true,
+      },
+      parser: 'espree',
+      parserOptions: {
+        ecmaVersion: 2020,
+        sourceType: 'module',
       },
     },
-  },
-}; 
+  ],
+};
