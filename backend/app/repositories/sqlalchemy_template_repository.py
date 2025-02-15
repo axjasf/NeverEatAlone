@@ -18,6 +18,7 @@ class FieldDict(TypedDict):
     reminder_template: Optional[str]
     validators: List[str]
 
+
 class CategoryDict(TypedDict):
     name: str
     description: str
@@ -63,7 +64,9 @@ class SQLAlchemyTemplateRepository:
             }
         return categories_dict
 
-    def _from_json_dict(self, data: Dict[str, CategoryDict]) -> Dict[str, CategoryDefinition]:
+    def _from_json_dict(
+        self, data: Dict[str, CategoryDict]
+    ) -> Dict[str, CategoryDefinition]:
         """Convert JSON dictionary back to domain objects.
 
         Args:

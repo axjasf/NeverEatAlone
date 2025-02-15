@@ -89,7 +89,7 @@ class Template(BaseModel):
     def _add_new_fields(
         self,
         categories: Dict[str, CategoryDefinition],
-        new_fields: Optional[Dict[str, Dict[str, FieldDefinition]]]
+        new_fields: Optional[Dict[str, Dict[str, FieldDefinition]]],
     ) -> None:
         """Add new fields to categories."""
         if not new_fields:
@@ -103,7 +103,7 @@ class Template(BaseModel):
         self,
         categories: Dict[str, CategoryDefinition],
         removed_tracker: Dict[str, Set[str]],
-        removed_fields: Optional[Dict[str, List[str]]]
+        removed_fields: Optional[Dict[str, List[str]]],
     ) -> None:
         """Remove fields and track them."""
         if not removed_fields:
@@ -123,7 +123,7 @@ class Template(BaseModel):
     def _change_fields(
         self,
         categories: Dict[str, CategoryDefinition],
-        changed_fields: Optional[Dict[str, Dict[str, FieldDefinition]]]
+        changed_fields: Optional[Dict[str, Dict[str, FieldDefinition]]],
     ) -> None:
         """Update existing fields."""
         if not changed_fields:
@@ -135,13 +135,13 @@ class Template(BaseModel):
 
             for field_name, new_field in fields.items():
                 if field_name not in category.fields:
-                    raise ValueError(f"Unknown field {field_name} in category {category_name}")
+                    raise ValueError(
+                        f"Unknown field {field_name} in category {category_name}"
+                    )
                 category.fields[field_name] = new_field
 
     def _ensure_category_exists(
-        self,
-        categories: Dict[str, CategoryDefinition],
-        category_name: str
+        self, categories: Dict[str, CategoryDefinition], category_name: str
     ) -> None:
         """Verify category exists or raise error."""
         if category_name not in categories:
@@ -150,7 +150,7 @@ class Template(BaseModel):
     def _create_new_version(
         self,
         categories: Dict[str, CategoryDefinition],
-        removed_fields: Dict[str, Set[str]]
+        removed_fields: Dict[str, Set[str]],
     ) -> "Template":
         """Create a new template version with updated fields."""
         now = datetime.now(UTC)
@@ -179,7 +179,9 @@ class Template(BaseModel):
             self._validate_category(category_name, category_data)
         return True
 
-    def _validate_category(self, category_name: str, category_data: Dict[str, Any]) -> None:
+    def _validate_category(
+        self, category_name: str, category_data: Dict[str, Any]
+    ) -> None:
         """Validate a single category of data.
 
         Args:
@@ -201,7 +203,7 @@ class Template(BaseModel):
         category_name: str,
         category: CategoryDefinition,
         field_name: str,
-        field_value: Any
+        field_value: Any,
     ) -> None:
         """Validate a single field value.
 
@@ -255,7 +257,9 @@ class Template(BaseModel):
         if not isinstance(field_value, str):
             raise ValueError(f"Field '{field_name}' must be a string")
 
-    def _validate_field_format(self, field_name: str, field: FieldDefinition, field_value: str) -> None:
+    def _validate_field_format(
+        self, field_name: str, field: FieldDefinition, field_value: str
+    ) -> None:
         """Validate the format of a field value based on its type.
 
         Args:
@@ -316,9 +320,7 @@ class Template(BaseModel):
             ValueError: If validation fails
         """
         if not self._validate_email(field_value):
-            raise ValueError(
-                f"Field '{field_name}' must be a valid email address"
-            )
+            raise ValueError(f"Field '{field_name}' must be a valid email address")
 
     def _validate_phone_number(self, value: str) -> bool:
         """Validate phone number format (+X XXX-XXX-XXXX)."""

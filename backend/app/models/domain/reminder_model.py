@@ -26,6 +26,7 @@ class RecurrenceUnit(str, Enum):
 
 class DateValidationError(ValueError):
     """Custom error for date validation failures."""
+
     pass
 
 
@@ -143,7 +144,7 @@ class RecurrencePattern:
             RecurrenceUnit.DAY: self._add_days,
             RecurrenceUnit.WEEK: self._add_weeks,
             RecurrenceUnit.MONTH: self._add_months,
-            RecurrenceUnit.YEAR: self._add_years
+            RecurrenceUnit.YEAR: self._add_years,
         }
 
         return calculation_methods[self.unit](date)
