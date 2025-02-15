@@ -20,6 +20,20 @@ Version: 2024.02.13-1
 - Separation of Tag model from database concerns
 - Basic CRUD API implementation
 - Error handling standardization
+- CI/CD Pipeline Adjustments:
+  - Fixed test report generation location
+  - Updated SonarCloud configuration to find reports
+  - Ensured proper artifact handling
+- Reminder System Implementation:
+  - Domain model with recurrence support
+  - SQLAlchemy ORM with proper timezone handling
+  - Repository pattern implementation
+  - Comprehensive test coverage
+- Template System Implementation:
+  - Version-controlled template model
+  - Field and category definitions
+  - Template evolution tracking
+  - Repository with JSON storage
 
 ### Active Sprint Backlog 📋
 1. **Tag Value Objects**
@@ -38,6 +52,18 @@ Version: 2024.02.13-1
    - Use new value objects
    - Update validation logic
    - Add comprehensive tests
+
+3. **Integration with Reminder System**
+   - Link tags with reminders
+   - Implement reminder generation from templates
+   - Add reminder inheritance rules
+   - Update repository layer
+
+4. **Template System Enhancements**
+   - Add validation rules to field definitions
+   - Implement template-based reminder generation
+   - Add template migration utilities
+   - Create template application service
 
 3. **Tag Repository** (Moved to next sprint)
    - Create repository interface

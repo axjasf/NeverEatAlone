@@ -7,12 +7,16 @@
 - [x] Added proper job dependencies to ensure correct execution flow
 - [x] Integrated SonarCloud analysis into main pipeline
 - [x] Added workflow summary job to aggregate all results
+- [x] Fixed test report generation location and movement
+- [x] Ensured proper artifact paths in root directory
 
 ### 2. Test Coverage and Quality Gates
 - [x] Set coverage threshold to 80%
 - [x] Configured test result collection for both frontend and backend
 - [x] Added proper test artifact handling
 - [x] Integrated test results with SonarCloud analysis
+- [x] Fixed coverage.xml and test-results.xml paths
+- [x] Updated pytest configuration to match SonarCloud expectations
 
 ### 3. SonarCloud Integration
 - [x] Fixed SonarCloud configuration
@@ -20,6 +24,7 @@
 - [x] Set up correct organization and project keys
 - [x] Added coverage report paths for both frontend and backend
 - [x] Configured test file patterns and exclusions
+- [x] Updated report paths to match CI artifact locations
 
 ### 4. Artifact Management
 - [x] Implemented proper artifact retention policies
