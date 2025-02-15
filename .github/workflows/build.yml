@@ -86,7 +86,7 @@ jobs:
         if: success() || failure()
         run: |
           echo "::group::Running MyPy"
-          python -m mypy --config-file mypy.ini . --txt-report mypy_report > mypy_output.log 2>&1 || {
+          python -m mypy --config-file mypy.ini . || {
             echo "::error::Type checking issues found"
             exit 1
           }
