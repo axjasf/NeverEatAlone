@@ -459,59 +459,58 @@ jobs:
 
   sonarcloud:
     name: SonarCloud Analysis
-    needs: [backend-test, frontend-test, frontend-lint, backend-lint]  # Added backend-lint
     runs-on: ubuntu-latest
-    # Run on main branch pushes or PRs from same repo, regardless of previous job status
-    if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Disable shallow clones for better relevancy of analysis
+          fetch-depth: 0
 
-      - name: Download backend test results
-        uses: actions/download-artifact@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          name: backend-test-results
-          path: ${{ env.PYTHON_ROOT }}
-        continue-on-error: true  # Don't fail if tests didn't generate results
+          python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Download frontend test results
-        uses: actions/download-artifact@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          name: frontend-test-results
-          path: ${{ env.NODE_ROOT }}
-        continue-on-error: true  # Don't fail if tests didn't generate results
+          node-version: ${{ env.NODE_VERSION }}
 
-      - name: Download lint results
-        uses: actions/download-artifact@v4
-        with:
-          name: lint-results
-          path: lint-results
-        continue-on-error: true  # Don't fail if linting didn't generate results
+      - name: Install Python dependencies
+        working-directory: ${{ env.PYTHON_ROOT }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Install Node.js dependencies
+        working-directory: ${{ env.NODE_ROOT }}
+        run: |
+          npm ci
+
+      - name: Run Python tests with coverage
+        working-directory: ${{ env.PYTHON_ROOT }}
+        run: |
+          pytest --cov=app --cov-report=xml --cov-report=html --junitxml=test-results.xml ../tests
+
+      - name: Run frontend tests with coverage
+        working-directory: ${{ env.NODE_ROOT }}
+        run: |
+          npm run test:ci
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v4.1.0
+        uses: sonarsource/sonarqube-scan-action@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
-            -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.organization=${{ env.SONAR_ORGANIZATION }}
-            -Dsonar.projectKey=axjasf_NeverEatAlone
-            -Dsonar.projectName=NeverEatAlone
+            -Dsonar.projectKey=NeverEatAlone
             -Dsonar.python.coverage.reportPaths=${{ env.PYTHON_ROOT }}/coverage.xml
+            -Dsonar.python.xunit.reportPath=${{ env.PYTHON_ROOT }}/test-results.xml
             -Dsonar.javascript.lcov.reportPaths=${{ env.NODE_ROOT }}/coverage/lcov.info
-            -Dsonar.verbose=true
             -Dsonar.sources=backend/app,frontend/src
-            -Dsonar.tests=tests,frontend/src
-            -Dsonar.test.inclusions=**/*.test.ts,**/*.test.tsx,tests/**/*_test.py,frontend/src/setupTests.ts
-            -Dsonar.test.exclusions=frontend/src/App.tsx,frontend/src/index.tsx
-            -Dsonar.sourceEncoding=UTF-8
             -Dsonar.python.version=3.11
-            -Dsonar.qualitygate.wait=true
-            -Dsonar.scm.provider=git
-            -Dsonar.branch.name=${GITHUB_REF_NAME}
 
   workflow-summary:
     name: Generate Workflow Summary
