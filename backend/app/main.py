@@ -333,7 +333,7 @@ async def list_contacts(
             .filter(
                 sa.and_(
                     TagORM.entity_type == EntityType.CONTACT.value,
-                    TagORM.name.in_(tag_list)
+                    TagORM.name.in_(tag_list),
                 )
             )
             .group_by(contact_tags.c.contact_id)
