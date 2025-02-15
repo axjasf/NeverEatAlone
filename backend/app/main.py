@@ -181,8 +181,13 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
         A JSON response with the error details.
     """
     detail = exc.detail
-    if isinstance(detail, dict) and "error" in detail:
-        return JSONResponse(status_code=exc.status_code, content=detail)
+    # Type guard to check if detail is a dict
+    if isinstance(detail, dict):
+        # Cast to Dict[str, Any] to help type checker
+        error_dict = cast(Dict[str, Any], detail)
+        if "error" in error_dict:
+            return JSONResponse(status_code=exc.status_code, content=error_dict)
+    # For all other cases, wrap the detail in an error object
     return JSONResponse(
         status_code=exc.status_code,
         content={"error": str(detail)},
