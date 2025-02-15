@@ -176,22 +176,23 @@ jobs:
         id: tests
         env:
           COVERAGE_FAIL_UNDER: ${{ env.COVERAGE_THRESHOLD }}
+        working-directory: ${{ env.PYTHON_ROOT }}  # Set working directory for the entire step
         run: |
           echo "::group::Test Environment"
           echo "Python path: $PYTHONPATH"
           echo "Coverage threshold: $COVERAGE_FAIL_UNDER"
+          echo "Working directory: $(pwd)"
           echo "::endgroup::"
 
           echo "::group::Running pytest with coverage"
-          cd ${{ env.PYTHON_ROOT }}
           python -m pytest \
             --cov=app \
-            --cov-report=xml:coverage.xml \
-            --cov-report=html:coverage_html \
+            --cov-report=xml:../coverage.xml \
+            --cov-report=html:../coverage_html \
             --cov-report=term-missing \
-            --junitxml=pytest-report.xml \
+            --junitxml=../pytest-report.xml \
             -v \
-            tests || {
+            ../tests || {
               echo "::error::Tests failed"
               exit 1
             }
@@ -201,7 +202,7 @@ jobs:
         if: always()
         run: |
           echo "::group::Test Summary"
-          if [ -f "${{ env.PYTHON_ROOT }}/pytest-report.xml" ]; then
+          if [ -f "pytest-report.xml" ]; then
             echo "Test report generated successfully"
             echo "Coverage report available in artifacts"
 
@@ -212,15 +213,15 @@ jobs:
             echo "" >> test_summary.txt
 
             # Extract key metrics from pytest report
-            if [ -f "${{ env.PYTHON_ROOT }}/coverage.xml" ]; then
+            if [ -f "coverage.xml" ]; then
               echo "Coverage Report:" >> test_summary.txt
-              grep -A 5 "<coverage" "${{ env.PYTHON_ROOT }}/coverage.xml" >> test_summary.txt
+              grep -A 5 "<coverage" "coverage.xml" >> test_summary.txt
             fi
 
-            if [ -f "${{ env.PYTHON_ROOT }}/pytest-report.xml" ]; then
+            if [ -f "pytest-report.xml" ]; then
               echo "" >> test_summary.txt
               echo "Test Results:" >> test_summary.txt
-              grep -A 5 "<testsuite" "${{ env.PYTHON_ROOT }}/pytest-report.xml" >> test_summary.txt
+              grep -A 5 "<testsuite" "pytest-report.xml" >> test_summary.txt
             fi
           else
             echo "::error::Test report generation failed"
