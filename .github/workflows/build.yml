@@ -502,8 +502,9 @@ jobs:
             -Dsonar.javascript.lcov.reportPaths=${{ env.NODE_ROOT }}/coverage/lcov.info
             -Dsonar.verbose=true
             -Dsonar.sources=backend/app,frontend/src
-            -Dsonar.tests=tests,frontend/src/__tests__
-            -Dsonar.test.inclusions=**/*.test.ts,**/*.test.tsx,tests/**/*_test.py
+            -Dsonar.tests=tests,frontend/src
+            -Dsonar.test.inclusions=**/*.test.ts,**/*.test.tsx,tests/**/*_test.py,frontend/src/setupTests.ts
+            -Dsonar.test.exclusions=frontend/src/App.tsx,frontend/src/index.tsx
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.python.version=3.11
             -Dsonar.qualitygate.wait=true
