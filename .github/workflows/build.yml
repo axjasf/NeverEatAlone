@@ -16,7 +16,7 @@ env:
   PYTEST_ADDOPTS: '--color=yes'
   # Debug Mode for Verbose Logging
   DEBUG: ${{ github.event_name == 'pull_request' }}
-  # SonarCloud Configuration
+  # SonarCloud Configuration - Configured via Organization Settings
   SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
   SONAR_ORGANIZATION: ${{ secrets.SONAR_ORGANIZATION }}
 
@@ -459,7 +459,7 @@ jobs:
 
   sonarcloud:
     name: SonarCloud Analysis
-    needs: [backend-test, frontend-lint]  # Ensure tests and linting complete first
+    needs: [backend-test, frontend-test]  # Updated to wait for all tests
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
 
@@ -493,6 +493,11 @@ jobs:
             -Dsonar.python.coverage.reportPaths=${{ env.PYTHON_ROOT }}/coverage.xml
             -Dsonar.javascript.lcov.reportPaths=${{ env.NODE_ROOT }}/coverage/lcov.info
             -Dsonar.verbose=true
+            -Dsonar.sources=backend/app,frontend/src
+            -Dsonar.tests=tests,frontend/tests
+            -Dsonar.sourceEncoding=UTF-8
+            -Dsonar.python.version=3.11
+            -Dsonar.qualitygate.wait=true
 
   workflow-summary:
     name: Generate Workflow Summary
