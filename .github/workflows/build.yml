@@ -459,12 +459,10 @@ jobs:
 
   sonarcloud:
     name: SonarCloud Analysis
-    needs: [backend-test, frontend-test, frontend-lint]  # Added frontend-lint dependency
+    needs: [backend-test, frontend-test, frontend-lint, backend-lint]  # Added backend-lint
     runs-on: ubuntu-latest
-    # Only run if all required jobs succeeded and it's either a push to main or a PR from the same repo
-    if: |
-      success() &&
-      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    # Run on main branch pushes or PRs from same repo, regardless of previous job status
+    if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     steps:
       - uses: actions/checkout@v4
         with:
@@ -475,13 +473,21 @@ jobs:
         with:
           name: backend-test-results
           path: ${{ env.PYTHON_ROOT }}
+        continue-on-error: true  # Don't fail if tests didn't generate results
 
       - name: Download frontend test results
         uses: actions/download-artifact@v4
         with:
           name: frontend-test-results
           path: ${{ env.NODE_ROOT }}
-        continue-on-error: true  # Frontend tests might not exist yet
+        continue-on-error: true  # Don't fail if tests didn't generate results
+
+      - name: Download lint results
+        uses: actions/download-artifact@v4
+        with:
+          name: lint-results
+          path: lint-results
+        continue-on-error: true  # Don't fail if linting didn't generate results
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
