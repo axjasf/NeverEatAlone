@@ -9,8 +9,6 @@ from ..models.domain.reminder import (
     RecurrencePattern,
     Reminder,
     ReminderStatus,
-    ReminderFrequency,
-    ReminderType
 )
 from .interfaces import ReminderRepository
 from ..models.orm.reminder import ReminderORM

@@ -13,6 +13,9 @@ from backend.app.models.domain.note import Note  # noqa: F401
 from backend.app.models.domain.tag import Tag  # noqa: F401
 from backend.app.models.orm.note import NoteORM  # noqa: F401
 from backend.app.models.orm.tag import TagORM  # noqa: F401
+from backend.app.models.orm.contact import ContactORM  # noqa: F401
+from backend.app.models.orm.reminder import ReminderORM  # noqa: F401
+from backend.app.models.orm.template import TemplateVersionORM  # noqa: F401
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
