@@ -1,20 +1,23 @@
 from datetime import datetime
-from typing import Optional, Any, Annotated, List, Dict
+from typing import Optional, Any, Annotated, List, Dict, cast
 from uuid import UUID
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, field_validator, ConfigDict
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func, select, distinct, Column
 from contextlib import contextmanager
 from typing import Iterator
 from http import HTTPStatus
 import sqlalchemy as sa
 
 from .models.domain.contact import Contact
-from .models.domain.tag import Tag as Hashtag, EntityType
-from .models.orm.contact_tag import contact_tags as contact_hashtags
+from .models.domain.tag import EntityType
+from .models.orm.contact_tag import contact_tags
+from .models.orm.contact import ContactORM
+from .models.orm.tag import TagORM
 
 app = FastAPI(title="Contact Management API")
 
@@ -43,44 +46,54 @@ def override_get_db(db: Session) -> Iterator[None]:
         _test_db = None
 
 
-class ContactCreate(BaseModel):
-    """Schema for creating a new contact"""
+class ContactBase(BaseModel):
+    """Base schema for contact data."""
 
-    name: str = Field(..., min_length=1, max_length=100)
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    name: str
     first_name: Optional[str] = None
-    sub_information: Optional[dict[str, Any]] = None
-    hashtags: Optional[list[str]] = Field(
-        None, description="List of hashtags. Each tag must start with '#'."
-    )
+    sub_information: Dict[str, Any] = {}
+    hashtags: Optional[List[str]] = None
+    last_contact: Optional[datetime] = None
+    contact_briefing_text: Optional[str] = None
+
+
+class ContactCreate(BaseModel):
+    """Schema for creating a new contact."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    name: str
+    first_name: Optional[str] = None
+    sub_information: Dict[str, Any] = {}
+    hashtags: Optional[List[str]] = None
     last_contact: Optional[datetime] = None
     contact_briefing_text: Optional[str] = None
 
     @field_validator("hashtags")
     @classmethod
-    def validate_hashtags(cls, v: Optional[list[str]]) -> Optional[list[str]]:
+    def validate_hashtags(cls, v: Optional[List[str]]) -> Optional[List[str]]:
         """Validate that all hashtags start with #"""
         if v is not None:
             for tag in v:
                 if not tag.startswith("#"):
-                    raise ValueError("Each hashtag must be a string starting with #")
+                    raise ValueError(f"Invalid hashtag '{tag}'. Must start with '#'")
         return v
 
-    model_config = {
-        "json_schema_extra": {
-            "example": {
-                "name": "John Doe",
-                "first_name": "John",
-                "sub_information": {"role": "developer"},
-                "hashtags": ["#work", "#tech"],
-            }
-        }
-    }
 
+class ContactResponse(BaseModel):
+    """Schema for contact response including system fields."""
 
-class ContactResponse(ContactCreate):
-    """Schema for contact response including system fields"""
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     id: UUID
+    name: str
+    first_name: Optional[str] = None
+    sub_information: Dict[str, Any] = {}
+    hashtags: List[str] = []  # Response always includes hashtags, even if empty
+    last_contact: Optional[datetime] = None
+    contact_briefing_text: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -88,10 +101,12 @@ class ContactResponse(ContactCreate):
 class ContactList(BaseModel):
     """Response model for paginated contact list."""
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     items: List[ContactResponse]
     total_count: int
-    limit: int = 10
-    offset: int = 0
+    limit: int
+    offset: int
 
 
 @app.exception_handler(RequestValidationError)
@@ -224,23 +239,10 @@ async def update_contact(
         raise HTTPException(status_code=404, detail="Contact not found")
 
     try:
-        # Prepare and validate all data before making changes
-        hashtags = contact.hashtags or []
-        sub_info = contact.sub_information or {}
-
-        # Validate hashtags
-        for tag in hashtags:
-            if not tag.startswith("#"):
-                raise ValueError("Each hashtag must be a string starting with #")
-
-        # Validate sub_information
-        if not isinstance(sub_info, dict):
-            raise ValueError("Input should be a valid dictionary")
-
-        # Update fields only after all validation passes
+        # Update fields
         db_contact.name = contact.name
         db_contact.first_name = contact.first_name
-        db_contact.sub_information = sub_info
+        db_contact.sub_information = contact.sub_information
         if contact.hashtags is not None:  # Only update hashtags if they were provided
             db_contact.set_hashtags(contact.hashtags)
         db_contact.last_contact = contact.last_contact
@@ -301,24 +303,14 @@ async def list_contacts(
     limit: int = 10,
     offset: int = 0,
 ) -> ContactList:
-    """List contacts with pagination and filtering.
-
-    Args:
-        db (Session): The database session.
-        name (str, optional): Filter by name (case-insensitive, partial match).
-        hashtags (str, optional): Comma-separated list of hashtags to filter by.
-        limit (int, optional): Maximum number of items to return. Defaults to 10.
-        offset (int, optional): Number of items to skip. Defaults to 0.
-
-    Returns:
-        ContactList: Paginated and filtered list of contacts.
-    """
+    """List contacts with pagination and filtering."""
     # Start with base query
     query = db.query(Contact)
 
     # Apply name filter if provided
     if name:
-        query = query.filter(Contact._name.ilike(f"%{name}%"))
+        name_col = cast(Column[str], ContactORM.name)
+        query = query.filter(name_col.ilike(f"%{name}%"))
 
     # Apply hashtag filter if provided
     if hashtags:
@@ -331,22 +323,27 @@ async def list_contacts(
         ]
         print(f"Normalized tags: {tag_list}")
 
-        # Find contacts that have ALL requested hashtags.
+        # Find contacts that have ALL requested hashtags
         matching_ids = (
-            sa.select(contact_hashtags.c.contact_id)
+            select(contact_tags.c.contact_id)
             .join(
-                Hashtag, contact_hashtags.c.hashtag_id == Hashtag.id
-            )  # Explicit join condition.
-            .filter(
-                Hashtag.entity_type == EntityType.CONTACT, Hashtag.name.in_(tag_list)
+                TagORM,
+                contact_tags.c.hashtag_id == TagORM.id,
             )
-            .group_by(contact_hashtags.c.contact_id)
-            .having(sa.func.count(sa.distinct(Hashtag.name)) == len(tag_list))
+            .filter(
+                sa.and_(
+                    TagORM.entity_type == EntityType.CONTACT.value,
+                    TagORM.name.in_(tag_list)
+                )
+            )
+            .group_by(contact_tags.c.contact_id)
+            .having(func.count(distinct(TagORM.name)) == len(tag_list))
             .scalar_subquery()
         )
 
-        # Apply filter to main query.
-        query = query.filter(Contact.id.in_(matching_ids))
+        # Apply filter to main query
+        id_col = cast(Column[UUID], ContactORM.id)
+        query = query.filter(id_col.in_(matching_ids))
 
         print("\nDebug - Final filtered query:")
         print(str(query.statement.compile(compile_kwargs={"literal_binds": True})))
@@ -359,13 +356,12 @@ async def list_contacts(
 
     # Get total count before pagination
     total_count = query.count()
-    print(f"\nTotal count: {total_count}")
 
     # Apply pagination
     contacts = query.offset(offset).limit(limit).all()
 
     # Convert to response models
-    items = []
+    items: List[ContactResponse] = []
     for contact in contacts:
         db_id = getattr(contact.id, "_value", contact.id)
         items.append(
