@@ -2,19 +2,18 @@
 
 from datetime import datetime
 from typing import Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import String, Integer, DateTime, CheckConstraint
-from ...database import Base
 from ..domain.tag_model import EntityType
+from .base_orm import BaseORMModel
 
 
-class TagORM(Base):
+class TagORM(BaseORMModel):
     """ORM model for storing tags in the database."""
 
     __tablename__ = "tags"
 
-    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     entity_id: Mapped[UUID] = mapped_column(nullable=False)
     entity_type: Mapped[str] = mapped_column(String, nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)

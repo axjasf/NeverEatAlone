@@ -19,6 +19,7 @@ ContactWithRelations = ContactORM
 NoteWithRelations = NoteORM
 ReminderWithRelations = ReminderORM
 
+
 @pytest.fixture
 def contact(db_session: Session) -> ContactWithRelations:
     """Create a test contact.
@@ -57,7 +58,9 @@ def note(db_session: Session, contact: ContactWithRelations) -> NoteWithRelation
         return note
 
 
-def test_create_one_off_reminder(db_session: Session, contact: ContactWithRelations) -> None:
+def test_create_one_off_reminder(
+    db_session: Session, contact: ContactWithRelations
+) -> None:
     """Test creating a one-off reminder."""
     # Create a reminder
     due_date = datetime(2024, 3, 1, tzinfo=timezone.utc)
@@ -85,7 +88,9 @@ def test_create_one_off_reminder(db_session: Session, contact: ContactWithRelati
     assert saved.recurrence_end_date is None
 
 
-def test_create_recurring_reminder(db_session: Session, contact: ContactWithRelations) -> None:
+def test_create_recurring_reminder(
+    db_session: Session, contact: ContactWithRelations
+) -> None:
     """Test creating a recurring reminder."""
     # Create a reminder
     due_date = datetime(2024, 3, 1, tzinfo=timezone.utc)
@@ -253,7 +258,9 @@ def test_delete_contact_cascades_to_reminders(
         assert db_session.get(ReminderORM, rid) is None
 
 
-def test_cascade_delete_from_contact(db_session: Session, contact: ContactWithRelations) -> None:
+def test_cascade_delete_from_contact(
+    db_session: Session, contact: ContactWithRelations
+) -> None:
     """Test that deleting a contact cascades to its reminders.
 
     Should:
@@ -385,7 +392,9 @@ def test_timezone_handling(db_session: Session, contact: ContactWithRelations) -
     assert loaded.due_date == due_date
 
 
-def test_recurrence_constraints(db_session: Session, contact: ContactWithRelations) -> None:
+def test_recurrence_constraints(
+    db_session: Session, contact: ContactWithRelations
+) -> None:
     """Test database constraints for recurrence fields.
 
     Should:
@@ -435,7 +444,9 @@ def test_recurrence_constraints(db_session: Session, contact: ContactWithRelatio
             db_session.flush()
 
 
-def test_completion_constraints(db_session: Session, contact: ContactWithRelations) -> None:
+def test_completion_constraints(
+    db_session: Session, contact: ContactWithRelations
+) -> None:
     """Test database constraints for completion status and date.
 
     Should:
@@ -493,10 +504,11 @@ def test_eager_loading(
     db_session.expunge_all()
 
     # Load reminder with relationships
-    stmt = select(ReminderORM).options(
-        selectinload(ReminderORM.contact),
-        selectinload(ReminderORM.note)
-    ).where(ReminderORM.id == reminder_id)
+    stmt = (
+        select(ReminderORM)
+        .options(selectinload(ReminderORM.contact), selectinload(ReminderORM.note))
+        .where(ReminderORM.id == reminder_id)
+    )
     loaded = db_session.execute(stmt).scalar_one()
     assert loaded is not None
     assert isinstance(loaded, ReminderORM)
