@@ -1,6 +1,5 @@
 """Tests for the Note repository."""
 
-from datetime import datetime, UTC
 from uuid import uuid4
 from sqlalchemy.orm import Session
 from backend.app.models.domain.note_model import Note

@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 import re
 from .base_model import BaseModel
 
