@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any, Dict
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import JSON, Integer, DateTime, PrimaryKeyConstraint
-from .base import BaseORMModel, GUID
+from .base_orm import BaseORMModel, GUID
 import uuid
 
 

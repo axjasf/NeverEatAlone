@@ -3,10 +3,10 @@
 from datetime import datetime, timezone
 from typing import List, TYPE_CHECKING
 from uuid import UUID
-from .base import BaseModel
+from .base_model import BaseModel
 
 if TYPE_CHECKING:
-    from .tag import Tag
+    from .tag_model import Tag
 
 
 class Statement(BaseModel):
@@ -44,7 +44,7 @@ class Statement(BaseModel):
             raise ValueError("Tag must start with #")
 
         # Import here to avoid circular dependency
-        from .tag import Tag, EntityType
+        from .tag_model import Tag, EntityType
 
         tag_name = tag_name.lower()
         # Check if tag already exists
@@ -144,7 +144,7 @@ class Note(BaseModel):
             raise ValueError("Tag must start with #")
 
         # Import here to avoid circular dependency
-        from .tag import Tag, EntityType
+        from .tag_model import Tag, EntityType
 
         tag_name = tag_name.lower()
         # Check if tag already exists

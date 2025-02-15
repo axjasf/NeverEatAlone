@@ -3,7 +3,7 @@
 from datetime import datetime, timezone, timedelta
 from uuid import UUID
 import pytest
-from backend.app.models.domain.reminder import (
+from backend.app.models.domain.reminder_model import (
     Reminder,
     RecurrencePattern,
     ReminderStatus,

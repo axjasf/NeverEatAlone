@@ -1,13 +1,27 @@
 """SQLAlchemy implementation of template repository."""
 
-from typing import List, Optional, Dict, Set, Any
+from typing import List, Optional, Dict, Set, TypedDict
 from uuid import UUID
-from datetime import datetime, UTC
+from datetime import UTC
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..models.domain.template import Template, CategoryDefinition, FieldDefinition
-from ..models.orm.template import TemplateVersionORM
+from ..models.domain.template_model import Template, CategoryDefinition, FieldDefinition
+from ..models.orm.template_orm import TemplateVersionORM
+
+
+class FieldDict(TypedDict):
+    name: str
+    type: str
+    description: str
+    display_format: Optional[str]
+    reminder_template: Optional[str]
+    validators: List[str]
+
+class CategoryDict(TypedDict):
+    name: str
+    description: str
+    fields: Dict[str, FieldDict]
 
 
 class SQLAlchemyTemplateRepository:
@@ -21,7 +35,7 @@ class SQLAlchemyTemplateRepository:
         """
         self._session = session
 
-    def _to_json_dict(self, template: Template) -> Dict[str, Any]:
+    def _to_json_dict(self, template: Template) -> Dict[str, CategoryDict]:
         """Convert template to JSON-serializable dictionary.
 
         Args:
@@ -30,9 +44,9 @@ class SQLAlchemyTemplateRepository:
         Returns:
             Dictionary representation of the template
         """
-        categories_dict = {}
+        categories_dict: Dict[str, CategoryDict] = {}
         for category_name, category in template.categories.items():
-            fields_dict = {}
+            fields_dict: Dict[str, FieldDict] = {}
             for field_name, field in category.fields.items():
                 fields_dict[field_name] = {
                     "name": field.name,
@@ -49,7 +63,7 @@ class SQLAlchemyTemplateRepository:
             }
         return categories_dict
 
-    def _from_json_dict(self, data: Dict[str, Any]) -> Dict[str, CategoryDefinition]:
+    def _from_json_dict(self, data: Dict[str, CategoryDict]) -> Dict[str, CategoryDefinition]:
         """Convert JSON dictionary back to domain objects.
 
         Args:
@@ -58,9 +72,9 @@ class SQLAlchemyTemplateRepository:
         Returns:
             Dictionary of CategoryDefinition objects
         """
-        categories = {}
+        categories: Dict[str, CategoryDefinition] = {}
         for category_name, category_data in data.items():
-            fields = {}
+            fields: Dict[str, FieldDefinition] = {}
             for field_name, field_data in category_data["fields"].items():
                 fields[field_name] = FieldDefinition(
                     name=field_data["name"],
@@ -77,7 +91,9 @@ class SQLAlchemyTemplateRepository:
             )
         return categories
 
-    def _to_json_removed_fields(self, removed_fields: Dict[str, Set[str]]) -> Dict[str, list[str]]:
+    def _to_json_removed_fields(
+        self, removed_fields: Dict[str, Set[str]]
+    ) -> Dict[str, list[str]]:
         """Convert removed_fields to JSON-serializable dictionary.
 
         Args:
@@ -86,12 +102,11 @@ class SQLAlchemyTemplateRepository:
         Returns:
             Dictionary with sets converted to lists for JSON serialization
         """
-        return {
-            category: list(fields)
-            for category, fields in removed_fields.items()
-        }
+        return {category: list(fields) for category, fields in removed_fields.items()}
 
-    def _from_json_removed_fields(self, data: Dict[str, list[str]]) -> Dict[str, Set[str]]:
+    def _from_json_removed_fields(
+        self, data: Dict[str, list[str]]
+    ) -> Dict[str, Set[str]]:
         """Convert JSON dictionary back to removed_fields format.
 
         Args:
@@ -100,10 +115,7 @@ class SQLAlchemyTemplateRepository:
         Returns:
             Dictionary with lists converted to sets
         """
-        return {
-            category: set(fields)
-            for category, fields in data.items()
-        }
+        return {category: set(fields) for category, fields in data.items()}
 
     def save(self, template: Template) -> None:
         """Save a template.
@@ -168,8 +180,7 @@ class SQLAlchemyTemplateRepository:
         """
         # Get the specific version
         stmt = select(TemplateVersionORM).where(
-            TemplateVersionORM.id == template_id,
-            TemplateVersionORM.version == version
+            TemplateVersionORM.id == template_id, TemplateVersionORM.version == version
         )
         template_orm = self._session.execute(stmt).scalar_one_or_none()
 
@@ -214,7 +225,9 @@ class SQLAlchemyTemplateRepository:
                 categories=self._from_json_dict(template_orm.categories),
                 created_at=template_orm.created_at.replace(tzinfo=UTC),
                 updated_at=template_orm.updated_at.replace(tzinfo=UTC),
-                removed_fields=self._from_json_removed_fields(template_orm.removed_fields),
+                removed_fields=self._from_json_removed_fields(
+                    template_orm.removed_fields
+                ),
             )
             templates.append(template)
 

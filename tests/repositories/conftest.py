@@ -9,13 +9,13 @@ from sqlalchemy.engine import Engine
 from backend.app.database import Base
 
 # Import all models to ensure they are registered with SQLAlchemy
-from backend.app.models.domain.note import Note  # noqa: F401
-from backend.app.models.domain.tag import Tag  # noqa: F401
-from backend.app.models.orm.note import NoteORM  # noqa: F401
-from backend.app.models.orm.tag import TagORM  # noqa: F401
-from backend.app.models.orm.contact import ContactORM  # noqa: F401
-from backend.app.models.orm.reminder import ReminderORM  # noqa: F401
-from backend.app.models.orm.template import TemplateVersionORM  # noqa: F401
+from backend.app.models.domain.note_model import Note  # noqa: F401
+from backend.app.models.domain.tag_model import Tag  # noqa: F401
+from backend.app.models.orm.note_orm import NoteORM  # noqa: F401
+from backend.app.models.orm.tag_orm import TagORM  # noqa: F401
+from backend.app.models.orm.contact_orm import ContactORM  # noqa: F401
+from backend.app.models.orm.reminder_orm import ReminderORM  # noqa: F401
+from backend.app.models.orm.template_orm import TemplateVersionORM  # noqa: F401
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)

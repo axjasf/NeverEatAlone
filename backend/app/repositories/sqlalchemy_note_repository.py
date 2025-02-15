@@ -5,12 +5,12 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..models.domain.note import Note
-from ..models.domain.tag import EntityType
+from ..models.domain.note_model import Note
+from ..models.domain.tag_model import EntityType
 from .interfaces import NoteRepository
-from ..models.orm.note import NoteORM
-from ..models.orm.statement import StatementORM
-from ..models.orm.tag import TagORM
+from ..models.orm.note_orm import NoteORM
+from ..models.orm.statement_orm import StatementORM
+from ..models.orm.tag_orm import TagORM
 
 
 class SQLAlchemyNoteRepository(NoteRepository):

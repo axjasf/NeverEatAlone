@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import String, Integer, DateTime, CheckConstraint
 from ...database import Base
-from ..domain.tag import EntityType
+from ..domain.tag_model import EntityType
 
 
 class TagORM(Base):

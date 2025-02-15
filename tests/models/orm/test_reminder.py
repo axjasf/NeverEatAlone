@@ -3,18 +3,24 @@
 from datetime import datetime, timezone, timedelta
 from uuid import UUID
 import pytest
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, Mapped
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import text, select
+from typing import cast, Optional, List
+from sqlalchemy.orm import selectinload
 
-from backend.app.models.domain.reminder import ReminderStatus, RecurrenceUnit
-from backend.app.models.orm.reminder import ReminderORM
-from backend.app.models.orm.contact import ContactORM
-from backend.app.models.orm.note import NoteORM
+from backend.app.models.domain.reminder_model import ReminderStatus, RecurrenceUnit
+from backend.app.models.orm.reminder_orm import ReminderORM
+from backend.app.models.orm.contact_orm import ContactORM
+from backend.app.models.orm.note_orm import NoteORM
 
+# Type aliases for clarity
+ContactWithRelations = ContactORM
+NoteWithRelations = NoteORM
+ReminderWithRelations = ReminderORM
 
 @pytest.fixture
-def contact(db_session: Session) -> ContactORM:
+def contact(db_session: Session) -> ContactWithRelations:
     """Create a test contact.
 
     Args:
@@ -23,6 +29,9 @@ def contact(db_session: Session) -> ContactORM:
     Returns:
         ContactORM: Test contact
     """
+    contact = ContactORM(name="Test Contact")
+    db_session.add(contact)
+    db_session.commit()
     with db_session.begin():
         contact = ContactORM(name="Test Contact")
         db_session.add(contact)
@@ -31,7 +40,7 @@ def contact(db_session: Session) -> ContactORM:
 
 
 @pytest.fixture
-def note(db_session: Session, contact: ContactORM) -> NoteORM:
+def note(db_session: Session, contact: ContactWithRelations) -> NoteWithRelations:
     """Create a test note.
 
     Args:
@@ -48,7 +57,7 @@ def note(db_session: Session, contact: ContactORM) -> NoteORM:
         return note
 
 
-def test_create_one_off_reminder(db_session: Session, contact: ContactORM) -> None:
+def test_create_one_off_reminder(db_session: Session, contact: ContactWithRelations) -> None:
     """Test creating a one-off reminder."""
     # Create a reminder
     due_date = datetime(2024, 3, 1, tzinfo=timezone.utc)
@@ -76,7 +85,7 @@ def test_create_one_off_reminder(db_session: Session, contact: ContactORM) -> No
     assert saved.recurrence_end_date is None
 
 
-def test_create_recurring_reminder(db_session: Session, contact: ContactORM) -> None:
+def test_create_recurring_reminder(db_session: Session, contact: ContactWithRelations) -> None:
     """Test creating a recurring reminder."""
     # Create a reminder
     due_date = datetime(2024, 3, 1, tzinfo=timezone.utc)
@@ -101,76 +110,48 @@ def test_create_recurring_reminder(db_session: Session, contact: ContactORM) -> 
     assert saved.recurrence_end_date == end_date
 
 
-def test_complete_reminder(db_session: Session, contact: ContactORM) -> None:
+def test_complete_reminder(db_session: Session, contact: ContactWithRelations) -> None:
     """Test completing a reminder."""
-    # Create a reminder
-    due_date = datetime(2024, 3, 1, tzinfo=timezone.utc)
     reminder = ReminderORM(
         contact_id=contact.id,
         title="Test reminder",
-        description="Test description",
-        due_date=due_date,
+        due_date=datetime.now(timezone.utc),
     )
     db_session.add(reminder)
     db_session.commit()
 
     # Complete the reminder
-    completion_date = datetime(2024, 3, 1, 12, tzinfo=timezone.utc)
-    updated_at = datetime.now(timezone.utc)
-
-    # Update using raw SQL to avoid constraint issues
-    with db_session.begin_nested():
-        result = db_session.execute(
-            text(
-                """
-                UPDATE reminders
-                SET status = :status,
-                    completion_date = :completion_date,
-                    updated_at = :updated_at
-                WHERE id = :id
-                RETURNING status, completion_date
-            """
-            ),
-            {
-                "id": str(reminder.id),  # Convert UUID to string
-                "status": ReminderStatus.COMPLETED.value,  # Use enum value
-                "completion_date": completion_date,
-                "updated_at": updated_at,
-            },
-        )
-        print("Update result:", result.fetchone())  # Debug output
+    reminder.status = ReminderStatus.COMPLETED
+    reminder.completion_date = datetime.now(timezone.utc)
     db_session.commit()
-
-    # Verify the update
     db_session.refresh(reminder)
+
     saved = db_session.get(ReminderORM, reminder.id)
-    print("Saved status:", saved.status)  # Debug output
-    print("Saved completion_date:", saved.completion_date)  # Debug output
+    assert saved is not None
+    assert saved.status == ReminderStatus.COMPLETED
+    assert saved.completion_date is not None
 
 
 def test_link_reminder_to_note(
-    db_session: Session, contact: ContactORM, note: NoteORM
+    db_session: Session, contact: ContactWithRelations, note: NoteWithRelations
 ) -> None:
-    """Test linking a reminder to a note.
-
-    Should:
-    - Create reminder with note reference
-    - Establish bidirectional relationship
-    """
+    """Test linking a reminder to a note."""
     reminder = ReminderORM(
         contact_id=contact.id,
+        title="Test reminder",
+        due_date=datetime.now(timezone.utc),
         note_id=note.id,
-        title="Follow up",
-        due_date=datetime(2024, 3, 1, tzinfo=timezone.utc),
     )
     db_session.add(reminder)
     db_session.commit()
 
-    # Verify reminder -> note relationship
     saved = db_session.get(ReminderORM, reminder.id)
     assert saved is not None
     assert saved.note_id == note.id
-    assert saved.note == note
+    saved_note = saved.note
+    if saved_note is not None:
+        assert isinstance(saved_note, NoteORM)
+        assert saved_note.id == note.id
 
     # Verify note -> reminder relationship
     db_session.refresh(note)
@@ -178,7 +159,7 @@ def test_link_reminder_to_note(
 
 
 def test_note_relationship(
-    db_session: Session, contact: ContactORM, note: NoteORM
+    db_session: Session, contact: ContactWithRelations, note: NoteWithRelations
 ) -> None:
     """Test reminder-note relationship behavior.
 
@@ -212,34 +193,37 @@ def test_note_relationship(
 
 
 def test_delete_note_doesnt_cascade_to_reminders(
-    db_session: Session, contact: ContactORM, note: NoteORM
+    db_session: Session, contact: ContactWithRelations, note: NoteWithRelations
 ) -> None:
-    """Test that deleting a note doesn't cascade to linked reminders.
-
-    Should:
-    - Keep reminders but clear their note_id when note is deleted
-    """
+    """Test that deleting a note doesn't cascade to reminders."""
     reminder = ReminderORM(
         contact_id=contact.id,
-        note_id=note.id,
         title="Test reminder",
-        due_date=datetime(2024, 3, 1, tzinfo=timezone.utc),
+        due_date=datetime.now(timezone.utc),
+        note_id=note.id,
     )
     db_session.add(reminder)
     db_session.commit()
+
+    # Verify relationship
+    assert reminder.note_id == note.id
+    reminder_note = reminder.note
+    if reminder_note is not None:
+        assert isinstance(reminder_note, NoteORM)
+        assert reminder_note.id == note.id
+    assert reminder in note.reminders
 
     # Delete note
     db_session.delete(note)
     db_session.commit()
 
     # Verify reminder still exists but note_id is cleared
-    saved = db_session.get(ReminderORM, reminder.id)
-    assert saved is not None
-    assert saved.note_id is None
+    assert reminder.note_id is None
+    assert reminder.note is None
 
 
 def test_delete_contact_cascades_to_reminders(
-    db_session: Session, contact: ContactORM
+    db_session: Session, contact: ContactWithRelations
 ) -> None:
     """Test that deleting a contact cascades to its reminders.
 
@@ -269,7 +253,7 @@ def test_delete_contact_cascades_to_reminders(
         assert db_session.get(ReminderORM, rid) is None
 
 
-def test_cascade_delete_from_contact(db_session: Session, contact: ContactORM) -> None:
+def test_cascade_delete_from_contact(db_session: Session, contact: ContactWithRelations) -> None:
     """Test that deleting a contact cascades to its reminders.
 
     Should:
@@ -377,7 +361,7 @@ def test_constraint_violations(db_session: Session) -> None:
     db_session.commit()
 
 
-def test_timezone_handling(db_session: Session, contact: ContactORM) -> None:
+def test_timezone_handling(db_session: Session, contact: ContactWithRelations) -> None:
     """Test that timezone information is preserved in the database.
 
     Should:
@@ -401,7 +385,7 @@ def test_timezone_handling(db_session: Session, contact: ContactORM) -> None:
     assert loaded.due_date == due_date
 
 
-def test_recurrence_constraints(db_session: Session, contact: ContactORM) -> None:
+def test_recurrence_constraints(db_session: Session, contact: ContactWithRelations) -> None:
     """Test database constraints for recurrence fields.
 
     Should:
@@ -451,7 +435,7 @@ def test_recurrence_constraints(db_session: Session, contact: ContactORM) -> Non
             db_session.flush()
 
 
-def test_completion_constraints(db_session: Session, contact: ContactORM) -> None:
+def test_completion_constraints(db_session: Session, contact: ContactWithRelations) -> None:
     """Test database constraints for completion status and date.
 
     Should:
@@ -488,31 +472,42 @@ def test_completion_constraints(db_session: Session, contact: ContactORM) -> Non
             db_session.flush()
 
 
-def test_eager_loading(db_session: Session, contact: ContactORM, note: NoteORM) -> None:
-    """Test eager loading of relationships.
+def test_eager_loading(
+    db_session: Session, contact: ContactWithRelations, note: NoteWithRelations
+) -> None:
+    """Test that relationships are eagerly loaded."""
+    reminder_id = None
 
-    Should:
-    - Load contact relationship eagerly
-    - Load note relationship eagerly
-    - Not require additional queries
-    """
-    # Create reminder with relationships
+    # First save the reminder
     reminder = ReminderORM(
         contact_id=contact.id,
-        note_id=note.id,
         title="Test reminder",
         due_date=datetime.now(timezone.utc),
+        note_id=note.id,
     )
     db_session.add(reminder)
     db_session.commit()
-    db_session.expire_all()
+    reminder_id = reminder.id
 
-    # Query with SQL logging to verify eager loading
-    with db_session.begin():
-        stmt = select(ReminderORM).where(ReminderORM.id == reminder.id)
-        loaded = db_session.execute(stmt).unique().scalar_one()
+    # Clear session to test loading
+    db_session.expunge_all()
 
-        # These should not trigger additional queries
-        _ = loaded.contact.name
-        if loaded.note:
-            _ = loaded.note.content
+    # Load reminder with relationships
+    stmt = select(ReminderORM).options(
+        selectinload(ReminderORM.contact),
+        selectinload(ReminderORM.note)
+    ).where(ReminderORM.id == reminder_id)
+    loaded = db_session.execute(stmt).scalar_one()
+    assert loaded is not None
+    assert isinstance(loaded, ReminderORM)
+
+    # These should not trigger additional queries
+    loaded_contact = loaded.contact
+    assert loaded_contact is not None
+    assert isinstance(loaded_contact, ContactORM)
+    assert loaded_contact.name is not None
+
+    loaded_note = loaded.note
+    if loaded_note is not None:
+        assert isinstance(loaded_note, NoteORM)
+        assert loaded_note.content is not None

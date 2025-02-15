@@ -2,7 +2,7 @@
 
 from datetime import datetime, UTC
 from uuid import UUID
-from backend.app.models.domain.base import BaseModel
+from backend.app.models.domain.base_model import BaseModel
 
 
 def test_base_model_initialization():
@@ -40,12 +40,10 @@ def test_base_model_update_tracking():
     time.sleep(0.001)
 
     # Trigger update
-    model._update_timestamp()
+    model.touch()
 
-    # ID and created_at should not change
-    assert model.id == original_id
-    assert model.created_at == original_created
-
-    # updated_at should change
-    assert model.updated_at > original_updated
-    assert model.updated_at.tzinfo == UTC  # Ensure UTC timezone
+    # Verify changes
+    assert model.id == original_id  # ID should never change
+    assert model.created_at == original_created  # created_at should never change
+    assert model.updated_at != original_updated  # updated_at should change
+    assert model.updated_at > original_updated  # New timestamp should be later

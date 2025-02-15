@@ -4,9 +4,9 @@ from typing import List, Optional
 from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from ..models.domain.tag import Tag, EntityType
+from ..models.domain.tag_model import Tag, EntityType
 from .interfaces import TagRepository
-from ..models.orm.tag import TagORM
+from ..models.orm.tag_orm import TagORM
 from datetime import timezone
 
 

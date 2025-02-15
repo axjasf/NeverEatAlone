@@ -7,8 +7,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy.engine import Engine
 from sqlalchemy import select, and_
 
-from backend.app.models.domain.tag import Tag, EntityType
-from backend.app.models.orm.tag import TagORM
+from backend.app.models.domain.tag_model import Tag, EntityType
+from backend.app.models.orm.tag_orm import TagORM
 from backend.app.repositories.sqlalchemy_tag_repository import (
     SQLAlchemyTagRepository,
 )

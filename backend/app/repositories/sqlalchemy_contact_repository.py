@@ -6,11 +6,11 @@ from datetime import datetime, UTC
 from sqlalchemy import select, and_, text
 from sqlalchemy.orm import Session, selectinload
 
-from ..models.domain.contact import Contact
-from ..models.domain.tag import Tag, EntityType
+from ..models.domain.contact_model import Contact
+from ..models.domain.tag_model import Tag, EntityType
 from .interfaces import ContactRepository
-from ..models.orm.contact import ContactORM
-from ..models.orm.tag import TagORM
+from ..models.orm.contact_orm import ContactORM
+from ..models.orm.tag_orm import TagORM
 
 
 class SQLAlchemyContactRepository:

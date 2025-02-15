@@ -3,7 +3,7 @@
 from datetime import datetime, UTC, timedelta
 from uuid import uuid4
 from sqlalchemy.orm import Session
-from backend.app.models.domain.contact import Contact
+from backend.app.models.domain.contact_model import Contact
 from backend.app.repositories.sqlalchemy_contact_repository import (
     SQLAlchemyContactRepository,
 )

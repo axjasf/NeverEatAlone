@@ -18,11 +18,11 @@ from sqlalchemy.orm import Session
 import sqlalchemy as sa
 
 # Local imports
-from .models.domain.contact import Contact
-from .models.domain.tag import EntityType
-from .models.orm.contact_tag import contact_tags as contact_hashtags
-from .models.orm.contact import ContactORM
-from .models.orm.tag import TagORM
+from .models.domain.contact_model import Contact
+from .models.domain.tag_model import EntityType
+from .models.orm.contact_tag_orm import contact_tags as contact_hashtags
+from .models.orm.contact_orm import ContactORM
+from .models.orm.tag_orm import TagORM
 
 # Type variables
 T = TypeVar("T")

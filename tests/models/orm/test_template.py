@@ -4,7 +4,7 @@ from datetime import datetime, UTC
 from uuid import uuid4
 import pytest
 from sqlalchemy.exc import IntegrityError
-from backend.app.models.orm.template import TemplateVersionORM
+from backend.app.models.orm.template_orm import TemplateVersionORM
 
 
 def test_template_version_creation(db_session):

@@ -3,8 +3,9 @@
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 import re
+from .base_model import BaseModel
 
 
 class EntityType(str, Enum):
@@ -22,7 +23,7 @@ class EntityType(str, Enum):
     STATEMENT = "statement"
 
 
-class Tag:
+class Tag(BaseModel):
     """Model for storing tags.
 
     Each tag is tied to a specific entity (contact, note, or statement) and can
@@ -53,6 +54,7 @@ class Tag:
         Raises:
             ValueError: If tag name is invalid
         """
+        super().__init__()
         if not name.startswith("#"):
             raise ValueError("Tag name must start with '#'")
         if len(name) <= 1:
@@ -62,7 +64,6 @@ class Tag:
                 "Tag name can only contain letters, numbers, and underscores"
             )
 
-        self.id: UUID = uuid4()
         self.entity_id = entity_id
         self.entity_type = entity_type.value
         self.name = name.lower()

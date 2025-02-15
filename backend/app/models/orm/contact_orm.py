@@ -4,11 +4,11 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, JSON, DateTime
-from .base import BaseORMModel
-from .tag import TagORM
-from .note import NoteORM
-from .reminder import ReminderORM
-from .contact_tag import contact_tags
+from .base_orm import BaseORMModel
+from .tag_orm import TagORM
+from .note_orm import NoteORM
+from .reminder_orm import ReminderORM
+from .contact_tag_orm import contact_tags
 
 
 class ContactORM(BaseORMModel):
