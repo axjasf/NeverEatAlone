@@ -189,10 +189,13 @@ def _format_error_detail(detail: ErrorDetail) -> Dict[str, str]:
         if detail is None:
             return {"error": DEFAULT_ERROR}
 
-        # Handle dictionary case
-        if isinstance(detail, dict):
-            if "error" in detail and isinstance(detail["error"], str):
-                return {"error": detail["error"]}
+        # Handle dictionary case with error key
+        if (
+            isinstance(detail, dict)
+            and "error" in detail
+            and isinstance(detail["error"], str)
+        ):
+            return {"error": detail["error"]}
 
         # Handle string case (all other cases converted to string)
         return {"error": str(detail)}

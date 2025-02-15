@@ -14,7 +14,8 @@ max-complexity = 10
 # D205 - 1 blank line required between summary line and description
 # D400 - First line should end with a period
 # B011 - Do not call assert False
-extend-ignore = E203,W503,F821,E704,F722,D100,D103,D104,D200,D205,D400,B011
+# SIM102 - Use a single if-statement instead of nested if-statements
+extend-ignore = E203,W503,F821,E704,F722,D100,D103,D104,D200,D205,D400,B011,SIM102
 exclude =
     .git,
     __pycache__,
