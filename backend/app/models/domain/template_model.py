@@ -76,62 +76,91 @@ class Template(BaseModel):
         removed_fields: Optional[Dict[str, List[str]]] = None,
         changed_fields: Optional[Dict[str, Dict[str, FieldDefinition]]] = None,
     ) -> "Template":
-        """Create a new version of the template with evolved fields.
-
-        Args:
-            new_fields: New fields to add, by category
-            removed_fields: Fields to remove, by category
-            changed_fields: Fields to change, by category
-
-        Returns:
-            A new Template instance with the evolved fields and incremented version
-        """
-        # Create a deep copy of the current template
+        """Create a new version of the template with evolved fields."""
         new_categories = deepcopy(self.categories)
         new_removed = deepcopy(self.removed_fields)
 
-        # Add new fields
-        if new_fields:
-            for category_name, fields in new_fields.items():
-                if category_name not in new_categories:
-                    raise ValueError(f"Unknown category: {category_name}")
-                new_categories[category_name].fields.update(fields)
+        self._add_new_fields(new_categories, new_fields)
+        self._remove_fields(new_categories, new_removed, removed_fields)
+        self._change_fields(new_categories, changed_fields)
 
-        # Remove fields
-        if removed_fields:
-            for category_name, field_names in removed_fields.items():
-                if category_name not in new_categories:
-                    raise ValueError(f"Unknown category: {category_name}")
-                # Track removed fields for historical data validation
-                if category_name not in new_removed:
-                    new_removed[category_name] = set()
-                new_removed[category_name].update(field_names)
-                # Remove fields from template
-                for field_name in field_names:
-                    if field_name in new_categories[category_name].fields:
-                        del new_categories[category_name].fields[field_name]
+        return self._create_new_version(new_categories, new_removed)
 
-        # Change fields
-        if changed_fields:
-            for category_name, fields in changed_fields.items():
-                if category_name not in new_categories:
-                    raise ValueError(f"Unknown category: {category_name}")
-                for field_name, new_field in fields.items():
-                    if field_name not in new_categories[category_name].fields:
-                        raise ValueError(
-                            f"Unknown field {field_name} in category {category_name}"
-                        )
-                    new_categories[category_name].fields[field_name] = new_field
+    def _add_new_fields(
+        self,
+        categories: Dict[str, CategoryDefinition],
+        new_fields: Optional[Dict[str, Dict[str, FieldDefinition]]]
+    ) -> None:
+        """Add new fields to categories."""
+        if not new_fields:
+            return
 
-        # Create a new version with the same ID
+        for category_name, fields in new_fields.items():
+            self._ensure_category_exists(categories, category_name)
+            categories[category_name].fields.update(fields)
+
+    def _remove_fields(
+        self,
+        categories: Dict[str, CategoryDefinition],
+        removed_tracker: Dict[str, Set[str]],
+        removed_fields: Optional[Dict[str, List[str]]]
+    ) -> None:
+        """Remove fields and track them."""
+        if not removed_fields:
+            return
+
+        for category_name, field_names in removed_fields.items():
+            self._ensure_category_exists(categories, category_name)
+            if category_name not in removed_tracker:
+                removed_tracker[category_name] = set()
+            removed_tracker[category_name].update(field_names)
+
+            category = categories[category_name]
+            for field_name in field_names:
+                if field_name in category.fields:
+                    del category.fields[field_name]
+
+    def _change_fields(
+        self,
+        categories: Dict[str, CategoryDefinition],
+        changed_fields: Optional[Dict[str, Dict[str, FieldDefinition]]]
+    ) -> None:
+        """Update existing fields."""
+        if not changed_fields:
+            return
+
+        for category_name, fields in changed_fields.items():
+            self._ensure_category_exists(categories, category_name)
+            category = categories[category_name]
+
+            for field_name, new_field in fields.items():
+                if field_name not in category.fields:
+                    raise ValueError(f"Unknown field {field_name} in category {category_name}")
+                category.fields[field_name] = new_field
+
+    def _ensure_category_exists(
+        self,
+        categories: Dict[str, CategoryDefinition],
+        category_name: str
+    ) -> None:
+        """Verify category exists or raise error."""
+        if category_name not in categories:
+            raise ValueError(f"Unknown category: {category_name}")
+
+    def _create_new_version(
+        self,
+        categories: Dict[str, CategoryDefinition],
+        removed_fields: Dict[str, Set[str]]
+    ) -> "Template":
+        """Create a new template version with updated fields."""
         now = datetime.now(UTC)
         return Template(
-            id=self.id,  # Keep the same ID for all versions
-            categories=new_categories,
+            id=self.id,
+            categories=categories,
             version=self.version + 1,
-            created_at=now,  # New version gets current timestamp
+            created_at=now,
             updated_at=now,
-            removed_fields=new_removed,
+            removed_fields=removed_fields,
         )
 
     def validate_data(self, data: Dict[str, Dict[str, Any]]) -> bool:
