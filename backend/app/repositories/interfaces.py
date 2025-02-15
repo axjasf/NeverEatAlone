@@ -1,10 +1,12 @@
-"""Repository interfaces."""
+"""Repository interfaces for the application."""
 
 from typing import Protocol, Optional, List
 from uuid import UUID
 from ..domain.note import Note
 from ..domain.tag import Tag, EntityType
 from ..domain.reminder import Reminder
+from ..domain.template import Template
+from ..domain.contact import Contact
 
 
 class NoteRepository(Protocol):
@@ -196,5 +198,88 @@ class ReminderRepository(Protocol):
 
         Args:
             reminder: The reminder to delete
+        """
+        ...
+
+
+class ContactRepository(Protocol):
+    """Interface for contact persistence."""
+
+    def save(self, contact: Contact) -> Contact:
+        """Save a contact."""
+        ...
+
+    def find_by_id(self, contact_id: UUID) -> Optional[Contact]:
+        """Find a contact by ID."""
+        ...
+
+    def find_by_tag(self, tag_name: str) -> List[Contact]:
+        """Find contacts by tag name."""
+        ...
+
+    def find_stale(self) -> List[Contact]:
+        """Find contacts with stale tags."""
+        ...
+
+    def delete(self, contact: Contact) -> None:
+        """Delete a contact."""
+        ...
+
+    def find_all(self) -> List[Contact]:
+        """Find all contacts."""
+        ...
+
+
+class TemplateRepository(Protocol):
+    """Interface for template persistence."""
+
+    def save(self, template: Template) -> None:
+        """Save a template.
+
+        Args:
+            template: The template to save
+        """
+        ...
+
+    def get_by_id(self, template_id: UUID) -> Optional[Template]:
+        """Get a template by its ID.
+
+        Args:
+            template_id: UUID of the template to find
+
+        Returns:
+            Template if found, None if not found
+
+        Raises:
+            ValueError: If template_id is invalid
+        """
+        ...
+
+    def get_version(self, template_id: UUID, version: int) -> Optional[Template]:
+        """Get a specific version of a template.
+
+        Args:
+            template_id: UUID of the template
+            version: Version number to retrieve
+
+        Returns:
+            Template if found, None if not found
+
+        Raises:
+            ValueError: If template_id or version is invalid
+        """
+        ...
+
+    def get_versions(self, template_id: UUID) -> List[Template]:
+        """Get all versions of a template.
+
+        Args:
+            template_id: UUID of the template
+
+        Returns:
+            List of all versions of the template, ordered by version number
+
+        Raises:
+            ValueError: If template_id is invalid
         """
         ...
