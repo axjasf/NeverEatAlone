@@ -12,9 +12,7 @@
   "python.testing.nosetestsEnabled": false,
   "python.testing.autoTestDiscoverOnSaveEnabled": true,
   "python.testing.pytestArgs": [
-    "tests",
-    "-v",
-    "--tb=short"
+    "tests"
   ],
   "python.envFile": "${workspaceFolder}/.env",
 

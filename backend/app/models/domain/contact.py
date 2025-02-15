@@ -1,6 +1,7 @@
 """Contact domain model."""
 
-from typing import Dict, Any, List, TYPE_CHECKING
+from typing import Dict, Any, List, TYPE_CHECKING, Optional
+from datetime import datetime
 from .base import BaseModel
 
 if TYPE_CHECKING:
@@ -22,6 +23,8 @@ class Contact(BaseModel):
         sub_information: Additional information about the contact
         notes: Notes about this contact
         tags: Tags associated with this contact
+        last_contact: When this contact was last contacted
+        contact_briefing_text: A brief text about the last contact
     """
 
     def __init__(
@@ -30,6 +33,8 @@ class Contact(BaseModel):
         first_name: str | None = None,
         briefing_text: str | None = None,
         sub_information: Dict[str, Any] | None = None,
+        last_contact: Optional[datetime] = None,
+        contact_briefing_text: Optional[str] = None,
     ) -> None:
         """Initialize a new Contact.
 
@@ -37,8 +42,9 @@ class Contact(BaseModel):
             name: The contact's name
             first_name: The contact's first name (optional)
             briefing_text: A brief description of the contact (optional)
-            sub_information: Additional information about the contact
-                (optional)
+            sub_information: Additional information about the contact (optional)
+            last_contact: When this contact was last contacted (optional)
+            contact_briefing_text: A brief text about the last contact (optional)
 
         Raises:
             ValueError: If sub_information is provided but not a dictionary
@@ -47,11 +53,45 @@ class Contact(BaseModel):
         self.name = name
         self.first_name = first_name
         self.briefing_text = briefing_text
-        if sub_information is not None and not isinstance(sub_information, dict):
+
+        # Validate sub_information is a dict if provided
+        if sub_information is not None and not hasattr(sub_information, "items"):
             raise ValueError("sub_information must be a dictionary")
         self.sub_information = sub_information or {}
+
+        self.last_contact = last_contact
+        self.contact_briefing_text = contact_briefing_text
         self.notes: List["Note"] = []
         self.tags: List["Tag"] = []
+
+    @property
+    def hashtag_names(self) -> List[str]:
+        """Get the list of hashtag names associated with this contact.
+
+        Returns:
+            List of hashtag names
+        """
+        return [tag.name for tag in self.tags]
+
+    def set_hashtags(self, hashtags: List[str]) -> None:
+        """Set the hashtags for this contact.
+
+        This will remove any existing tags and add the new ones.
+
+        Args:
+            hashtags: List of hashtag names (must start with #)
+
+        Raises:
+            ValueError: If any hashtag doesn't start with #
+        """
+        # Clear existing tags
+        self.tags.clear()
+
+        # Add new tags
+        for tag_name in hashtags:
+            self.add_tag(tag_name)
+
+        self._update_timestamp()
 
     def add_tag(self, tag_name: str) -> None:
         """Add a tag to the contact.
