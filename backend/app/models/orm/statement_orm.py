@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import Text, ForeignKey, Integer
 from ...database import Base
-from .tag import TagORM
+from .tag_orm import TagORM
 
 
 class StatementORM(Base):
@@ -32,7 +32,7 @@ class StatementORM(Base):
         Args:
             tag_names: List of tag names to set
         """
-        from ..domain.tag import EntityType
+        from ..domain.tag_model import EntityType
 
         # Clear existing tags
         self.tags = []

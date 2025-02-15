@@ -4,7 +4,7 @@ from datetime import datetime, timezone, timedelta
 from enum import Enum
 from typing import Optional
 from uuid import UUID
-from .base import BaseModel
+from .base_model import BaseModel
 
 
 class ReminderStatus(str, Enum):

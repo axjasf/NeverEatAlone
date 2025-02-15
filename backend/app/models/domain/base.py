@@ -1,28 +1,25 @@
 """Base domain model."""
 
-from datetime import datetime, timezone
+from abc import ABC
+from datetime import datetime, UTC
 from uuid import UUID, uuid4
+from typing import Optional
 
 
-class BaseModel:
-    """Base model class that includes common fields and methods.
+class BaseModel(ABC):
+    """Base class for all domain models."""
 
-    This class serves as the foundation for all domain models in
-    the application. It provides common fields for tracking record
-    creation and modification times, and a unique identifier.
+    def __init__(self, id: Optional[UUID] = None) -> None:
+        """Initialize the base model.
 
-    Attributes:
-        id: Unique identifier for the model.
-        created_at: Timestamp of when the record was created.
-        updated_at: Timestamp of the last update.
-    """
+        Args:
+            id: Optional UUID for the model. If not provided, a new UUID will be generated.
+        """
+        self.id = id or uuid4()
+        now = datetime.now(UTC)
+        self.created_at = now
+        self.updated_at = now
 
-    def __init__(self) -> None:
-        """Initialize base model with tracking fields."""
-        self.id: UUID = uuid4()
-        self.created_at: datetime = datetime.now(timezone.utc)
-        self.updated_at: datetime = self.created_at
-
-    def _update_timestamp(self) -> None:
-        """Update the last modified timestamp."""
-        self.updated_at = datetime.now(timezone.utc)
+    def touch(self) -> None:
+        """Update the updated_at timestamp."""
+        self.updated_at = datetime.now(UTC)

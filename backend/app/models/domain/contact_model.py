@@ -2,11 +2,11 @@
 
 from typing import Dict, Any, List, TYPE_CHECKING, Optional
 from datetime import datetime
-from .base import BaseModel
+from .base_model import BaseModel
 
 if TYPE_CHECKING:
-    from .note import Note
-    from .tag import Tag
+    from .note_model import Note
+    from .tag_model import Tag
 
 
 class Contact(BaseModel):
@@ -106,7 +106,7 @@ class Contact(BaseModel):
             raise ValueError("Tag must start with #")
 
         # Import here to avoid circular dependency
-        from .tag import Tag, EntityType
+        from .tag_model import Tag, EntityType
 
         tag_name = tag_name.lower()
         # Check if tag already exists
@@ -135,7 +135,7 @@ class Contact(BaseModel):
             The created note
         """
         # Import here to avoid circular dependency
-        from .note import Note
+        from .note_model import Note
 
         note = Note(self.id, content)
         self.notes.append(note)

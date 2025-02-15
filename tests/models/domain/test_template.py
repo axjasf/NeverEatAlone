@@ -3,7 +3,7 @@
 import pytest
 from datetime import datetime, UTC
 from uuid import uuid4
-from backend.app.models.domain.template import (
+from backend.app.models.domain.template_model import (
     FieldDefinition,
     CategoryDefinition,
     Template,

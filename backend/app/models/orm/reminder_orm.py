@@ -8,7 +8,7 @@ from sqlalchemy import String, ForeignKey, DateTime, Integer, Enum, CheckConstra
 from sqlalchemy.types import TypeDecorator
 
 from ...database import Base
-from ..domain.reminder import ReminderStatus, RecurrenceUnit
+from ..domain.reminder_model import ReminderStatus, RecurrenceUnit
 
 
 class TZDateTime(TypeDecorator):

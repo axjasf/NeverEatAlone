@@ -2,8 +2,8 @@
 
 import pytest
 from uuid import UUID
-from backend.app.models.domain.contact import Contact
-from backend.app.models.domain.tag import Tag, EntityType
+from backend.app.models.domain.contact_model import Contact
+from backend.app.models.domain.tag_model import Tag, EntityType
 
 
 TEST_UUID = UUID("11111111-1111-1111-1111-111111111111")

@@ -6,8 +6,8 @@ from datetime import datetime, UTC
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..models.domain.template import Template, CategoryDefinition, FieldDefinition
-from ..models.orm.template import TemplateVersionORM
+from ..models.domain.template_model import Template, CategoryDefinition, FieldDefinition
+from ..models.orm.template_orm import TemplateVersionORM
 
 
 class SQLAlchemyTemplateRepository:

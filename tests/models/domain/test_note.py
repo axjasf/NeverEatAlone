@@ -6,8 +6,8 @@ from uuid import UUID
 from typing import List
 
 # We'll create these domain models next
-from backend.app.models.domain.note import Note, Statement
-from backend.app.models.domain.tag import Tag
+from backend.app.models.domain.note_model import Note, Statement
+from backend.app.models.domain.tag_model import Tag
 
 
 TEST_UUID = UUID("11111111-1111-1111-1111-111111111111")

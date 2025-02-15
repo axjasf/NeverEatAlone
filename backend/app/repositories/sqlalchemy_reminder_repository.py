@@ -5,13 +5,14 @@ from uuid import UUID
 from datetime import datetime, timezone
 from sqlalchemy import select, and_
 from sqlalchemy.orm import Session, selectinload
-from ..models.domain.reminder import (
+from ..models.domain.reminder_model import (
     RecurrencePattern,
     Reminder,
     ReminderStatus,
+    RecurrenceUnit,
 )
 from .interfaces import ReminderRepository
-from ..models.orm.reminder import ReminderORM
+from ..models.orm.reminder_orm import ReminderORM
 
 
 class SQLAlchemyReminderRepository(ReminderRepository):

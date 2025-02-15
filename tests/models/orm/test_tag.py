@@ -4,11 +4,11 @@ import pytest
 from datetime import datetime, UTC
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from backend.app.models.orm.tag import TagORM
-from backend.app.models.orm.contact import ContactORM
-from backend.app.models.orm.note import NoteORM
-from backend.app.models.orm.statement import StatementORM
-from backend.app.models.domain.tag import EntityType
+from backend.app.models.orm.tag_orm import TagORM
+from backend.app.models.orm.contact_orm import ContactORM
+from backend.app.models.orm.note_orm import NoteORM
+from backend.app.models.orm.statement_orm import StatementORM
+from backend.app.models.domain.tag_model import EntityType
 
 
 def test_tag_creation_with_required_fields(db_session: Session) -> None:

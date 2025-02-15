@@ -5,14 +5,14 @@ from datetime import datetime, timezone, timedelta
 from uuid import UUID
 from sqlalchemy.orm import Session
 
-from backend.app.models.domain.reminder import (
+from backend.app.models.domain.reminder_model import (
     Reminder,
     ReminderStatus,
     RecurrencePattern,
     RecurrenceUnit,
 )
-from backend.app.models.orm.contact import ContactORM
-from backend.app.models.orm.note import NoteORM
+from backend.app.models.orm.contact_orm import ContactORM
+from backend.app.models.orm.note_orm import NoteORM
 from backend.app.repositories.sqlalchemy_reminder_repository import (
     SQLAlchemyReminderRepository,
 )

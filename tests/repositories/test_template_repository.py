@@ -3,7 +3,7 @@
 from datetime import datetime, UTC
 from uuid import uuid4
 from sqlalchemy.orm import Session
-from backend.app.models.domain.template import (
+from backend.app.models.domain.template_model import (
     Template,
     CategoryDefinition,
     FieldDefinition,

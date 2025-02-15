@@ -7,10 +7,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import text, select
 
-from backend.app.models.domain.reminder import ReminderStatus, RecurrenceUnit
-from backend.app.models.orm.reminder import ReminderORM
-from backend.app.models.orm.contact import ContactORM
-from backend.app.models.orm.note import NoteORM
+from backend.app.models.domain.reminder_model import ReminderStatus, RecurrenceUnit
+from backend.app.models.orm.reminder_orm import ReminderORM
+from backend.app.models.orm.contact_orm import ContactORM
+from backend.app.models.orm.note_orm import NoteORM
 
 
 @pytest.fixture
