@@ -2,6 +2,7 @@
 
 import pytest
 from uuid import UUID
+from typing import Any, cast
 from backend.app.models.domain.contact_model import Contact
 
 
@@ -50,7 +51,7 @@ def test_contact_sub_information_validation():
     """
     # Test invalid type
     with pytest.raises(ValueError):
-        Contact(name="John Doe", sub_information="invalid")
+        Contact(name="John Doe", sub_information=cast(Any, "invalid"))
 
     # Test default empty dict
     contact = Contact(name="John Doe")
