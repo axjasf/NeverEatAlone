@@ -1,0 +1,134 @@
+"""Test cases for the template ORM model."""
+
+from datetime import datetime, UTC
+from uuid import uuid4
+import pytest
+from sqlalchemy.exc import IntegrityError
+from backend.app.models.orm.template import TemplateVersionORM
+
+
+def test_template_version_creation(db_session):
+    """Test creating a template version."""
+    now = datetime.now(UTC)
+    template = TemplateVersionORM(
+        id=uuid4(),
+        version=1,
+        categories={
+            "contact_info": {
+                "name": "contact_info",
+                "description": "Basic contact information",
+                "fields": {
+                    "phone": {
+                        "name": "phone",
+                        "type": "phone",
+                        "description": "Phone number",
+                    }
+                },
+            }
+        },
+        created_at=now,
+        updated_at=now,
+    )
+
+    db_session.add(template)
+    db_session.flush()
+
+    # Verify it was saved
+    saved = db_session.get(TemplateVersionORM, (template.id, template.version))
+    assert saved is not None
+    assert saved.version == 1
+    assert saved.categories["contact_info"]["fields"]["phone"]["type"] == "phone"
+    assert saved.created_at == template.created_at
+    assert saved.updated_at == template.updated_at
+
+
+def test_template_version_unique_constraint(db_session):
+    """Test that version numbers must be unique per template."""
+    template_id = uuid4()
+    now = datetime.now(UTC)
+
+    # Create first version
+    v1 = TemplateVersionORM(
+        id=template_id, version=1, categories={}, created_at=now, updated_at=now
+    )
+    db_session.add(v1)
+    db_session.flush()
+
+    # Try to create another version with the same version number
+    with pytest.raises(IntegrityError):
+        v2 = TemplateVersionORM(
+            id=template_id, version=1, categories={}, created_at=now, updated_at=now
+        )
+        db_session.add(v2)
+        db_session.flush()
+
+
+def test_template_version_required_fields(db_session):
+    """Test that required fields are enforced."""
+    now = datetime.now(UTC)
+
+    # Try to create without version
+    with pytest.raises(IntegrityError):
+        template = TemplateVersionORM(
+            id=uuid4(), categories={}, created_at=now, updated_at=now
+        )
+        db_session.add(template)
+        db_session.flush()
+    db_session.rollback()
+
+    # Try to create without categories
+    with pytest.raises(IntegrityError):
+        template = TemplateVersionORM(
+            id=uuid4(), version=1, created_at=now, updated_at=now
+        )
+        db_session.add(template)
+        db_session.flush()
+    db_session.rollback()
+
+
+def test_template_version_json_storage(db_session):
+    """Test that JSON data is properly stored and retrieved."""
+    now = datetime.now(UTC)
+    complex_categories = {
+        "personal": {
+            "name": "personal",
+            "description": "Personal information",
+            "fields": {
+                "name": {"type": "string", "required": True},
+                "birth_date": {"type": "date", "format": "YYYY-MM-DD"},
+                "phones": [
+                    {"type": "phone", "label": "home"},
+                    {"type": "phone", "label": "work"},
+                ],
+            },
+        },
+        "preferences": {
+            "name": "preferences",
+            "description": "Contact preferences",
+            "fields": {
+                "preferred_time": {
+                    "type": "string",
+                    "choices": ["morning", "afternoon", "evening"],
+                },
+                "do_not_contact": {"type": "boolean", "default": False},
+            },
+        },
+    }
+
+    template = TemplateVersionORM(
+        id=uuid4(),
+        version=1,
+        categories=complex_categories,
+        created_at=now,
+        updated_at=now,
+    )
+
+    db_session.add(template)
+    db_session.flush()
+
+    # Verify it was saved correctly
+    saved = db_session.get(TemplateVersionORM, (template.id, template.version))
+    assert saved is not None
+    assert saved.categories == complex_categories
+    assert saved.created_at == template.created_at
+    assert saved.updated_at == template.updated_at

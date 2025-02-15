@@ -122,12 +122,14 @@ class Template(BaseModel):
                         )
                     new_categories[category_name].fields[field_name] = new_field
 
+        # Create a new version with the same ID
+        now = datetime.now(UTC)
         return Template(
-            id=self.id,
+            id=self.id,  # Keep the same ID for all versions
             categories=new_categories,
             version=self.version + 1,
-            created_at=self.created_at,
-            updated_at=datetime.now(UTC),
+            created_at=now,  # New version gets current timestamp
+            updated_at=now,
             removed_fields=new_removed,
         )
 

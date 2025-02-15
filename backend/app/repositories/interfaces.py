@@ -2,11 +2,11 @@
 
 from typing import Protocol, Optional, List
 from uuid import UUID
-from ..domain.note import Note
-from ..domain.tag import Tag, EntityType
-from ..domain.reminder import Reminder
-from ..domain.template import Template
-from ..domain.contact import Contact
+from ..models.domain.note import Note
+from ..models.domain.tag import Tag, EntityType
+from ..models.domain.reminder import Reminder
+from ..models.domain.template import Template
+from ..models.domain.contact import Contact
 
 
 class NoteRepository(Protocol):
