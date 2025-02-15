@@ -102,8 +102,6 @@ jobs:
             ${{ env.PYTHON_ROOT }}/**/*.log
             black_check.log
             flake8_report.txt
-            mypy_report
-            mypy_output.log
           retention-days: 14
           if-no-files-found: warn
 
