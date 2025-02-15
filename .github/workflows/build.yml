@@ -16,6 +16,9 @@ env:
   PYTEST_ADDOPTS: '--color=yes'
   # Debug Mode for Verbose Logging
   DEBUG: ${{ github.event_name == 'pull_request' }}
+  # SonarCloud Configuration
+  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  SONAR_ORGANIZATION: ${{ secrets.SONAR_ORGANIZATION }}
 
 jobs:
   backend-lint:
@@ -453,6 +456,43 @@ jobs:
             ${{ env.NODE_ROOT }}/build
             build_summary.txt
           retention-days: 14
+
+  sonarcloud:
+    name: SonarCloud Analysis
+    needs: [backend-test, frontend-lint]  # Ensure tests and linting complete first
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Disable shallow clones for better relevancy of analysis
+
+      - name: Download backend test results
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-test-results
+          path: ${{ env.PYTHON_ROOT }}
+
+      - name: Download frontend test results
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-test-results
+          path: ${{ env.NODE_ROOT }}
+        continue-on-error: true  # Frontend tests might not exist yet
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=${{ env.SONAR_ORGANIZATION }}
+            -Dsonar.projectKey=NeverEatAlone
+            -Dsonar.python.coverage.reportPaths=${{ env.PYTHON_ROOT }}/coverage.xml
+            -Dsonar.javascript.lcov.reportPaths=${{ env.NODE_ROOT }}/coverage/lcov.info
+            -Dsonar.verbose=true
 
   workflow-summary:
     name: Generate Workflow Summary
