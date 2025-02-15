@@ -459,7 +459,8 @@ jobs:
 
   sonarcloud:
     name: SonarCloud Analysis
-    needs: [backend-test, frontend-test]
+    if: always()  # Run even if previous jobs fail
+    needs: [backend-test, frontend-test]  # Keep the dependencies but they won't block execution
     runs-on: ubuntu-latest
 
     steps:
@@ -469,12 +470,14 @@ jobs:
 
       - name: Download backend test results
         uses: actions/download-artifact@v4
+        continue-on-error: true  # Continue if artifacts are missing
         with:
           name: backend-test-results
           path: backend
 
       - name: Download frontend test results
         uses: actions/download-artifact@v4
+        continue-on-error: true  # Continue if artifacts are missing
         with:
           name: frontend-test-results
           path: frontend
@@ -495,6 +498,9 @@ jobs:
             -Dsonar.python.coverage.reportPaths=backend/coverage.xml
             -Dsonar.python.xunit.reportPath=backend/test-results.xml
             -Dsonar.javascript.lcov.reportPaths=frontend/coverage/lcov.info
+            -Dsonar.coverage.exclusions=frontend/src/**/*.test.tsx,frontend/src/**/*.test.ts,tests/**/*_test.py
+            -Dsonar.cpd.exclusions=frontend/src/**/*.test.tsx,frontend/src/**/*.test.ts
+            -Dsonar.verbose=true
 
   workflow-summary:
     name: Generate Workflow Summary
