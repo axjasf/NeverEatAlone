@@ -77,7 +77,9 @@ class SQLAlchemyTemplateRepository:
             )
         return categories
 
-    def _to_json_removed_fields(self, removed_fields: Dict[str, Set[str]]) -> Dict[str, list[str]]:
+    def _to_json_removed_fields(
+        self, removed_fields: Dict[str, Set[str]]
+    ) -> Dict[str, list[str]]:
         """Convert removed_fields to JSON-serializable dictionary.
 
         Args:
@@ -86,12 +88,11 @@ class SQLAlchemyTemplateRepository:
         Returns:
             Dictionary with sets converted to lists for JSON serialization
         """
-        return {
-            category: list(fields)
-            for category, fields in removed_fields.items()
-        }
+        return {category: list(fields) for category, fields in removed_fields.items()}
 
-    def _from_json_removed_fields(self, data: Dict[str, list[str]]) -> Dict[str, Set[str]]:
+    def _from_json_removed_fields(
+        self, data: Dict[str, list[str]]
+    ) -> Dict[str, Set[str]]:
         """Convert JSON dictionary back to removed_fields format.
 
         Args:
@@ -100,10 +101,7 @@ class SQLAlchemyTemplateRepository:
         Returns:
             Dictionary with lists converted to sets
         """
-        return {
-            category: set(fields)
-            for category, fields in data.items()
-        }
+        return {category: set(fields) for category, fields in data.items()}
 
     def save(self, template: Template) -> None:
         """Save a template.
@@ -168,8 +166,7 @@ class SQLAlchemyTemplateRepository:
         """
         # Get the specific version
         stmt = select(TemplateVersionORM).where(
-            TemplateVersionORM.id == template_id,
-            TemplateVersionORM.version == version
+            TemplateVersionORM.id == template_id, TemplateVersionORM.version == version
         )
         template_orm = self._session.execute(stmt).scalar_one_or_none()
 
@@ -214,7 +211,9 @@ class SQLAlchemyTemplateRepository:
                 categories=self._from_json_dict(template_orm.categories),
                 created_at=template_orm.created_at.replace(tzinfo=UTC),
                 updated_at=template_orm.updated_at.replace(tzinfo=UTC),
-                removed_fields=self._from_json_removed_fields(template_orm.removed_fields),
+                removed_fields=self._from_json_removed_fields(
+                    template_orm.removed_fields
+                ),
             )
             templates.append(template)
 

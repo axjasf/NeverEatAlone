@@ -34,9 +34,7 @@ def test_note_find_by_contact(db_session: Session) -> None:
     # Create notes for different contacts
     note1 = Note(contact_id=TEST_UUID, content="Note 1")
     note2 = Note(contact_id=TEST_UUID, content="Note 2")
-    note3 = Note(
-        contact_id=uuid4(), content="Note 3"
-    )
+    note3 = Note(contact_id=uuid4(), content="Note 3")
     repo.save(note1)
     repo.save(note2)
     repo.save(note3)
