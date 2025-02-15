@@ -490,14 +490,16 @@ jobs:
         continue-on-error: true  # Don't fail if linting didn't generate results
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v4.1.0  # Updated to the recommended action
+        uses: SonarSource/sonarqube-scan-action@v4.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
+            -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.organization=${{ env.SONAR_ORGANIZATION }}
-            -Dsonar.projectKey=NeverEatAlone
+            -Dsonar.projectKey=axjasf_NeverEatAlone
+            -Dsonar.projectName=NeverEatAlone
             -Dsonar.python.coverage.reportPaths=${{ env.PYTHON_ROOT }}/coverage.xml
             -Dsonar.javascript.lcov.reportPaths=${{ env.NODE_ROOT }}/coverage/lcov.info
             -Dsonar.verbose=true
@@ -508,6 +510,8 @@ jobs:
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.python.version=3.11
             -Dsonar.qualitygate.wait=true
+            -Dsonar.scm.provider=git
+            -Dsonar.branch.name=${GITHUB_REF_NAME}
 
   workflow-summary:
     name: Generate Workflow Summary
