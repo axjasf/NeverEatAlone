@@ -59,6 +59,11 @@ jobs:
           args: >
             -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
             -Dsonar.projectKey=NeverEatAlone
+            -Dsonar.sources=backend/app,frontend/src
+            -Dsonar.tests=tests,frontend/src
+            -Dsonar.test.inclusions=frontend/src/**/*.test.tsx,frontend/src/**/*.test.ts,tests/**/*_test.py
+            -Dsonar.test.exclusions=frontend/src/setupTests.ts
             -Dsonar.python.coverage.reportPaths=backend/coverage.xml
             -Dsonar.python.xunit.reportPath=backend/test-results.xml
             -Dsonar.javascript.lcov.reportPaths=frontend/coverage/lcov.info
+            -Dsonar.host.url=https://sonarcloud.io
