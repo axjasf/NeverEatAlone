@@ -1,8 +1,9 @@
 """SQLAlchemy ORM model for contacts."""
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
+from datetime import datetime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, JSON
+from sqlalchemy import String, JSON, DateTime
 from .base import BaseORMModel
 from .tag import TagORM
 from .note import NoteORM
@@ -21,9 +22,11 @@ class ContactORM(BaseORMModel):
     sub_information: Mapped[Dict[str, Any]] = mapped_column(
         JSON, nullable=True, default=dict
     )
+    last_contact: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    contact_briefing_text: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
     # Relationships
-    notes: Mapped[List[NoteORM]] = relationship(  # type: ignore
+    notes: Mapped[List[NoteORM]] = relationship(
         NoteORM,
         back_populates="contact",
         cascade="all, delete-orphan",  # Notes are owned by the contact
@@ -34,7 +37,7 @@ class ContactORM(BaseORMModel):
         TagORM, secondary=contact_tags, lazy="joined"
     )
     # Reminders are owned by the contact
-    reminders: Mapped[List[ReminderORM]] = relationship(  # type: ignore
+    reminders: Mapped[List[ReminderORM]] = relationship(
         ReminderORM,
         back_populates="contact",
         cascade="all, delete-orphan",

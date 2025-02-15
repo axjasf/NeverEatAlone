@@ -1,29 +1,54 @@
+"""Contact Management API."""
+
+# Standard library imports
+from contextlib import contextmanager
 from datetime import datetime
-from typing import Optional, Any, Annotated, List, Dict
+from http import HTTPStatus
+from typing import Annotated, Any, Dict, Iterator, List, Optional, TypeVar, Union, cast
 from uuid import UUID
-from fastapi import FastAPI, Depends, HTTPException, Request
+
+# Third-party imports
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from pydantic import BaseModel, Field, field_validator
-from sqlalchemy.orm import Session
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from contextlib import contextmanager
-from typing import Iterator
-from http import HTTPStatus
+from sqlalchemy.orm import Session
 import sqlalchemy as sa
 
+# Local imports
 from .models.domain.contact import Contact
-from .models.domain.tag import Tag as Hashtag, EntityType
+from .models.domain.tag import EntityType
 from .models.orm.contact_tag import contact_tags as contact_hashtags
+from .models.orm.contact import ContactORM
+from .models.orm.tag import TagORM
 
-app = FastAPI(title="Contact Management API")
+# Type variables
+T = TypeVar("T")
 
-# Store for the test database session
+# Type definitions
+ErrorDetail = Union[str, Dict[str, Any], None]
+
+# FastAPI application
+app = FastAPI(
+    title="Contact Management API",
+    description="API for managing contacts and their relationships",
+)
+
+# Test database session store
 _test_db: Optional[Session] = None
 
 
 def get_test_db() -> Session:
-    """Get database session - using test session for now"""
+    """Get database session for testing.
+
+    Returns:
+        Session: The test database session.
+
+    Raises:
+        RuntimeError: If no test database session is found.
+    """
     if _test_db is None:
         raise RuntimeError(
             "No database session found. "
@@ -34,7 +59,11 @@ def get_test_db() -> Session:
 
 @contextmanager
 def override_get_db(db: Session) -> Iterator[None]:
-    """Context manager to override the database session during tests"""
+    """Context manager to override the database session during tests.
+
+    Args:
+        db: The database session to use.
+    """
     global _test_db
     _test_db = db
     try:
@@ -43,44 +72,71 @@ def override_get_db(db: Session) -> Iterator[None]:
         _test_db = None
 
 
-class ContactCreate(BaseModel):
-    """Schema for creating a new contact"""
+class ContactBase(BaseModel):
+    """Base schema for contact data."""
 
-    name: str = Field(..., min_length=1, max_length=100)
-    first_name: Optional[str] = None
-    sub_information: Optional[dict[str, Any]] = None
-    hashtags: Optional[list[str]] = Field(
-        None, description="List of hashtags. Each tag must start with '#'."
-    )
-    last_contact: Optional[datetime] = None
-    contact_briefing_text: Optional[str] = None
-
-    @field_validator("hashtags")
-    @classmethod
-    def validate_hashtags(cls, v: Optional[list[str]]) -> Optional[list[str]]:
-        """Validate that all hashtags start with #"""
-        if v is not None:
-            for tag in v:
-                if not tag.startswith("#"):
-                    raise ValueError("Each hashtag must be a string starting with #")
-        return v
-
-    model_config = {
-        "json_schema_extra": {
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        json_schema_extra={
             "example": {
                 "name": "John Doe",
                 "first_name": "John",
+                "briefing_text": "Important business contact",
                 "sub_information": {"role": "developer"},
                 "hashtags": ["#work", "#tech"],
             }
-        }
-    }
+        },
+    )
+
+    name: str
+    first_name: Optional[str] = None
+    briefing_text: Optional[str] = None
+    sub_information: Dict[str, Any] = Field(default_factory=dict)
+    hashtags: List[str] = Field(
+        default_factory=list,
+        description="List of hashtags. Each tag must start with '#'.",
+    )
+
+    @field_validator("hashtags")
+    @classmethod
+    def validate_hashtags(cls, v: List[str]) -> List[str]:
+        """Validate that all hashtags start with #."""
+        return [tag if tag.startswith("#") else f"#{tag}" for tag in v]
 
 
-class ContactResponse(ContactCreate):
-    """Schema for contact response including system fields"""
+class ContactCreate(BaseModel):
+    """Schema for creating a new contact."""
+
+    name: str
+    first_name: Optional[str] = None
+    briefing_text: Optional[str] = None
+    sub_information: Dict[str, Any] = Field(default_factory=dict)
+    hashtags: Optional[List[str]] = Field(
+        default=None,
+        description="List of hashtags. Each tag must start with '#'.",
+    )
+
+    @field_validator("hashtags")
+    @classmethod
+    def validate_hashtags(cls, v: Optional[List[str]]) -> Optional[List[str]]:
+        """Validate that all hashtags start with #."""
+        if v is not None:
+            return [tag if tag.startswith("#") else f"#{tag}" for tag in v]
+        return v
+
+
+class ContactResponse(BaseModel):
+    """Schema for contact response including system fields."""
 
     id: UUID
+    name: str
+    first_name: Optional[str] = None
+    briefing_text: Optional[str] = None
+    sub_information: Dict[str, Any] = Field(default_factory=dict)
+    hashtags: List[str] = Field(
+        default_factory=list,
+        description="List of hashtags. Each tag must start with '#'.",
+    )
     created_at: datetime
     updated_at: datetime
 
@@ -88,114 +144,159 @@ class ContactResponse(ContactCreate):
 class ContactList(BaseModel):
     """Response model for paginated contact list."""
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     items: List[ContactResponse]
     total_count: int
-    limit: int = 10
-    offset: int = 0
+    limit: int
+    offset: int
 
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
-    """Convert validation errors to our standard format"""
+    """Handle request validation errors.
+
+    Args:
+        request: The incoming request.
+        exc: The validation exception.
+
+    Returns:
+        A JSON response with the error details.
+    """
     error_msg: str = exc.errors()[0]["msg"] if exc.errors() else "Validation error"
-    return JSONResponse(status_code=400, content={"error": error_msg})
+    return JSONResponse(
+        status_code=HTTPStatus.BAD_REQUEST,
+        content={"error": error_msg},
+    )
+
+
+def _format_error_detail(detail: ErrorDetail) -> Dict[str, str]:
+    """Format error detail into a consistent structure.
+
+    Args:
+        detail: The error detail from an exception.
+
+    Returns:
+        A dictionary with an error message.
+    """
+    # Default error message
+    DEFAULT_ERROR = "Unknown error"
+
+    try:
+        # Handle None case
+        if detail is None:
+            return {"error": DEFAULT_ERROR}
+
+        # Handle dictionary case with error key
+        if (
+            isinstance(detail, dict)
+            and "error" in detail
+            and isinstance(detail["error"], str)
+        ):
+            return {"error": detail["error"]}
+
+        # Handle string case (all other cases converted to string)
+        return {"error": str(detail)}
+    except Exception:
+        return {"error": DEFAULT_ERROR}
 
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
-    """Convert HTTP exceptions to our standard format"""
-    detail = exc.detail
-    if isinstance(detail, dict) and "error" in detail:
-        return JSONResponse(status_code=exc.status_code, content=detail)
-    return JSONResponse(status_code=exc.status_code, content={"error": str(detail)})
-
-
-@app.post("/api/contacts", response_model=ContactResponse, status_code=201)
-async def create_contact(
-    contact: ContactCreate, db: Annotated[Session, Depends(get_test_db)]
-) -> ContactResponse:
-    """Create a new contact with the provided data.
+    """Handle HTTP exceptions.
 
     Args:
-        contact (ContactCreate): The contact data to create.
-        db (Session): The database session.
+        request: The incoming request.
+        exc: The HTTP exception.
 
     Returns:
-        ContactResponse: The created contact with system fields.
+        A JSON response with the error details.
+    """
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=_format_error_detail(exc.detail),
+    )
+
+
+@app.post(
+    "/api/contacts", response_model=ContactResponse, status_code=HTTPStatus.CREATED
+)
+async def create_contact(
+    contact: ContactCreate,
+    db: Annotated[Session, Depends(get_test_db)],
+) -> ContactResponse:
+    """Create a new contact.
+
+    Args:
+        contact: The contact data to create.
+        db: The database session.
+
+    Returns:
+        The created contact.
 
     Raises:
-        HTTPException: 400 if data is invalid or constraints are violated.
+        HTTPException: If the contact data is invalid.
     """
     try:
-        # Convert Pydantic model to SQLAlchemy model
+        # Convert Pydantic model to domain model
         db_contact = Contact(
             name=contact.name,
             first_name=contact.first_name,
+            briefing_text=contact.briefing_text,
             sub_information=contact.sub_information or {},
-            last_contact=contact.last_contact,
-            contact_briefing_text=contact.contact_briefing_text,
         )
 
+        # Add contact and its tags
         db.add(db_contact)
         if contact.hashtags:
-            db_contact.set_hashtags(contact.hashtags)
+            for tag_name in contact.hashtags:
+                db_contact.add_tag(tag_name)
+
         db.commit()
         db.refresh(db_contact)
 
-        # Convert SQLAlchemy model back to Pydantic model
-        db_id = getattr(db_contact.id, "_value", db_contact.id)
-        return ContactResponse(
-            id=UUID(str(db_id)) if not isinstance(db_id, UUID) else db_id,
-            name=str(db_contact.name),
-            first_name=(str(db_contact.first_name) if db_contact.first_name else None),
-            sub_information=dict(db_contact.sub_information),
-            hashtags=db_contact.hashtag_names,
-            last_contact=db_contact.last_contact,
-            contact_briefing_text=db_contact.contact_briefing_text,
-            created_at=db_contact.created_at.replace(tzinfo=None),
-            updated_at=db_contact.updated_at.replace(tzinfo=None),
-        )
+        # Convert to response model
+        return _contact_to_response(db_contact)
+
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=400, detail={"error": "Invalid data provided"})
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail={"error": "Invalid data provided"},
+        )
+
+
+def _contact_to_response(contact: Contact | ContactORM) -> ContactResponse:
+    """Convert a domain or ORM contact model to a response model."""
+    db_id = getattr(contact.id, "_value", contact.id)
+    return ContactResponse(
+        id=UUID(str(db_id)) if not isinstance(db_id, UUID) else db_id,
+        name=str(contact.name),
+        first_name=(str(contact.first_name) if contact.first_name else None),
+        briefing_text=contact.briefing_text,
+        sub_information=dict(contact.sub_information),
+        hashtags=[tag.name for tag in contact.tags],
+        created_at=contact.created_at.replace(tzinfo=None),
+        updated_at=contact.updated_at.replace(tzinfo=None),
+    )
 
 
 @app.get("/api/contacts/{contact_id}", response_model=ContactResponse)
 async def get_contact(
-    contact_id: UUID, db: Annotated[Session, Depends(get_test_db)]
+    contact_id: UUID,
+    db: Annotated[Session, Depends(get_test_db)],
 ) -> ContactResponse:
-    """Retrieve a contact by its ID.
-
-    Args:
-        contact_id (UUID): The unique identifier of the contact.
-        db (Session): The database session.
-
-    Returns:
-        ContactResponse: The requested contact data.
-
-    Raises:
-        HTTPException: 404 if contact is not found.
-    """
-    db_contact = (
-        db.query(Contact).filter(Contact.id == contact_id).first()  # type: ignore
-    )
+    """Get a contact by ID."""
+    db_contact = db.query(ContactORM).filter(ContactORM.id == contact_id).first()
     if db_contact is None:
-        raise HTTPException(status_code=404, detail={"error": "Contact not found"})
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail={"error": "Contact not found"},
+        )
 
-    db_id = getattr(db_contact.id, "_value", db_contact.id)
-    return ContactResponse(
-        id=UUID(str(db_id)) if not isinstance(db_id, UUID) else db_id,
-        name=str(db_contact.name),
-        first_name=(str(db_contact.first_name) if db_contact.first_name else None),
-        sub_information=dict(db_contact.sub_information),
-        hashtags=db_contact.hashtag_names,
-        last_contact=db_contact.last_contact,
-        contact_briefing_text=db_contact.contact_briefing_text,
-        created_at=db_contact.created_at.replace(tzinfo=None),
-        updated_at=db_contact.updated_at.replace(tzinfo=None),
-    )
+    return _contact_to_response(cast(Contact, db_contact))
 
 
 @app.put("/api/contacts/{contact_id}", response_model=ContactResponse)
@@ -204,90 +305,76 @@ async def update_contact(
     contact: ContactCreate,
     db: Annotated[Session, Depends(get_test_db)],
 ) -> ContactResponse:
-    """Update a contact.
-
-    Args:
-        contact_id: The contact's ID
-        contact: The updated contact data
-        db: The database session
-
-    Returns:
-        The updated contact
-
-    Raises:
-        HTTPException: If the contact is not found or there's a database error
-    """
-    db_contact = (
-        db.query(Contact).filter(Contact.id == contact_id).first()  # type: ignore
-    )
+    """Update a contact."""
+    db_contact = db.query(ContactORM).filter(ContactORM.id == contact_id).first()
     if not db_contact:
-        raise HTTPException(status_code=404, detail="Contact not found")
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail={"error": "Contact not found"},
+        )
 
     try:
-        # Prepare and validate all data before making changes
-        hashtags = contact.hashtags or []
-        sub_info = contact.sub_information or {}
+        # Convert to domain model for update
+        domain_contact = Contact(
+            name=contact.name,
+            first_name=contact.first_name,
+            briefing_text=contact.briefing_text,
+            sub_information=contact.sub_information or {},
+        )
 
-        # Validate hashtags
-        for tag in hashtags:
-            if not tag.startswith("#"):
-                raise ValueError("Each hashtag must be a string starting with #")
+        # Update ORM fields from domain model
+        db_contact.name = str(domain_contact.name)
+        if domain_contact.first_name is not None:
+            db_contact.first_name = str(domain_contact.first_name)
+        if domain_contact.briefing_text is not None:
+            db_contact.briefing_text = str(domain_contact.briefing_text)
+        db_contact.sub_information = dict(domain_contact.sub_information)
 
-        # Validate sub_information
-        if not isinstance(sub_info, dict):
-            raise ValueError("Input should be a valid dictionary")
-
-        # Update fields only after all validation passes
-        db_contact.name = contact.name
-        db_contact.first_name = contact.first_name
-        db_contact.sub_information = sub_info
-        if contact.hashtags is not None:  # Only update hashtags if they were provided
-            db_contact.set_hashtags(contact.hashtags)
-        db_contact.last_contact = contact.last_contact
-        db_contact.contact_briefing_text = contact.contact_briefing_text
+        # Update tags if provided
+        if contact.hashtags is not None:
+            # Clear existing tags
+            db_contact.tags = []
+            # Add new tags
+            for tag_name in contact.hashtags:
+                tag_name = tag_name if tag_name.startswith("#") else f"#{tag_name}"
+                tag = TagORM(
+                    entity_id=db_contact.id,
+                    entity_type=EntityType.CONTACT.value,
+                    name=tag_name.lower(),
+                )
+                db_contact.tags.append(tag)
 
         db.commit()
         db.refresh(db_contact)
 
-        # Convert to response model
-        db_id = getattr(db_contact.id, "_value", db_contact.id)
-        return ContactResponse(
-            id=UUID(str(db_id)) if not isinstance(db_id, UUID) else db_id,
-            name=str(db_contact.name),
-            first_name=(str(db_contact.first_name) if db_contact.first_name else None),
-            sub_information=dict(db_contact.sub_information),
-            hashtags=db_contact.hashtag_names,
-            last_contact=db_contact.last_contact,
-            contact_briefing_text=db_contact.contact_briefing_text,
-            created_at=db_contact.created_at.replace(tzinfo=None),
-            updated_at=db_contact.updated_at.replace(tzinfo=None),
-        )
+        return _contact_to_response(cast(Contact, db_contact))
+
     except ValueError as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail={"error": str(e)})
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail={"error": str(e)},
+        )
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=400, detail={"error": "Invalid data provided"})
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail={"error": "Invalid data provided"},
+        )
 
 
 @app.delete("/api/contacts/{contact_id}", status_code=HTTPStatus.NO_CONTENT)
 async def delete_contact(
-    contact_id: UUID, db: Annotated[Session, Depends(get_test_db)]
+    contact_id: UUID,
+    db: Annotated[Session, Depends(get_test_db)],
 ) -> None:
-    """Delete a contact.
-
-    Args:
-        contact_id: The contact's ID
-        db: The database session
-
-    Raises:
-        HTTPException: If the contact is not found
-    """
-    db_contact = (
-        db.query(Contact).filter(Contact.id == contact_id).first()  # type: ignore
-    )
+    """Delete a contact."""
+    db_contact = db.query(ContactORM).filter(ContactORM.id == contact_id).first()
     if not db_contact:
-        raise HTTPException(status_code=404, detail="Contact not found")
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail={"error": "Contact not found"},
+        )
 
     db.delete(db_contact)
     db.commit()
@@ -301,90 +388,60 @@ async def list_contacts(
     limit: int = 10,
     offset: int = 0,
 ) -> ContactList:
-    """List contacts with pagination and filtering.
-
-    Args:
-        db (Session): The database session.
-        name (str, optional): Filter by name (case-insensitive, partial match).
-        hashtags (str, optional): Comma-separated list of hashtags to filter by.
-        limit (int, optional): Maximum number of items to return. Defaults to 10.
-        offset (int, optional): Number of items to skip. Defaults to 0.
-
-    Returns:
-        ContactList: Paginated and filtered list of contacts.
-    """
+    """List contacts with pagination and filtering."""
     # Start with base query
-    query = db.query(Contact)
+    query = db.query(ContactORM)
 
     # Apply name filter if provided
     if name:
-        query = query.filter(Contact._name.ilike(f"%{name}%"))
+        # cspell:ignore ilike
+        query = query.filter(ContactORM.name.ilike(f"%{name}%"))
 
     # Apply hashtag filter if provided
     if hashtags:
-        print("\n=== HASHTAG FILTERING DEBUG ===")
-        print(f"Input hashtags: {hashtags}")
         tag_list = [
             tag.strip().lower()
             for tag in hashtags.split(",")
             if tag.strip().startswith("#")
         ]
-        print(f"Normalized tags: {tag_list}")
 
-        # Find contacts that have ALL requested hashtags.
+        # Find contacts that have ALL requested hashtags
         matching_ids = (
-            sa.select(contact_hashtags.c.contact_id)
+            select(contact_hashtags.c.contact_id)
             .join(
-                Hashtag, contact_hashtags.c.hashtag_id == Hashtag.id
-            )  # Explicit join condition.
+                TagORM,
+                contact_hashtags.c.hashtag_id == TagORM.id,
+            )
             .filter(
-                Hashtag.entity_type == EntityType.CONTACT, Hashtag.name.in_(tag_list)
+                TagORM.entity_type == EntityType.CONTACT.value,
+                TagORM.name.in_(tag_list),
             )
             .group_by(contact_hashtags.c.contact_id)
-            .having(sa.func.count(sa.distinct(Hashtag.name)) == len(tag_list))
+            .having(sa.func.count(sa.distinct(TagORM.name)) == len(tag_list))
             .scalar_subquery()
         )
 
-        # Apply filter to main query.
-        query = query.filter(Contact.id.in_(matching_ids))
-
-        print("\nDebug - Final filtered query:")
-        print(str(query.statement.compile(compile_kwargs={"literal_binds": True})))
-
-        # Print filtered results for debugging
-        results = query.all()
-        print(f"\nFound {len(results)} matching contacts:")
-        for c in results:
-            print(f"- {c.name}: {c.hashtag_names}")
+        # Apply filter to main query
+        query = query.filter(ContactORM.id.in_(matching_ids))
 
     # Get total count before pagination
     total_count = query.count()
-    print(f"\nTotal count: {total_count}")
 
     # Apply pagination
     contacts = query.offset(offset).limit(limit).all()
 
     # Convert to response models
-    items = []
-    for contact in contacts:
-        db_id = getattr(contact.id, "_value", contact.id)
-        items.append(
-            ContactResponse(
-                id=UUID(str(db_id)) if not isinstance(db_id, UUID) else db_id,
-                name=str(contact.name),
-                first_name=(str(contact.first_name) if contact.first_name else None),
-                sub_information=dict(contact.sub_information),
-                hashtags=contact.hashtag_names,
-                last_contact=contact.last_contact,
-                contact_briefing_text=contact.contact_briefing_text,
-                created_at=contact.created_at.replace(tzinfo=None),
-                updated_at=contact.updated_at.replace(tzinfo=None),
-            )
-        )
+    items = [_contact_to_response(cast(Contact, contact)) for contact in contacts]
 
-    return ContactList(items=items, total_count=total_count, limit=limit, offset=offset)
+    return ContactList(
+        items=items,
+        total_count=total_count,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @app.get("/")
 def read_root() -> Dict[str, str]:
+    """Root endpoint for health checks."""
     return {"message": "Hello World"}

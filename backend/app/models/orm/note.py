@@ -1,7 +1,7 @@
 """SQLAlchemy ORM model for notes."""
 
 from datetime import datetime, timezone
-from typing import List
+from typing import List, TYPE_CHECKING
 from uuid import UUID, uuid4
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import Text, ForeignKey
@@ -9,6 +9,9 @@ from ...database import Base
 from .statement import StatementORM
 from .tag import TagORM
 from .reminder import ReminderORM
+
+if TYPE_CHECKING:
+    from .contact import ContactORM
 
 
 class NoteORM(Base):
@@ -27,7 +30,7 @@ class NoteORM(Base):
     )
 
     # Relationships
-    contact: Mapped["ContactORM"] = relationship(  # type: ignore
+    contact: Mapped["ContactORM"] = relationship(
         "ContactORM", back_populates="notes", lazy="joined"
     )
     statements: Mapped[List[StatementORM]] = relationship(
@@ -41,7 +44,7 @@ class NoteORM(Base):
         TagORM, secondary="note_tags", lazy="joined"
     )
     # Reminders referencing this note
-    reminders: Mapped[List[ReminderORM]] = relationship(  # type: ignore
+    reminders: Mapped[List[ReminderORM]] = relationship(
         ReminderORM,
         back_populates="note",
         lazy="joined",
