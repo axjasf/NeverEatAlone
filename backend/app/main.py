@@ -4,7 +4,7 @@
 from contextlib import contextmanager
 from datetime import datetime
 from http import HTTPStatus
-from typing import Annotated, Any, Dict, Iterator, List, Optional, TypeVar
+from typing import Annotated, Any, Dict, Iterator, List, Optional, TypeVar, cast
 from uuid import UUID
 
 # Third-party imports
@@ -89,6 +89,27 @@ class ContactBase(BaseModel):
     first_name: Optional[str] = None
     briefing_text: Optional[str] = None
     sub_information: Dict[str, Any] = Field(default_factory=dict)
+    hashtags: List[str] = Field(
+        default_factory=list,
+        description="List of hashtags. Each tag must start with '#'.",
+    )
+
+    @field_validator("hashtags")
+    @classmethod
+    def validate_hashtags(cls, v: List[str]) -> List[str]:
+        """Validate that all hashtags start with #."""
+        return [
+            tag if tag.startswith("#") else f"#{tag}"
+            for tag in v
+        ]
+
+
+class ContactCreate(BaseModel):
+    """Schema for creating a new contact."""
+    name: str
+    first_name: Optional[str] = None
+    briefing_text: Optional[str] = None
+    sub_information: Dict[str, Any] = Field(default_factory=dict)
     hashtags: Optional[List[str]] = Field(
         default=None,
         description="List of hashtags. Each tag must start with '#'.",
@@ -97,17 +118,7 @@ class ContactBase(BaseModel):
     @field_validator("hashtags")
     @classmethod
     def validate_hashtags(cls, v: Optional[List[str]]) -> Optional[List[str]]:
-        """Validate that all hashtags start with #.
-
-        Args:
-            v: List of hashtags to validate.
-
-        Returns:
-            The validated list of hashtags.
-
-        Raises:
-            ValueError: If any hashtag doesn't start with '#'.
-        """
+        """Validate that all hashtags start with #."""
         if v is not None:
             return [
                 tag if tag.startswith("#") else f"#{tag}"
@@ -116,18 +127,19 @@ class ContactBase(BaseModel):
         return v
 
 
-class ContactCreate(ContactBase):
-    """Schema for creating a new contact."""
-    pass
-
-
-class ContactResponse(ContactBase):
+class ContactResponse(BaseModel):
     """Schema for contact response including system fields."""
-
     id: UUID
+    name: str
+    first_name: Optional[str] = None
+    briefing_text: Optional[str] = None
+    sub_information: Dict[str, Any] = Field(default_factory=dict)
+    hashtags: List[str] = Field(
+        default_factory=list,
+        description="List of hashtags. Each tag must start with '#'.",
+    )
     created_at: datetime
     updated_at: datetime
-    hashtags: List[str] = []  # Response always includes hashtags list
 
 
 class ContactList(BaseModel):
@@ -229,15 +241,8 @@ async def create_contact(
         )
 
 
-def _contact_to_response(contact: Contact) -> ContactResponse:
-    """Convert a domain contact model to a response model.
-
-    Args:
-        contact: The domain contact model.
-
-    Returns:
-        The contact response model.
-    """
+def _contact_to_response(contact: Contact | ContactORM) -> ContactResponse:
+    """Convert a domain or ORM contact model to a response model."""
     db_id = getattr(contact.id, "_value", contact.id)
     return ContactResponse(
         id=UUID(str(db_id)) if not isinstance(db_id, UUID) else db_id,
@@ -256,21 +261,10 @@ async def get_contact(
     contact_id: UUID,
     db: Annotated[Session, Depends(get_test_db)],
 ) -> ContactResponse:
-    """Get a contact by ID.
-
-    Args:
-        contact_id: The contact's ID.
-        db: The database session.
-
-    Returns:
-        The contact.
-
-    Raises:
-        HTTPException: If the contact is not found.
-    """
+    """Get a contact by ID."""
     db_contact = (
-        db.query(Contact)
-        .filter(Contact.id == contact_id)
+        db.query(ContactORM)
+        .filter(ContactORM.id == contact_id)
         .first()
     )
     if db_contact is None:
@@ -279,7 +273,7 @@ async def get_contact(
             detail={"error": "Contact not found"},
         )
 
-    return _contact_to_response(db_contact)
+    return _contact_to_response(cast(Contact, db_contact))
 
 
 @app.put("/api/contacts/{contact_id}", response_model=ContactResponse)
@@ -288,22 +282,10 @@ async def update_contact(
     contact: ContactCreate,
     db: Annotated[Session, Depends(get_test_db)],
 ) -> ContactResponse:
-    """Update a contact.
-
-    Args:
-        contact_id: The contact's ID.
-        contact: The updated contact data.
-        db: The database session.
-
-    Returns:
-        The updated contact.
-
-    Raises:
-        HTTPException: If the contact is not found or the data is invalid.
-    """
+    """Update a contact."""
     db_contact = (
-        db.query(Contact)
-        .filter(Contact.id == contact_id)
+        db.query(ContactORM)
+        .filter(ContactORM.id == contact_id)
         .first()
     )
     if not db_contact:
@@ -313,22 +295,40 @@ async def update_contact(
         )
 
     try:
-        # Update fields
-        db_contact.name = contact.name
-        db_contact.first_name = contact.first_name
-        db_contact.briefing_text = contact.briefing_text
-        db_contact.sub_information = contact.sub_information or {}
+        # Convert to domain model for update
+        domain_contact = Contact(
+            name=contact.name,
+            first_name=contact.first_name,
+            briefing_text=contact.briefing_text,
+            sub_information=contact.sub_information or {},
+        )
+
+        # Update ORM fields from domain model
+        db_contact.name = str(domain_contact.name)
+        if domain_contact.first_name is not None:
+            db_contact.first_name = str(domain_contact.first_name)
+        if domain_contact.briefing_text is not None:
+            db_contact.briefing_text = str(domain_contact.briefing_text)
+        db_contact.sub_information = dict(domain_contact.sub_information)
 
         # Update tags if provided
         if contact.hashtags is not None:
-            db_contact.tags.clear()
+            # Clear existing tags
+            db_contact.tags = []
+            # Add new tags
             for tag_name in contact.hashtags:
-                db_contact.add_tag(tag_name)
+                tag_name = tag_name if tag_name.startswith("#") else f"#{tag_name}"
+                tag = TagORM(
+                    entity_id=db_contact.id,
+                    entity_type=EntityType.CONTACT.value,
+                    name=tag_name.lower(),
+                )
+                db_contact.tags.append(tag)
 
         db.commit()
         db.refresh(db_contact)
 
-        return _contact_to_response(db_contact)
+        return _contact_to_response(cast(Contact, db_contact))
 
     except ValueError as e:
         db.rollback()
@@ -349,18 +349,10 @@ async def delete_contact(
     contact_id: UUID,
     db: Annotated[Session, Depends(get_test_db)],
 ) -> None:
-    """Delete a contact.
-
-    Args:
-        contact_id: The contact's ID.
-        db: The database session.
-
-    Raises:
-        HTTPException: If the contact is not found.
-    """
+    """Delete a contact."""
     db_contact = (
-        db.query(Contact)
-        .filter(Contact.id == contact_id)
+        db.query(ContactORM)
+        .filter(ContactORM.id == contact_id)
         .first()
     )
     if not db_contact:
@@ -381,23 +373,13 @@ async def list_contacts(
     limit: int = 10,
     offset: int = 0,
 ) -> ContactList:
-    """List contacts with pagination and filtering.
-
-    Args:
-        db: The database session.
-        name: Optional name filter.
-        hashtags: Optional comma-separated list of hashtags.
-        limit: Maximum number of contacts to return.
-        offset: Number of contacts to skip.
-
-    Returns:
-        A paginated list of contacts.
-    """
+    """List contacts with pagination and filtering."""
     # Start with base query
     query = db.query(ContactORM)
 
     # Apply name filter if provided
     if name:
+        # cspell:ignore ilike
         query = query.filter(ContactORM.name.ilike(f"%{name}%"))
 
     # Apply hashtag filter if provided
@@ -434,7 +416,7 @@ async def list_contacts(
     contacts = query.offset(offset).limit(limit).all()
 
     # Convert to response models
-    items = [_contact_to_response(contact) for contact in contacts]
+    items = [_contact_to_response(cast(Contact, contact)) for contact in contacts]
 
     return ContactList(
         items=items,
