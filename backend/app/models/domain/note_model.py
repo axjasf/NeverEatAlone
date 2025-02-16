@@ -1,7 +1,7 @@
 """Note domain model."""
 
 from datetime import datetime, timezone
-from typing import List, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING
 from uuid import UUID
 from .base_model import BaseModel
 
@@ -67,26 +67,59 @@ class Statement(BaseModel):
 class Note(BaseModel):
     """A note about a contact.
 
-    Notes capture interactions, observations, and plans related to a contact.
-    They can be broken down into statements and tagged for organization.
+    Notes can be either:
+    1. Content notes: Containing actual information about the contact
+    2. Interaction records: Just tracking that contact happened
+
+    For content notes:
+    - content is required
+    - interaction_date must be None
+
+    For interaction notes:
+    - interaction_date is required
+    - content is optional
     """
 
-    def __init__(self, contact_id: UUID, content: str) -> None:
+    def __init__(
+        self,
+        contact_id: UUID,
+        content: Optional[str] = None,
+        is_interaction: bool = False,
+        interaction_date: Optional[datetime] = None
+    ) -> None:
         """Create a new note.
 
         Args:
             contact_id: ID of the contact this note is about
-            content: The note content
+            content: The note content (required for non-interaction notes)
+            is_interaction: Whether this note represents an interaction
+            interaction_date: When the interaction occurred (required for interaction notes)
 
         Raises:
-            ValueError: If content is empty
+            ValueError: If validation fails:
+                - Content notes require content
+                - Interaction notes require date
+                - Content notes cannot have interaction date
+                - Interaction date cannot be in future
         """
         super().__init__()
-        if not content.strip():
-            raise ValueError("Content cannot be empty")
+
+        # Validate interaction rules
+        if is_interaction:
+            if not interaction_date:
+                raise ValueError("Interaction notes require a date")
+            if interaction_date > datetime.now(timezone.utc):
+                raise ValueError("Interaction date cannot be in the future")
+        else:
+            if not content or not content.strip():
+                raise ValueError("Content notes require content")
+            if interaction_date is not None:
+                raise ValueError("Content notes cannot have interaction date")
 
         self.contact_id = contact_id
-        self.content = content.strip()
+        self.is_interaction = is_interaction
+        self.interaction_date = interaction_date
+        self.content = content.strip() if content else None
         self.statements: List[Statement] = []
         self.tags: List["Tag"] = []
 
@@ -97,8 +130,10 @@ class Note(BaseModel):
             new_content: New content for the note
 
         Raises:
-            ValueError: If new_content is empty
+            ValueError: If new_content is empty or note is interaction-only
         """
+        if self.is_interaction:
+            raise ValueError("Cannot update content of interaction-only note")
         if not new_content.strip():
             raise ValueError("Content cannot be empty")
         self.content = new_content.strip()

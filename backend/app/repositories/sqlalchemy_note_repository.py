@@ -34,7 +34,13 @@ class SQLAlchemyNoteRepository(NoteRepository):
             The saved note with any updates from the database
         """
         # Convert domain model to ORM
-        note_orm = NoteORM(id=note.id, contact_id=note.contact_id, content=note.content)
+        note_orm = NoteORM(
+            id=note.id,
+            contact_id=note.contact_id,
+            content=note.content,
+            is_interaction=note.is_interaction,
+            interaction_date=note.interaction_date,
+        )
 
         # Add statements
         for i, statement in enumerate(note.statements):
@@ -103,6 +109,38 @@ class SQLAlchemyNoteRepository(NoteRepository):
         notes_orm = self.session.execute(stmt).scalars().unique().all()
         return [self._to_domain(note) for note in notes_orm]
 
+    def find_interactions(self, contact_id: UUID) -> List[Note]:
+        """Find all interaction notes for a contact.
+
+        Args:
+            contact_id: The contact's ID
+
+        Returns:
+            List of interaction notes for the contact
+        """
+        stmt = select(NoteORM).where(
+            NoteORM.contact_id == contact_id,
+            NoteORM.is_interaction == True  # noqa: E712
+        ).order_by(NoteORM.interaction_date.desc())
+        notes_orm = self.session.execute(stmt).scalars().all()
+        return [self._to_domain(note) for note in notes_orm]
+
+    def find_interactions_by_tag(self, tag_name: str) -> List[Note]:
+        """Find all interaction notes with a specific tag.
+
+        Args:
+            tag_name: The tag name to search for
+
+        Returns:
+            List of interaction notes with the tag
+        """
+        stmt = select(NoteORM).join(NoteORM.tags).where(
+            NoteORM.is_interaction == True,  # noqa: E712
+            NoteORM.tags.any(name=tag_name.lower())
+        ).order_by(NoteORM.interaction_date.desc())
+        notes_orm = self.session.execute(stmt).scalars().all()
+        return [self._to_domain(note) for note in notes_orm]
+
     def delete(self, note: Note) -> None:
         """Delete a note.
 
@@ -123,8 +161,15 @@ class SQLAlchemyNoteRepository(NoteRepository):
         Returns:
             The domain model
         """
-        # Create domain model
-        note = Note(contact_id=note_orm.contact_id, content=note_orm.content)
+        note = Note(
+            contact_id=note_orm.contact_id,
+            content=note_orm.content,
+            is_interaction=note_orm.is_interaction,
+            interaction_date=note_orm.interaction_date,
+        )
+        note.id = note_orm.id
+        note.created_at = note_orm.created_at
+        note.updated_at = note_orm.updated_at
 
         # Add statements
         for statement_orm in note_orm.statements:

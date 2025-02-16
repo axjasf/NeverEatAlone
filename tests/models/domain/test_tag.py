@@ -145,3 +145,38 @@ def test_tag_staleness():
         assert tag.is_stale()
     finally:
         Tag.get_current_time = original_now  # type: ignore
+
+
+def test_tag_interaction_handling():
+    """Test handling of note interactions.
+
+    Interaction handling rules:
+    1. Only contact tags should update last_contact
+    2. Only update if is_interaction is True and has interaction_date
+    3. Last contact should update to interaction_date
+    4. Non-contact tags should not update
+    """
+    # Test contact tag with interaction
+    contact_tag = Tag(entity_id=TEST_UUID, entity_type=EntityType.CONTACT, name="#test")
+    interaction_time = datetime.now(UTC)
+    contact_tag.handle_note_interaction(True, interaction_time)
+    assert contact_tag.last_contact == interaction_time
+
+    # Test contact tag without interaction
+    contact_tag.last_contact = None
+    contact_tag.handle_note_interaction(False, interaction_time)
+    assert contact_tag.last_contact is None
+
+    # Test contact tag with interaction but no date
+    contact_tag.handle_note_interaction(True, None)
+    assert contact_tag.last_contact is None
+
+    # Test non-contact tags (should not update)
+    note_tag = Tag(entity_id=TEST_UUID, entity_type=EntityType.NOTE, name="#test")
+    statement_tag = Tag(entity_id=TEST_UUID, entity_type=EntityType.STATEMENT, name="#test")
+
+    note_tag.handle_note_interaction(True, interaction_time)
+    statement_tag.handle_note_interaction(True, interaction_time)
+
+    assert note_tag.last_contact is None
+    assert statement_tag.last_contact is None
