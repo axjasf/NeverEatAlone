@@ -100,6 +100,7 @@ We chose DDD to ensure the codebase accurately reflects the business domain and 
 - **Rich Domain Models**: Business logic lives in the domain models
 - **Ubiquitous Language**: Code terminology matches business concepts
 - **Bounded Contexts**: Clear separation between different parts of the system
+- **Natural Domain Representation**: Domain models reflect business concepts naturally, without persistence implementation details
 
 Example of rich domain model with business rules:
 ```python
@@ -112,12 +113,22 @@ class Tag:
         self.last_contact = None if days is None else self.get_current_time()
 ```
 
+Example of natural domain representation:
+```python
+class Note:
+    def add_statement(self, content: str) -> None:
+        """Add a statement to the note, maintaining natural list order."""
+        statement = Statement(content)
+        self.statements.append(statement)  # Order maintained by list position
+```
+
 ### 2. Repository Pattern
 We use repositories to abstract persistence details:
 
 - **Interface-Based**: Repository interfaces define persistence contracts
 - **Implementation-Agnostic**: Domain models don't know about storage
 - **Single Responsibility**: Each repository handles one aggregate
+- **Implementation Details Hidden**: Persistence mechanisms (like ordering) are managed by repositories
 
 Example of repository interface:
 ```python
@@ -127,6 +138,21 @@ class TagRepository(Protocol):
         """Find tags that need attention based on frequency."""
         ...
 ```
+
+Example of repository handling implementation details:
+```python
+class SQLAlchemyNoteRepository:
+    def save(self, note: Note) -> Note:
+        """Save note with statements, handling order persistence."""
+        note_orm = NoteORM(...)
+        for i, statement in enumerate(note.statements):
+            # Repository layer manages sequence numbers
+            statement_orm = StatementORM(
+                content=statement.content,
+                sequence_number=i
+            )
+            note_orm.statements.append(statement_orm)
+        return note
 
 ### 3. Clean Architecture
 Our layered approach ensures separation of concerns:
