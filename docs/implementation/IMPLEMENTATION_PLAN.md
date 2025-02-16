@@ -280,3 +280,91 @@ None currently blocking progress.
 - ✅ Complete
 - ⏳ In Progress
 - 🔄 Pending
+
+## Active Sprint: Timezone Handling Implementation
+
+### Currently Working On 🔨
+- Timezone Handling:
+  - Implementing timezone-aware base model
+  - Updating repository layer for timezone support
+  - Adding timezone-specific tests
+  - Ensuring consistent UTC storage
+
+### Just Finished ✅
+- Initial domain model design for Tag
+- Basic test suite for Tag business logic
+- Separation of Tag model from database concerns
+- Basic CRUD API implementation
+- Error handling standardization
+- CI/CD Pipeline Adjustments
+
+### Active Sprint Backlog 📋
+1. **Base Model Timezone Support**
+   - Create timezone utility methods
+   - Update datetime handling to use UTC
+   - Add validation for timezone awareness
+   - Write comprehensive tests
+
+2. **Repository Layer Updates**
+   - Ensure timezone preservation in ORM mapping
+   - Update repository interfaces
+   - Add timezone-specific tests
+   - Handle timezone edge cases
+
+3. **Model Layer Updates**
+   - Update Contact model datetime fields
+   - Update Note model datetime fields
+   - Update Tag model datetime fields
+   - Add timezone validation
+
+4. **Integration Testing**
+   - Test timezone handling across layers
+   - Test daylight saving transitions
+   - Test timezone conversions
+   - Test data consistency
+
+### Sprint Success Criteria
+- All datetime fields are timezone-aware
+- UTC storage in database
+- Proper timezone preservation
+- Test coverage > 80%
+- Clear timezone handling documentation
+
+## Implementation Steps
+
+### Phase 0: Timezone Handling (Current) ⏳
+1. Base Model Changes
+   - [ ] Add timezone utility methods
+   - [ ] Update datetime handling
+   - [ ] Add timezone validation
+   - [ ] Write comprehensive tests
+
+2. Repository Layer Updates
+   - [ ] Update ORM mapping
+   - [ ] Ensure timezone preservation
+   - [ ] Add timezone tests
+   - [ ] Handle edge cases
+
+3. Model Layer Updates
+   - [ ] Update Contact model
+   - [ ] Update Note model
+   - [ ] Update Tag model
+   - [ ] Add validation
+
+4. Integration Testing
+   - [ ] Cross-layer tests
+   - [ ] DST transition tests
+   - [ ] Conversion tests
+   - [ ] Data consistency tests
+
+### Phase 1: Tag Value Objects (Next) 🔄
+1. Create value objects
+   - [ ] TagName value object
+   - [ ] Frequency value object
+   - [ ] Unit tests for both
+   - [ ] Integration tests
+
+2. Update Tag model
+   - [ ] Use new value objects
+   - [ ] Remove SQLAlchemy
+   - [ ] Update tests

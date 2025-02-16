@@ -27,6 +27,12 @@
 - US2.6: I want to see related statements by shared tags
 - US2.7: I want tags to be preserved when notes are broken into statements
 
+### As a user, I want accurate timezone handling for all interactions
+- US2.12: I want all my interaction timestamps to be stored accurately regardless of my timezone
+- US2.13: I want to see interaction times in my local timezone
+- US2.14: I want to ensure contact frequency calculations work correctly across daylight saving changes
+- US2.15: I want historical interaction data to maintain correct timing when viewed from any timezone
+
 ### As a user, I want to manage reminders
 - US2.8: I want to set one-off reminders for specific contacts
 - US2.9: I want to set recurring reminders (like birthdays)

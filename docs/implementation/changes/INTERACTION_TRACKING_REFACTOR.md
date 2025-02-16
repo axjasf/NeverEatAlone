@@ -168,67 +168,111 @@ For each phase (Tag → Note → Contact):
 - FR3.2.3: System must support recording interactions without content
 - FR3.2.4: System must maintain interaction history with tags
 - FR3.2.5: System must support efficient querying of next due contacts
+- FR3.2.6: All datetime fields must be timezone-aware using UTC
+
+### 1.5 Cross-Cutting Concerns
+
+During Phase 2 implementation, we identified timezone handling as a critical cross-cutting concern that affects all models with datetime fields. To ensure consistent handling:
+
+1. **Database Layer**
+   - All datetime columns must use `DateTime(timezone=True)`
+   - SQLite stores UTC timestamps
+   - PostgreSQL preserves timezone information
+
+2. **ORM Layer**
+   - All datetime fields must be mapped with timezone support:
+     ```python
+     last_contact: Mapped[Optional[datetime]] = mapped_column(
+         DateTime(timezone=True), nullable=True
+     )
+     ```
+
+3. **Domain Layer**
+   - All datetime operations must use UTC
+   - Example:
+     ```python
+     @staticmethod
+     def get_current_time() -> datetime:
+         return datetime.now(timezone.utc)
+     ```
+
+4. **Repository Layer**
+   - Ensure timezone preservation when converting between ORM and domain models
+   - Example:
+     ```python
+     def _to_domain(self, orm: SomeORM) -> SomeModel:
+         if orm.timestamp and orm.timestamp.tzinfo is None:
+             orm.timestamp = orm.timestamp.replace(tzinfo=timezone.utc)
+     ```
+
+This concern has been addressed in completed Phase 1 (Tag Model) ✅ and is being incorporated into ongoing Phase 2 (Note Model) 🔄.
 
 ## 2. Implementation Breakdown
 
-### 2.1 Tag Model Changes (Phase 1)
+### 2.1 Base Model Changes (Phase 0) 🆕
 
 #### Domain Model Changes
-- Remove last_contact_notes field (content moves to Notes)
-- Keep last_contact timestamp for efficient querying
-- Keep frequency_days for due date calculations
-- Update validation and constructor
-- Ensure frequency tracking works with Note-based updates
-- Add methods for calculating next due date
-- Consider contact_tags and note_tags relationships
-
-#### ORM Changes
-- Remove last_contact_notes column
-- Update relationships and constraints
-- Add indices for efficient querying:
-  ```sql
-  CREATE INDEX idx_tags_last_contact ON tags(last_contact) WHERE last_contact IS NOT NULL;
-  CREATE INDEX idx_tags_frequency ON tags(frequency_days) WHERE frequency_days IS NOT NULL;
-  ```
-
-#### Repository Changes
-- Update tag creation/update logic
-- Ensure proper handling of last_contact updates
-- Update query methods
-- Add methods for:
-  ```python
-  def find_by_frequency(self) -> List[Tag]:
-      """Find tags with frequency settings."""
-
-  def find_stale(self) -> List[Tag]:
-      """Find tags that are overdue for contact."""
-  ```
+- Add timezone utility methods to BaseModel
+- Update all datetime handling to use UTC
+- Add validation for timezone awareness
 
 #### Test Updates
 ```python
-def test_tag_without_notes():
-    """Ensure tag works without last_contact_notes field"""
-    tag = Tag(entity_id=uuid4(), entity_type=EntityType.CONTACT, name="#test")
-    assert not hasattr(tag, 'last_contact_notes')
+def test_timezone_handling():
+    """Test timezone handling in base model."""
+    # Test naive datetime conversion
+    naive_dt = datetime(2024, 1, 1)
+    aware_dt = BaseModel.ensure_timezone(naive_dt)
+    assert aware_dt.tzinfo is not None
+    assert aware_dt.tzinfo == timezone.utc
 
-def test_tag_frequency_validation():
-    """Test frequency validation still works"""
-    tag = Tag(entity_id=uuid4(), entity_type=EntityType.CONTACT, name="#test")
-    tag.set_frequency(30)
-    assert tag.frequency_days == 30
-    assert tag.last_contact is not None
-
-def test_tag_staleness():
-    """Test staleness calculation with new model"""
-    tag = Tag(entity_id=uuid4(), entity_type=EntityType.CONTACT, name="#test")
-    tag.set_frequency(7)
-    tag.update_last_contact(datetime.now() - timedelta(days=8))
-    assert tag.is_stale()
+    # Test already aware datetime
+    utc_dt = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    result_dt = BaseModel.ensure_timezone(utc_dt)
+    assert result_dt == utc_dt
 ```
 
-### 2.2 Note Model Changes (Phase 2)
+### 2.2 Tag Model Changes (Phase 1)
 
-#### Domain Model Changes
+#### Domain Model Changes ✅
+- Remove last_contact_notes field (content moves to Notes) ✅
+- Keep last_contact timestamp for efficient querying ✅
+- Keep frequency_days for due date calculations ✅
+- Update validation and constructor ✅
+- Ensure frequency tracking works with Note-based updates ✅
+- Add methods for calculating next due date ✅
+- Consider contact_tags and note_tags relationships ✅
+
+#### ORM Changes ✅
+- Remove last_contact_notes column ✅
+- Update relationships and constraints ✅
+- Add indices for efficient querying ✅
+
+#### Repository Changes ✅
+- Update tag creation/update logic ✅
+- Ensure proper handling of last_contact updates ✅
+- Update query methods ✅
+- Add methods for finding tags by frequency and staleness ✅
+
+#### Test Updates ✅
+- Added test_tag_interaction_tracking ✅
+- Verified timezone handling ✅
+- Verified entity type handling ✅
+- Verified frequency and staleness calculations ✅
+
+### 2.3 Note Model Changes (Phase 2) 🔄
+
+#### Current Status
+- ⚠️ Implementation rolled back to handle timezone centralization
+- Phase 2 will resume after timezone handling is properly implemented
+
+#### Immediate Next Steps
+1. Implement timezone handling in base models
+2. Update existing repositories to use centralized timezone handling
+3. Add timezone-specific tests
+4. Resume Note model changes with proper timezone support
+
+#### Remaining Domain Model Changes
 - Add is_interaction flag
 - Add interaction_date field
 - Ensure proper validation for content/interaction requirements:
@@ -293,7 +337,7 @@ def test_note_updates_contact():
     assert contact.last_contact_at == note.interaction_date
 ```
 
-### 2.3 Contact Model Changes (Phase 3)
+### 2.4 Contact Model Changes (Phase 3)
 
 #### Domain Model Changes
 - Rename last_interaction_at to last_contact_at

@@ -108,6 +108,21 @@ sequenceDiagram
 
 ## 3. Implementation Details
 
+### 3.0 Timezone Handling
+```python
+# All datetime fields are stored in UTC and handled consistently across layers
+class TimezoneAwareBase:
+    """Base functionality for timezone handling across all models."""
+    @staticmethod
+    def ensure_timezone(dt: Optional[datetime]) -> Optional[datetime]:
+        """Ensures datetime is timezone-aware in UTC."""
+        if dt is None:
+            return None
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+```
+
 ### 3.1 Contact Model
 ```python
 class Contact(BaseModel):
@@ -116,9 +131,15 @@ class Contact(BaseModel):
     first_name: Optional[str]
     sub_information: Dict[str, Any]
     tags: List[ContactTag]
-    last_interaction_at: Optional[datetime]
-    created_at: datetime
-    updated_at: datetime
+    last_interaction_at: Optional[datetime]  # Always in UTC
+    created_at: datetime  # Always in UTC
+    updated_at: datetime  # Always in UTC
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.last_interaction_at = self.ensure_timezone(self.last_interaction_at)
+        self.created_at = self.ensure_timezone(self.created_at)
+        self.updated_at = self.ensure_timezone(self.updated_at)
 ```
 
 ### 3.2 Note Model
@@ -128,9 +149,14 @@ class Note(BaseModel):
     contact_id: UUID
     content: Optional[str]
     is_interaction: bool
-    interaction_date: Optional[datetime]
+    interaction_date: Optional[datetime]  # Always in UTC
     tags: List[str]
-    created_at: datetime
+    created_at: datetime  # Always in UTC
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.interaction_date = self.ensure_timezone(self.interaction_date)
+        self.created_at = self.ensure_timezone(self.created_at)
 ```
 
 ### 3.3 ContactTag Model
@@ -139,8 +165,13 @@ class ContactTag(BaseModel):
     contact_id: UUID
     name: str
     frequency_days: Optional[int]
-    last_contact: Optional[datetime]
-    created_at: datetime
+    last_contact: Optional[datetime]  # Always in UTC
+    created_at: datetime  # Always in UTC
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.last_contact = self.ensure_timezone(self.last_contact)
+        self.created_at = self.ensure_timezone(self.created_at)
 ```
 
 ### 3.4 Template Model
@@ -162,6 +193,14 @@ class FieldDefinition(BaseModel):
 ```
 
 ## 4. API Design
+
+### 4.0 Timezone Standards
+- All datetime fields in API requests and responses use RFC3339 format with timezone information
+- All datetime fields are stored and processed in UTC internally
+- Clients are responsible for local timezone display
+- API validates that incoming datetime fields include timezone information
+- API converts all datetime fields to UTC before storage
+- API returns all datetime fields in UTC with explicit timezone marker
 
 ### 4.1 REST Endpoints
 ```plaintext

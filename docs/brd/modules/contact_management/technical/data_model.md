@@ -12,9 +12,9 @@ CREATE TABLE contacts (
     first_name VARCHAR,
     sub_information JSON NOT NULL DEFAULT '{}',
     briefing_text TEXT,
-    last_interaction_at TIMESTAMP,
-    created_at TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP NOT NULL
+    last_interaction_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
 CREATE INDEX idx_contacts_name ON contacts(name);
@@ -28,8 +28,8 @@ CREATE TABLE contact_tags (
     contact_id UUID NOT NULL,
     tag_name VARCHAR NOT NULL,
     frequency_days INTEGER,
-    last_contact TIMESTAMP,
-    created_at TIMESTAMP NOT NULL,
+    last_contact TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     PRIMARY KEY (contact_id, tag_name),
     FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE
 );
@@ -46,8 +46,8 @@ CREATE TABLE notes (
     contact_id UUID NOT NULL,
     content TEXT,
     is_interaction BOOLEAN NOT NULL DEFAULT FALSE,
-    interaction_date TIMESTAMP,
-    created_at TIMESTAMP NOT NULL,
+    interaction_date TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE,
     CONSTRAINT valid_interaction CHECK (
         (is_interaction = FALSE AND interaction_date IS NULL) OR
@@ -78,11 +78,11 @@ CREATE TABLE reminders (
     contact_id UUID NOT NULL,
     tag_name VARCHAR,
     title TEXT NOT NULL,
-    due_date TIMESTAMP NOT NULL,
+    due_date TIMESTAMP WITH TIME ZONE NOT NULL,
     recurring_type VARCHAR,  -- null, daily, weekly, monthly, yearly
     recurring_interval INTEGER,
-    completed_at TIMESTAMP,
-    created_at TIMESTAMP NOT NULL,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE,
     FOREIGN KEY (contact_id, tag_name) REFERENCES tags(contact_id, name)
 );

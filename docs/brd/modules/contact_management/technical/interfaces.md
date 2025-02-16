@@ -341,6 +341,8 @@ Response 200:
 
 ### 2.1 Schema
 ```graphql
+scalar DateTime  # RFC3339 format with timezone information
+
 type Contact {
     id: ID!
     name: String!
@@ -348,6 +350,7 @@ type Contact {
     subInformation: JSON
     hashtags: [String!]
     contactBriefingText: String
+    lastInteractionAt: DateTime
     createdAt: DateTime!
     updatedAt: DateTime!
 }
@@ -356,6 +359,7 @@ type Tag {
     name: String!
     frequencyDays: Int
     entityType: String!
+    lastContact: DateTime
     createdAt: DateTime!
 }
 
@@ -418,7 +422,7 @@ input UpdateTemplateInput {
 interface ContactEvent {
     type: "CREATED" | "UPDATED" | "DELETED";
     contactId: string;
-    timestamp: string;
+    timestamp: string;  // ISO8601 format with timezone
     data: {
         before?: Contact;
         after?: Contact;
@@ -431,7 +435,7 @@ interface ContactEvent {
 interface TagEvent {
     type: "FREQUENCY_ENABLED" | "FREQUENCY_DISABLED" | "FREQUENCY_UPDATED" | "TAGGED" | "UNTAGGED";
     tagName: string;
-    timestamp: string;
+    timestamp: string;  // ISO8601 format with timezone
     entityType: "contact" | "note" | "statement";
     entityId: string;
     data: {
@@ -445,7 +449,7 @@ interface TagEvent {
 ```typescript
 interface TemplateEvent {
     type: "UPDATED";
-    timestamp: string;
+    timestamp: string;  // ISO8601 format with timezone
     version: number;
     data: {
         before?: Template;
@@ -459,7 +463,7 @@ interface TemplateEvent {
 interface StatementEvent {
     type: "CREATED" | "UPDATED";
     statementId: string;
-    timestamp: string;
+    timestamp: string;  // ISO8601 format with timezone
     data: {
         before?: Statement;
         after?: Statement;

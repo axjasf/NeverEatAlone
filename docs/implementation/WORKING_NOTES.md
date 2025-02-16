@@ -1,103 +1,92 @@
 # Working Notes - Model Layer Refactoring
-Version: 2024.02.13-1
+Version: 2024.02.13-2
 
 ## Version History
+- 2024.02.13-2: Updated focus to timezone handling implementation
 - 2024.02.13-1: Added versioning, updated focus to Tag value objects
 - 2024.02.13-0: Initial version, model layer refactoring plan
 
-## Current Focus: Tag Value Objects Implementation
+## Current Focus: Timezone Handling Implementation
 Last Updated: 2024-02-13
 
 ### What We're Working On 🔨
-1. **Tag Value Objects**
-   - Creating TagName value object
-     - Validation rules
-     - Case normalization
-     - Immutability
-   - Creating Frequency value object
-     - Range validation
-     - Business rules
-   - Unit tests for both
+1. **Base Model Timezone Support**
+   - Adding timezone utility methods to BaseModel
+   - Ensuring UTC storage for all datetime fields
+   - Adding timezone validation
+   - Writing comprehensive tests
+   - Handling daylight saving transitions
 
-2. **Tag Domain Model Updates**
-   - Converting to use new value objects
-   - Removing SQLAlchemy dependencies
-   - Updating existing tests
+2. **Repository Layer Updates**
+   - Ensuring timezone preservation in ORM mapping
+   - Updating repository interfaces for timezone support
+   - Adding timezone-specific tests
+   - Handling timezone edge cases
 
 ### Just Finished ✅
-1. **Initial Tag Model Analysis**
-   - Identified core business logic:
-     - Tag name validation and normalization
-     - Frequency tracking
-     - Last contact tracking
-     - Staleness calculation
-   - Identified value objects:
-     - EntityType (CONTACT, NOTE, STATEMENT)
-     - TagName (with validation and normalization)
-     - Frequency (with validation)
+1. **Initial Timezone Analysis**
+   - Identified datetime fields requiring timezone support:
+     - Contact: last_contact_at, created_at, updated_at
+     - Note: interaction_date, created_at, updated_at
+     - Tag: last_contact, created_at, updated_at
+   - Identified key requirements:
+     - UTC storage in database
+     - Timezone preservation in API
+     - Proper DST handling
+     - Consistent timezone conversion
 
-2. **Test Suite Setup**
-   - Basic validation tests
-   - Business logic tests
-   - Frequency tracking tests
-   - Last contact tests
-   - Staleness calculation tests
+2. **Test Suite Planning**
+   - Base model timezone tests
+   - Repository layer timezone tests
+   - Integration tests for timezone handling
+   - DST transition tests
+   - Data consistency tests
 
 ### Technical Decisions Made
-1. **Value Objects Design**
-   - Use Python dataclasses with frozen=True
-   - Validate in __post_init__
-   - Make invalid states unrepresentable
-   - Include only business rules
-   - Keep persistence separate
+1. **Timezone Handling Design**
+   - Store all datetimes in UTC
+   - Use timezone-aware datetime objects
+   - Handle DST transitions explicitly
+   - Validate timezone presence
+   - Convert to local time in presentation layer
 
-2. **Domain Model Design**
-   - Keep models as pure Python classes
-   - Use value objects for complex properties
-   - Validate in constructors
-   - Make invalid states unrepresentable
-   - Use type hints consistently
-
-3. **Testing Strategy**
-   - Pure unit tests for value objects
-   - No database dependencies
-   - Property-based testing for validation
-   - Test edge cases thoroughly
-   - Focus on behavior, not implementation
+2. **Testing Strategy**
+   - Test timezone conversion edge cases
+   - Test DST transitions
+   - Test timezone preservation
+   - Test data consistency
+   - Focus on timezone-specific behavior
 
 ### Current Test Coverage
-- **Tag Value Objects**
-  - ❌ TagName validation
-  - ❌ TagName normalization
-  - ❌ Frequency validation
-  - ❌ Value object immutability
+- **Base Model Timezone**
+  - ❌ Timezone utility methods
+  - ❌ UTC conversion
+  - ❌ Timezone validation
+  - ❌ DST handling
 
-- **Tag Domain Model**
-  - ✅ Basic creation and validation
-  - ✅ Name normalization
-  - ✅ Frequency tracking
-  - ✅ Last contact tracking
-  - ✅ Staleness calculation
-  - ❌ Integration with value objects
-  - ❌ Repository integration
+- **Repository Layer**
+  - ❌ ORM timezone mapping
+  - ❌ Timezone preservation
+  - ❌ Edge case handling
+  - ❌ Integration tests
 
 ### Next Steps (In Priority Order)
-1. **Implement Value Objects**
-   - Create TagName value object
-   - Create Frequency value object
+1. **Implement Base Model Changes**
+   - Add timezone utility methods
+   - Update datetime handling
+   - Add timezone validation
    - Write comprehensive tests
-   - Update Tag model to use them
 
-2. **Update Tag Model**
-   - Remove SQLAlchemy dependencies
-   - Use new value objects
-   - Update validation logic
-   - Update existing tests
+2. **Update Repository Layer**
+   - Update ORM mapping
+   - Ensure timezone preservation
+   - Add timezone tests
+   - Handle edge cases
 
 ### Notes on Implementation
 - Following strict TDD approach
-- Using dataclasses for value objects
-- Ensuring immutability
+- Focusing on timezone correctness
+- Ensuring backward compatibility
 - Comprehensive validation
 - Clear error messages
 
@@ -105,4 +94,4 @@ Last Updated: 2024-02-13
 [Previous history moved to HISTORY.md]
 
 ## Next Update Expected
-After implementing and testing TagName value object.
+After implementing and testing base model timezone support.

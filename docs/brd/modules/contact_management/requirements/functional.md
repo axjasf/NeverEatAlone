@@ -61,6 +61,9 @@
 - FR3.2.4: System MUST maintain interaction history with tags
 - FR3.2.5: System MUST validate interaction dates
 - FR3.2.6: System MUST prevent future interaction dates
+- FR3.2.7: System MUST store all datetime fields in UTC timezone
+- FR3.2.8: System MUST preserve timezone information when retrieving datetime fields
+- FR3.2.9: System MUST handle timezone conversion consistently across all layers
 
 ### 3.3 Information Extraction
 - FR3.3.1: System MUST analyze statements for JSON-compatible information
