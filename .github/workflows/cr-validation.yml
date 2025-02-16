@@ -1,0 +1,47 @@
+name: CR Validation
+
+on:
+  pull_request:
+    paths:
+      - 'docs/implementation/changes/CR-*.md'
+      - 'docs/implementation/IMPLEMENTATION_PLAN.md'
+      - 'docs/implementation/WORKING_NOTES.md'
+
+jobs:
+  validate-cr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Check CR Document Structure
+        run: |
+          for cr in docs/implementation/changes/CR-*.md; do
+            # Check required sections
+            for section in "Change Request Information" "Executive Summary" "Requirements Analysis" "Documentation Updates"; do
+              if ! grep -q "^## $section" "$cr"; then
+                echo "❌ Missing section: $section in $cr"
+                exit 1
+              fi
+            done
+          done
+
+      - name: Validate Version Numbers
+        run: |
+          # Check Implementation Plan version matches CR
+          impl_version=$(grep "^Version: " docs/implementation/IMPLEMENTATION_PLAN.md | cut -d' ' -f2)
+          working_version=$(grep "^Version: " docs/implementation/WORKING_NOTES.md | cut -d' ' -f2)
+          if [ "$impl_version" != "$working_version" ]; then
+            echo "❌ Version mismatch between Implementation Plan ($impl_version) and Working Notes ($working_version)"
+            exit 1
+          fi
+
+      - name: Check Documentation Cross-References
+        run: |
+          # Ensure CR references exist in Implementation Plan
+          for cr in docs/implementation/changes/CR-*.md; do
+            cr_number=$(basename "$cr" .md)
+            if ! grep -q "$cr_number" docs/implementation/IMPLEMENTATION_PLAN.md; then
+              echo "❌ CR $cr_number not referenced in Implementation Plan"
+              exit 1
+            fi
+          done
