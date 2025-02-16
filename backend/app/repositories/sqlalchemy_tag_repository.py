@@ -41,7 +41,11 @@ class SQLAlchemyTagRepository(TagRepository):
         if existing:
             # Update existing tag
             existing.frequency_days = tag.frequency_days
-            existing.last_contact = tag.last_contact
+            existing.last_contact = (
+                tag.last_contact.replace(tzinfo=None)
+                if tag.last_contact is not None
+                else None
+            )
             tag.id = existing.id  # Update domain model with DB ID
         else:
             # Create new tag
@@ -51,7 +55,11 @@ class SQLAlchemyTagRepository(TagRepository):
                 entity_type=tag.entity_type,
                 name=tag.name,
                 frequency_days=tag.frequency_days,
-                last_contact=tag.last_contact,
+                last_contact=(
+                    tag.last_contact.replace(tzinfo=None)
+                    if tag.last_contact is not None
+                    else None
+                ),
             )
             self.session.add(tag_orm)
 
