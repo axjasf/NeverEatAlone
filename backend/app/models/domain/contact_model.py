@@ -142,6 +142,51 @@ class Contact(BaseModel):
         self._update_timestamp()
         return note
 
+    def add_interaction(
+        self,
+        interaction_date: Optional[datetime] = None,
+        content: Optional[str] = None
+    ) -> "Note":
+        """Record an interaction with this contact.
+
+        Args:
+            interaction_date: When the interaction occurred
+            content: Optional description of the interaction
+
+        Returns:
+            The created interaction note
+
+        Raises:
+            ValueError: If validation fails:
+                - interaction_date is required
+                - interaction_date cannot be in future
+                - content cannot be empty if provided
+        """
+        # Import here to avoid circular dependency
+        from .note_model import Note
+
+        # Create the interaction note
+        note = Note(
+            contact_id=self.id,
+            content=content,
+            is_interaction=True,
+            interaction_date=interaction_date
+        )
+
+        # Update contact tracking
+        self.last_contact = interaction_date
+        if content:
+            self.contact_briefing_text = content
+
+        # Update all contact tags
+        for tag in self.tags:
+            tag.handle_note_interaction(True, interaction_date)
+
+        # Add note to contact
+        self.notes.append(note)
+        self._update_timestamp()
+        return note
+
     def remove_note(self, note: "Note") -> None:
         """Remove a note about this contact.
 

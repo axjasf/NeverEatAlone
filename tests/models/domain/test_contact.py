@@ -1,6 +1,7 @@
 """Tests for the Contact domain model."""
 
 import pytest
+from datetime import datetime, UTC
 from uuid import UUID
 from typing import Any, cast
 from backend.app.models.domain.contact_model import Contact
@@ -18,12 +19,13 @@ def test_contact_creation():
     3. Optional briefing text
     4. Optional sub_information dictionary
     """
-    # Test with only required fields
-    contact = Contact(name="John Doe")
-    assert contact.name == "John Doe"
+    contact = Contact(name="Test Contact")
+    assert contact.name == "Test Contact"
     assert contact.first_name is None
     assert contact.briefing_text is None
     assert contact.sub_information == {}
+    assert contact.last_contact is None
+    assert contact.contact_briefing_text is None
     assert contact.notes == []
     assert contact.tags == []
 
@@ -130,11 +132,11 @@ def test_contact_note_management():
     assert note2.content == "Second note"
 
     # Test empty note
-    with pytest.raises(ValueError, match="Content cannot be empty"):
+    with pytest.raises(ValueError, match="Content notes require content"):
         contact.add_note("")
 
     # Test whitespace note
-    with pytest.raises(ValueError, match="Content cannot be empty"):
+    with pytest.raises(ValueError, match="Content notes require content"):
         contact.add_note("   ")
 
     # Remove note
@@ -142,3 +144,86 @@ def test_contact_note_management():
     assert len(contact.notes) == 1
     assert contact.notes[0] is note2
     assert contact.notes[0].content == "Second note"
+
+
+def test_contact_interaction_recording():
+    """Test recording an interaction with a contact.
+
+    When recording an interaction:
+    1. Creates an interaction note
+    2. Updates last_contact timestamp
+    3. Updates contact_briefing_text
+    4. Updates any contact tags
+    """
+    contact = Contact(name="Test Contact")
+    interaction_time = datetime.now(UTC)
+
+    # Record interaction with content
+    note = contact.add_interaction(
+        content="Met for coffee",
+        interaction_date=interaction_time
+    )
+
+    assert note.is_interaction
+    assert note.interaction_date == interaction_time
+    assert note.content == "Met for coffee"
+    assert contact.last_contact == interaction_time
+    assert contact.contact_briefing_text == "Met for coffee"
+
+    # Record interaction without content
+    new_time = datetime.now(UTC)
+    note = contact.add_interaction(interaction_date=new_time)
+
+    assert note.is_interaction
+    assert note.interaction_date == new_time
+    assert note.content is None
+    assert contact.last_contact == new_time
+    assert contact.contact_briefing_text == "Met for coffee"  # Shouldn't change without content
+
+
+def test_contact_tag_interaction_updates():
+    """Test that contact tags update when recording interactions.
+
+    When recording an interaction:
+    1. All contact tags should update their last_contact
+    2. This should work with or without note content
+    """
+    contact = Contact(name="Test Contact")
+    contact.add_tag("#test")
+    contact.add_tag("#monthly")
+
+    # Record interaction
+    interaction_time = datetime.now(UTC)
+    contact.add_interaction(
+        content="Test interaction",
+        interaction_date=interaction_time
+    )
+
+    # Verify all tags updated
+    for tag in contact.tags:
+        assert tag.last_contact == interaction_time
+
+
+def test_invalid_interaction_recording():
+    """Test validation when recording interactions.
+
+    Validation rules:
+    1. interaction_date is required
+    2. interaction_date cannot be in future
+    3. content is optional but must not be empty if provided
+    """
+    contact = Contact(name="Test Contact")
+
+    # Test missing date
+    with pytest.raises(ValueError, match="Interaction notes require a date"):
+        contact.add_interaction()
+
+    # Test future date
+    future_time = datetime.now(UTC).replace(year=9999)
+    with pytest.raises(ValueError, match="Interaction date cannot be in the future"):
+        contact.add_interaction(interaction_date=future_time)
+
+    # Test empty content (should be allowed for interactions)
+    interaction_time = datetime.now(UTC)
+    note = contact.add_interaction(interaction_date=interaction_time)
+    assert note.content is None
