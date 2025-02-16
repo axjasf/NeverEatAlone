@@ -2,7 +2,6 @@
 
 from typing import List, Optional, Dict, Set, TypedDict
 from uuid import UUID
-from datetime import UTC
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -162,12 +161,13 @@ class SQLAlchemyTemplateRepository:
             return None
 
         # Convert to domain model
+        # Note: created_at and updated_at are already in UTC from the ORM layer
         return Template(
             id=template_orm.id,
             version=template_orm.version,
             categories=self._from_json_dict(template_orm.categories),
-            created_at=template_orm.created_at.replace(tzinfo=UTC),
-            updated_at=template_orm.updated_at.replace(tzinfo=UTC),
+            created_at=template_orm.created_at,  # UTCDateTime ensures this is UTC-aware
+            updated_at=template_orm.updated_at,  # UTCDateTime ensures this is UTC-aware
             removed_fields=self._from_json_removed_fields(template_orm.removed_fields),
         )
 
@@ -191,12 +191,13 @@ class SQLAlchemyTemplateRepository:
             return None
 
         # Convert to domain model
+        # Note: created_at and updated_at are already in UTC from the ORM layer
         return Template(
             id=template_orm.id,
             version=template_orm.version,
             categories=self._from_json_dict(template_orm.categories),
-            created_at=template_orm.created_at.replace(tzinfo=UTC),
-            updated_at=template_orm.updated_at.replace(tzinfo=UTC),
+            created_at=template_orm.created_at,  # UTCDateTime ensures this is UTC-aware
+            updated_at=template_orm.updated_at,  # UTCDateTime ensures this is UTC-aware
             removed_fields=self._from_json_removed_fields(template_orm.removed_fields),
         )
 
@@ -218,20 +219,15 @@ class SQLAlchemyTemplateRepository:
         template_orms = self._session.execute(stmt).scalars().all()
 
         # Convert to domain models
-        templates: List[Template] = []
-
-        for template_orm in template_orms:
-            # Convert to domain model
-            template = Template(
-                id=template_orm.id,
-                version=template_orm.version,
-                categories=self._from_json_dict(template_orm.categories),
-                created_at=template_orm.created_at.replace(tzinfo=UTC),
-                updated_at=template_orm.updated_at.replace(tzinfo=UTC),
-                removed_fields=self._from_json_removed_fields(
-                    template_orm.removed_fields
-                ),
+        # Note: created_at and updated_at are already in UTC from the ORM layer
+        return [
+            Template(
+                id=orm.id,
+                version=orm.version,
+                categories=self._from_json_dict(orm.categories),
+                created_at=orm.created_at,  # UTCDateTime ensures this is UTC-aware
+                updated_at=orm.updated_at,  # UTCDateTime ensures this is UTC-aware
+                removed_fields=self._from_json_removed_fields(orm.removed_fields),
             )
-            templates.append(template)
-
-        return templates
+            for orm in template_orms
+        ]

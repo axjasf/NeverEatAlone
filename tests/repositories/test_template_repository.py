@@ -3,6 +3,7 @@
 from datetime import datetime, UTC
 from uuid import uuid4
 from sqlalchemy.orm import Session
+from zoneinfo import ZoneInfo
 from backend.app.models.domain.template_model import (
     Template,
     CategoryDefinition,
@@ -182,3 +183,68 @@ def test_template_version_tracking(db_session: Session) -> None:
     # Third version tracks the removed field
     assert "contact_info" in versions[2].removed_fields
     assert "email" in versions[2].removed_fields["contact_info"]
+
+
+def test_template_timezone_handling(db_session: Session) -> None:
+    """Test timezone handling in template repository.
+
+    The repository should:
+    1. Accept timezone-aware datetimes from different timezones
+    2. Store all datetimes in UTC
+    3. Return timezone-aware datetimes in UTC
+    4. Preserve the exact point in time during conversions
+    """
+    repository = SQLAlchemyTemplateRepository(db_session)
+
+    # Create template with different timezones for created_at and updated_at
+    tokyo_time = datetime.now(ZoneInfo("Asia/Tokyo"))
+    ny_time = datetime.now(ZoneInfo("America/New_York"))
+
+    template = Template(
+        id=uuid4(),
+        categories={
+            "test": CategoryDefinition(
+                name="test",
+                description="Test category",
+                fields={
+                    "field": FieldDefinition(
+                        name="field",
+                        type="string",
+                        description="Test field"
+                    )
+                }
+            )
+        },
+        version=1,
+        created_at=tokyo_time,
+        updated_at=ny_time
+    )
+
+    # Save the template
+    repository.save(template)
+
+    # Get the template back
+    retrieved = repository.get_by_id(template.id)
+    assert retrieved is not None
+
+    # Verify timezone handling
+    assert retrieved.created_at.tzinfo == UTC
+    assert retrieved.updated_at.tzinfo == UTC
+    assert retrieved.created_at == tokyo_time.astimezone(UTC)
+    assert retrieved.updated_at == ny_time.astimezone(UTC)
+
+    # Test timezone handling in get_version
+    version = repository.get_version(template.id, 1)
+    assert version is not None
+    assert version.created_at.tzinfo == UTC
+    assert version.updated_at.tzinfo == UTC
+    assert version.created_at == tokyo_time.astimezone(UTC)
+    assert version.updated_at == ny_time.astimezone(UTC)
+
+    # Test timezone handling in get_versions
+    versions = repository.get_versions(template.id)
+    assert len(versions) == 1
+    assert versions[0].created_at.tzinfo == UTC
+    assert versions[0].updated_at.tzinfo == UTC
+    assert versions[0].created_at == tokyo_time.astimezone(UTC)
+    assert versions[0].updated_at == ny_time.astimezone(UTC)

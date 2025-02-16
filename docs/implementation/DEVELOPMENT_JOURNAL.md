@@ -1,5 +1,5 @@
 # Development Journal
-Version: 2024.02.16-1
+Version: 2024.02.16-2
 
 ## Current Focus: Timezone Handling Implementation
 Last Updated: 2024-02-16
@@ -12,8 +12,13 @@ Last Updated: 2024-02-16
 
 Current decisions:
 - ✅ Template model inherits timezone handling correctly from BaseModel
-- ✅ All tests passing for timezone-aware functionality
-- Next: Move on to Contact model's last_contact field
+- ✅ All tests passing for timezone-aware functionality in domain layer
+- ✅ ORM layer has timezone handling via UTCDateTime type
+- ✅ Fixed SQLAlchemy session configuration for proper query handling
+- ✅ Repository layer handles timezone conversion correctly for Template BO
+- ✅ Completed vertical timezone implementation for Template BO (Domain→ORM→Repository)
+- 🔍 Insight: Implementing timezone handling vertically through each BO's layers (Model→ORM→Repository)
+- Next: Apply same pattern to Contact BO's last_contact field
 
 ### Notes of the current activities:
 - We need to update the following models that have datetime fields:
@@ -29,8 +34,17 @@ Current decisions:
     - Already has timezone validation for due_date and completion_date (good!)
   - Template Model:
     - ✅ created_at and updated_at fields inherit timezone handling from BaseModel
+    - ✅ ORM layer has timezone handling via UTCDateTime
+    - ✅ Repository layer correctly handles timezone conversion
+    - ✅ All tests passing including timezone-specific tests
+    - ✅ Architectural cohesion verified across all three layers
 
 ### Recent Progress ✅
+- Fixed SQLAlchemy session configuration:
+  - Removed incorrect query_cls configuration
+  - All 115 tests now passing
+  - Proper handling of timezone-aware datetime fields
+  - Maintained test isolation and transaction management
 - Implemented timezone handling in BaseModel:
   - All timestamps stored in UTC
   - Input timezone conversion to UTC
@@ -47,13 +61,14 @@ Current decisions:
 - Created SQLAlchemy repositories
 - Added comprehensive test suite
 
-### Technical Decisions 🤔
+### Technical Decisions 🔨
 - Using Python's datetime with UTC
 - Storing all times in UTC
 - Converting to local time in presentation layer
 - Validating timezone presence in models
 - Using SQLAlchemy for persistence
 - Following domain-driven design
+- Simplified SQLAlchemy session configuration for better maintainability
 
 ### Next Steps 📋
 1. Timezone Implementation
@@ -87,8 +102,15 @@ Current decisions:
 - Follow PEP 8 style guide
 - Use type hints everywhere
 - Document all public APIs
+- Consider documenting common SQLAlchemy warnings in test suite
 
 ## History
+### 2024.02.16-2
+- Fixed SQLAlchemy session configuration
+- All tests passing (115/115)
+- Improved timezone handling in ORM layer
+- Updated test documentation
+
 ### 2024.02.16-1
 - Started timezone handling implementation
 - Updated focus from Tag implementation
