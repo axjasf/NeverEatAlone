@@ -13,7 +13,14 @@ class Statement(BaseModel):
     """A single statement within a note.
 
     Statements allow breaking down notes into smaller, taggable pieces
-    for more granular organization and tracking.
+    for more granular organization and tracking. The order of statements
+    within a note is maintained through their position in the note's
+    statements list, providing a natural and intuitive representation
+    of how statements appear in a note.
+
+    While the persistence layer (ORM) uses a sequence_number field to maintain
+    this order in the database, the domain model intentionally abstracts this
+    implementation detail away to maintain a clean separation of concerns.
     """
 
     def __init__(self, content: str) -> None:

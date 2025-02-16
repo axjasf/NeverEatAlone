@@ -58,6 +58,8 @@ The model layer implements a rich domain model with clean separation between dom
 - Content validation
 - Tag management methods
 
+The order of statements within a note is maintained through their position in the note's statements list in the domain model, providing a natural and intuitive representation. The ORM layer handles the persistence of this order using a sequence_number field, but this implementation detail is intentionally abstracted away from the domain model to maintain a clean separation of concerns.
+
 #### Tag
 - Represents a categorization or reminder
 - Properties:
@@ -87,7 +89,9 @@ The model layer implements a rich domain model with clean separation between dom
 - SQLAlchemy model for statements
 - Many-to-one relationship with notes
 - Many-to-many relationship with tags
-- Sequence number for ordering
+- Sequence number for ordering in persistence layer
+- Maintains statement order through explicit sequence_number field
+- Order is automatically managed by the repository layer during save/load operations
 
 #### TagORM
 - SQLAlchemy model for tags
@@ -108,10 +112,10 @@ The model layer implements a rich domain model with clean separation between dom
 #### NoteRepository
 - Interface for note persistence operations
 - Methods:
-  - `save(note: Note) -> Note`
-  - `find_by_id(note_id: UUID) -> Optional[Note]`
-  - `find_by_contact(contact_id: UUID) -> List[Note]`
-  - `find_by_tag(tag_name: str) -> List[Note]`
+  - `save(note: Note) -> Note`  # Handles statement ordering during persistence
+  - `find_by_id(note_id: UUID) -> Optional[Note]`  # Returns statements in correct order
+  - `find_by_contact(contact_id: UUID) -> List[Note]`  # Returns statements in correct order
+  - `find_by_tag(tag_name: str) -> List[Note]`  # Returns statements in correct order
   - `delete(note: Note) -> None`
 
 #### TagRepository
