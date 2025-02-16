@@ -131,6 +131,22 @@
     {
       "filePath": "backend/app",
       "group": "Default"
+    },
+    {
+      "filePath": "docs/development/guides/PROJECT_MANAGEMENT.md",
+      "group": "Default"
+    },
+    {
+      "filePath": "docs/implementation/DEVELOPMENT_JOURNAL.md",
+      "group": "Default"
+    },
+    {
+      "filePath": "docs/implementation/BACKLOG.md",
+      "group": "Default"
+    },
+    {
+      "filePath": "docs/development/architecture/model_layer_design.md",
+      "group": "Default"
     }
   ],
   "python.testing.pytestArgs": [
