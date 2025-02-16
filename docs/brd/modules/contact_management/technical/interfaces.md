@@ -15,7 +15,7 @@ Authorization: Bearer {token}
     "first_name": "string",
     "sub_information": {},
     "hashtags": ["string"],
-    "contact_briefing_text": "string"
+    "briefing_text": "string"
 }
 
 Response 201:
@@ -25,7 +25,8 @@ Response 201:
     "first_name": "string",
     "sub_information": {},
     "hashtags": ["string"],
-    "contact_briefing_text": "string",
+    "briefing_text": "string",
+    "last_interaction_at": "datetime?",
     "created_at": "datetime",
     "updated_at": "datetime"
 }
@@ -84,7 +85,125 @@ Authorization: Bearer {token}
 Response 204
 ```
 
-### 1.2 Tag Management
+### 1.2 Note Management
+
+#### Create Note
+```http
+POST /api/notes
+Content-Type: application/json
+Authorization: Bearer {token}
+
+{
+    "contact_id": "uuid",
+    "content": "string",
+    "is_interaction": "boolean",
+    "interaction_date": "datetime?",
+    "tags": ["string"]
+}
+
+Response 201:
+{
+    "id": "uuid",
+    "contact_id": "uuid",
+    "content": "string",
+    "is_interaction": "boolean",
+    "interaction_date": "datetime?",
+    "tags": ["string"],
+    "created_at": "datetime"
+}
+```
+
+#### Update Note
+```http
+PUT /api/notes/{id}
+Content-Type: application/json
+Authorization: Bearer {token}
+
+{
+    "content": "string",
+    "is_interaction": "boolean",
+    "interaction_date": "datetime?",
+    "tags": ["string"]
+}
+
+Response 200:
+{
+    "id": "uuid",
+    "contact_id": "uuid",
+    "content": "string",
+    "is_interaction": "boolean",
+    "interaction_date": "datetime?",
+    "tags": ["string"],
+    "created_at": "datetime",
+    "updated_at": "datetime"
+}
+```
+
+#### Search Notes
+```http
+GET /api/notes/search
+Authorization: Bearer {token}
+
+Query Parameters:
+- contact_id: "uuid?"
+- is_interaction: "boolean?"
+- from_date: "datetime?"
+- to_date: "datetime?"
+- tags: "string[]?"
+- page: "number?"
+- limit: "number?"
+
+Response 200:
+{
+    "items": [
+        {
+            "id": "uuid",
+            "contact_id": "uuid",
+            "content": "string",
+            "is_interaction": "boolean",
+            "interaction_date": "datetime?",
+            "tags": ["string"],
+            "created_at": "datetime"
+        }
+    ],
+    "total_count": "number",
+    "page": "number",
+    "limit": "number"
+}
+```
+
+#### Get Interaction History
+```http
+GET /api/notes/interactions
+Authorization: Bearer {token}
+
+Query Parameters:
+- contact_id: "uuid?"
+- tags: "string[]?"
+- from_date: "datetime?"
+- to_date: "datetime?"
+- page: "number?"
+- limit: "number?"
+
+Response 200:
+{
+    "items": [
+        {
+            "id": "uuid",
+            "contact_id": "uuid",
+            "content": "string",
+            "interaction_date": "datetime",
+            "tags": ["string"],
+            "created_at": "datetime"
+        }
+    ],
+    "total_count": "number",
+    "page": "number",
+    "limit": "number"
+}
+```
+
+### 1.3 Tag Management
 
 #### List Tags
 ```http
@@ -98,6 +217,7 @@ Response 200:
             "name": "string",
             "frequency_days": "number?",
             "entity_type": "string",
+            "last_contact": "datetime?",
             "created_at": "datetime"
         }
     ],
@@ -148,7 +268,7 @@ Response 200:
 }
 ```
 
-### 1.3 Template Management
+### 1.4 Template Management
 
 #### Get Template
 ```http
