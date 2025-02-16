@@ -98,6 +98,7 @@ Impact: This change simplifies the data model, improves data consistency, and pr
 
 - Add is_interaction and interaction_date columns
 - Add constraints for content/interaction validation:
+
   ```sql
   CONSTRAINT valid_interaction CHECK (
       (is_interaction = FALSE AND interaction_date IS NULL) OR
@@ -108,6 +109,7 @@ Impact: This change simplifies the data model, improves data consistency, and pr
       (is_interaction = FALSE AND content IS NOT NULL)
   )
   ```
+
 - Update relationships with note_tags table
 
 ### 2.3 Repository Layer
@@ -163,6 +165,7 @@ Impact: This change simplifies the data model, improves data consistency, and pr
 ### Phase 1: Note Model (Core of Interaction Tracking)
 
 1. Write Note Tests (RED)
+
    ```
    test_note_requires_either_content_or_interaction()
    test_interaction_note_requires_date()
@@ -171,6 +174,7 @@ Impact: This change simplifies the data model, improves data consistency, and pr
    test_interaction_note_updates_tag_timestamps()
    test_note_validation_edge_cases()
    ```
+
    Commit: "test: add Note model interaction tracking tests"
 
 2. Implement Note Changes (GREEN)
@@ -186,12 +190,14 @@ Impact: This change simplifies the data model, improves data consistency, and pr
 ### Phase 2: Tag Model (Frequency and Tracking)
 
 1. Write Tag Tests (RED)
+
    ```
    test_tag_frequency_validation()
    test_tag_last_contact_updates()
    test_tag_next_contact_calculation()
    test_tag_staleness_check()
    ```
+
    Commit: "test: add Tag model frequency tracking tests"
 
 2. Implement Tag Changes (GREEN)
@@ -206,11 +212,13 @@ Impact: This change simplifies the data model, improves data consistency, and pr
 ### Phase 3: Contact Model (Last Contact Tracking)
 
 1. Write Contact Tests (RED)
+
    ```
    test_contact_last_contact_updates()
    test_contact_briefing_text_validation()
    test_contact_interaction_history()
    ```
+
    Commit: "test: add Contact model last contact tracking tests"
 
 2. Implement Contact Changes (GREEN)
@@ -227,11 +235,13 @@ Impact: This change simplifies the data model, improves data consistency, and pr
 Only after all individual models are tested and working:
 
 1. Write Integration Tests (RED)
+
    ```
    test_complete_interaction_flow()
    test_frequency_based_tracking()
    test_contact_history_tracking()
    ```
+
    Commit: "test: add interaction tracking integration tests"
 
 2. Fix Integration Issues (GREEN)
@@ -243,6 +253,7 @@ Only after all individual models are tested and working:
    Commit: "refactor: clean up interaction tracking implementation"
 
 Each phase follows:
+
 1. Write failing tests first
 2. Show tests failing
 3. Implement minimum code to pass
