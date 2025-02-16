@@ -8,6 +8,7 @@ from backend.app.models.domain.template_model import (
     CategoryDefinition,
     Template,
 )
+from zoneinfo import ZoneInfo
 
 
 def test_field_definition_creation():
@@ -359,3 +360,71 @@ def test_template_evolution_change_field_type():
         new_template.validate_data(
             {"contact_info": {"birthday": "Jan 1, 1990"}}  # Invalid format
         )
+
+
+def test_template_timezone_handling():
+    """Test timezone handling in Template model.
+
+    Template should:
+    1. Require timezone-aware datetimes for created_at and updated_at
+    2. Preserve timezone information during template evolution
+    3. Convert all datetimes to UTC internally
+    """
+    template_id = uuid4()
+    ny_time = datetime.now(ZoneInfo("America/New_York"))
+
+    # Test creation with timezone-aware datetime
+    template = Template(
+        id=template_id,
+        categories={
+            "test": CategoryDefinition(
+                name="test",
+                description="Test category",
+                fields={
+                    "field": FieldDefinition(
+                        name="field",
+                        type="string",
+                        description="Test field"
+                    )
+                }
+            )
+        },
+        version=1,
+        created_at=ny_time,
+        updated_at=ny_time
+    )
+
+    # Verify datetimes are stored in UTC
+    assert template.created_at.tzinfo == UTC
+    assert template.updated_at.tzinfo == UTC
+    assert template.created_at == ny_time.astimezone(UTC)
+    assert template.updated_at == ny_time.astimezone(UTC)
+
+    # Test rejection of naive datetime
+    naive_time = datetime.now()
+    with pytest.raises(ValueError, match="must be timezone-aware"):
+        Template(
+            id=template_id,
+            categories={},
+            version=1,
+            created_at=naive_time,
+            updated_at=naive_time
+        )
+
+    # Test timezone handling during evolution
+    evolved = template.evolve(
+        new_fields={
+            "test": {
+                "new_field": FieldDefinition(
+                    name="new_field",
+                    type="string",
+                    description="New test field"
+                )
+            }
+        }
+    )
+
+    # Verify evolved template preserves timezone awareness
+    assert evolved.created_at.tzinfo == UTC
+    assert evolved.updated_at.tzinfo == UTC
+    assert evolved.version == template.version + 1

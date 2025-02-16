@@ -70,6 +70,24 @@ class Template(BaseModel):
                 )
         return v
 
+    @field_validator("created_at", "updated_at")
+    @classmethod
+    def validate_timezone(cls, v: datetime) -> datetime:
+        """Ensure datetime fields are timezone-aware and convert to UTC.
+
+        Args:
+            v: The datetime value to validate
+
+        Returns:
+            The datetime in UTC
+
+        Raises:
+            ValueError: If the datetime has no timezone
+        """
+        if v.tzinfo is None:
+            raise ValueError("Datetime must be timezone-aware")
+        return v.astimezone(UTC)
+
     def evolve(
         self,
         new_fields: Optional[Dict[str, Dict[str, FieldDefinition]]] = None,

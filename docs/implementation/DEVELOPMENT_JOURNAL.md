@@ -10,6 +10,26 @@ Last Updated: 2024-02-16
 - Updating repositories to handle timezone conversion
 - Adding timezone validation to models
 
+Current decisions:
+- ✅ Template model inherits timezone handling correctly from BaseModel
+- ✅ All tests passing for timezone-aware functionality
+- Next: Move on to Contact model's last_contact field
+
+### Notes of the current activities:
+- We need to update the following models that have datetime fields:
+  - Contact Model:
+    - last_contact field needs timezone validation
+  - Tag Model:
+    - last_contact field already has timezone handling (good!)
+  - Note Model:
+    - Already inherits timezone handling from BaseModel (good!)
+  - Statement Model:
+    - Already inherits timezone handling from BaseModel (good!)
+  - Reminder Model:
+    - Already has timezone validation for due_date and completion_date (good!)
+  - Template Model:
+    - ✅ created_at and updated_at fields inherit timezone handling from BaseModel
+
 ### Recent Progress ✅
 - Implemented timezone handling in BaseModel:
   - All timestamps stored in UTC
@@ -39,6 +59,8 @@ Last Updated: 2024-02-16
 1. Timezone Implementation
    - ✅ Create TimezoneAwareBase model
    - [ ] Update existing models
+     - ✅ Template model (inherits from BaseModel)
+     - [ ] Contact model (last_contact field)
    - ✅ Add timezone tests
    - [ ] Update repositories
 
