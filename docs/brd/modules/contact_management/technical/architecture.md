@@ -9,10 +9,13 @@ graph TD
     A --> C[Data Storage]
     A --> D[Search Engine]
     A --> E[Integration Layer]
-    B --> F[Template Repository]
-    C --> G[SQLite Database]
-    D --> H[Search Index]
-    E --> I[External Services]
+    A --> F[Interaction Tracking]
+    B --> G[Template Repository]
+    C --> H[SQLite Database]
+    D --> I[Search Index]
+    E --> J[External Services]
+    F --> K[Contact Tracking]
+    F --> L[Topic Tracking]
 ```
 
 ### 1.2 Key Components
@@ -22,6 +25,7 @@ graph TD
    - GraphQL interface
    - WebSocket notifications
    - Authentication middleware
+   - Interaction validation
 
 2. **Template Engine**
    - Template validation
@@ -38,8 +42,8 @@ graph TD
 4. **Search Engine**
    - Full-text search
    - Tag-based search
-   - Fuzzy matching
-   - Result ranking
+   - Interaction history search
+   - Contact staleness search
 
 5. **Integration Layer**
    - Service adapters
@@ -47,37 +51,59 @@ graph TD
    - Data transformers
    - Event system
 
+6. **Interaction Tracking**
+   - Two-level tracking:
+     - Contact level
+     - Topic level (tags)
+   - Frequency monitoring
+   - Staleness calculation
+   - Interaction validation
+
 ## 2. Data Architecture
 
 ### 2.1 Core Entities
 ```mermaid
 erDiagram
     Contact ||--o{ Note : has
-    Contact ||--o{ Tag : has
-    Contact ||--o{ Reminder : has
-    Tag ||--o{ Reminder : suggests
-    Note ||--o{ Statement : contains
-    Statement ||--o{ SuggestedUpdate : generates
-    Statement ||--o{ Tag : has
-    Note ||--o{ Tag : has
+    Contact ||--o{ ContactTag : has
+    Note ||--o{ NoteTag : has
+    ContactTag }|--o{ NoteTag : updates
 ```
 
 ### 2.2 Data Flow
+
+#### 2.2.1 Interaction Recording Flow
 ```mermaid
 sequenceDiagram
     participant U as User
     participant A as API
-    participant T as Template Engine
+    participant V as Validator
+    participant T as Tracking
     participant D as Database
-    participant S as Search Engine
 
-    U->>A: Create/Update Contact
-    A->>T: Validate Template
-    T-->>D: Store Contact
-    D-->>S: Update Index
-    A->>D: Update Tags
-    D->>A: Return Updated State
-    A->>U: Return Result
+    U->>A: Record Interaction
+    A->>V: Validate Interaction
+    V-->>A: Validation Result
+    A->>T: Process Interaction
+    T->>D: Update Contact Tracking
+    T->>D: Update Topic Tracking
+    D-->>A: Confirmation
+    A->>U: Response
+```
+
+#### 2.2.2 Contact Update Flow
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant A as API
+    participant T as Tracking
+    participant D as Database
+
+    U->>A: Update Contact
+    A->>T: Check Frequencies
+    T->>D: Update Tracking
+    D-->>A: Confirmation
+    A->>U: Response
 ```
 
 ## 3. Implementation Details
@@ -88,23 +114,36 @@ class Contact(BaseModel):
     id: UUID
     name: str
     first_name: Optional[str]
-    sub_information: Dict[str, Any]  # Template-validated JSON
-    hashtags: List[str]  # Normalized, lowercase tags
-    briefing_text: Optional[str]
+    sub_information: Dict[str, Any]
+    tags: List[ContactTag]
+    last_interaction_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime
 ```
 
-### 3.2 Tag Model
+### 3.2 Note Model
 ```python
-class Tag(BaseModel):
-    name: str  # Normalized, lowercase
-    frequency_days: Optional[int]  # Optional contact frequency
-    entity_type: str  # 'contact', 'note', or 'statement'
+class Note(BaseModel):
+    id: UUID
+    contact_id: UUID
+    content: Optional[str]
+    is_interaction: bool
+    interaction_date: Optional[datetime]
+    tags: List[str]
     created_at: datetime
 ```
 
-### 3.3 Template Model
+### 3.3 ContactTag Model
+```python
+class ContactTag(BaseModel):
+    contact_id: UUID
+    name: str
+    frequency_days: Optional[int]
+    last_contact: Optional[datetime]
+    created_at: datetime
+```
+
+### 3.4 Template Model
 ```python
 class Template(BaseModel):
     categories: Dict[str, CategoryDefinition]
@@ -112,7 +151,7 @@ class Template(BaseModel):
     version: int  # For tracking template evolution
 ```
 
-### 3.4 Field Definition
+### 3.5 Field Definition
 ```python
 class FieldDefinition(BaseModel):
     type: str  # string, number, date, boolean
@@ -133,9 +172,15 @@ PUT    /api/contacts/{id}         # Update contact
 DELETE /api/contacts/{id}         # Delete contact
 GET    /api/contacts/search       # Search contacts
 
+# Note Management
+POST   /api/notes                 # Create note
+PUT    /api/notes/{id}            # Update note
+GET    /api/notes/search          # Search notes
+GET    /api/notes/interactions    # Get interaction notes
+
 # Tag Management
 GET    /api/tags                  # List all tags
-PUT    /api/tags/{name}          # Update tag (e.g., enable frequency)
+PUT    /api/tags/{name}          # Update tag
 GET    /api/tags/{name}/contacts # List contacts with tag
 
 # Template Management
@@ -144,4 +189,33 @@ PUT    /api/template             # Update template with version
 ```
 
 ### 4.2 GraphQL Schema
-```
+```graphql
+type Contact {
+    id: ID!
+    name: String!
+    firstName: String
+    subInformation: JSON
+    hashtags: [String!]
+    briefingText: String
+    lastInteractionAt: DateTime
+    createdAt: DateTime!
+    updatedAt: DateTime!
+}
+
+type Note {
+    id: ID!
+    contactId: ID!
+    content: String!
+    isInteraction: Boolean!
+    interactionDate: DateTime
+    tags: [String!]
+    createdAt: DateTime!
+}
+
+type Query {
+    contact(id: ID!): Contact
+    contactNotes(
+        contactId: ID!
+        isInteraction: Boolean
+    ): [Note!]!
+}

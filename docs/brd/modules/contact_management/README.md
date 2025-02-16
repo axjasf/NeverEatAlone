@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Contact Management module provides a flexible system for storing and organizing contact information. It combines structured data fields with dynamic information storage and AI-powered features for note-taking and summarization.
+The Contact Management module provides a flexible system for storing and organizing contact information, with a focus on tracking interactions at both general and topic-specific levels.
 
 ## Core Features
 
@@ -10,7 +10,9 @@ The Contact Management module provides a flexible system for storing and organiz
    - Required name field
    - Optional first name
    - Optional contact briefing text (with AI-assisted generation)
-   - Last met timestamp
+   - Last interaction tracking at two levels:
+     - General last contact date for any interaction
+     - Tag-specific last contact dates for topic-based tracking
    - Creation and last update timestamps
 
 2. **Flexible Information Storage**
@@ -19,23 +21,34 @@ The Contact Management module provides a flexible system for storing and organiz
    - Support for nested structures
    - Example fields: lived_in, preferences, relationships
 
-3. **Notes and Statements**
-   - Voice-to-text note creation
-   - Automatic statement extraction
-   - AI-suggested updates to contact information
-   - Historical interaction tracking
+3. **Contact Tracking**
+   - Two types of tracking:
+     - General: When was the last interaction with this contact?
+     - Tag-specific: When did we last discuss specific topics?
+   - Support for contentless interaction records
+   - Frequency requirements per contact-tag combination
+   - Example: "Talk about hobbies monthly with Grandma"
 
-4. **Organization Features**
+4. **Notes and Interactions**
+   - Two types of notes:
+     - Content notes: Actual information about the contact
+     - Interaction records: Just tracking that contact happened
+   - Tag-based organization
+   - Automatic contact tracking updates
+   - Support for topic-based interaction history
+
+5. **Organization Features**
    - Hashtag-based categorization
-   - Basic search functionality
-   - Ring-based organization (e.g., "monthly calls")
-   - Last met tracking and filtering
+   - Contact-tag frequency settings
+   - Staleness tracking per topic
+   - Filtering by interaction history
+   - Topic-based contact grouping
 
-5. **AI Integration**
-   - Voice-to-text conversion
-   - Statement extraction from notes
-   - Contact information suggestions
+6. **AI Integration**
+   - Smart tag suggestions
    - Contact briefing generation
+   - Interaction pattern analysis
+   - Frequency recommendation
 
 ## Documentation Structure
 
@@ -53,22 +66,22 @@ The Contact Management module provides a flexible system for storing and organiz
 
 1. **Contact Creation**
    ```
-   Create Contact → Add Basic Info → Define JSON Fields → Add Hashtags
+   Create Contact → Add Basic Info → Define JSON Fields → Add Tags with Frequencies
    ```
 
-2. **Note Taking**
+2. **Recording Interactions**
    ```
-   Voice Note → Text → Statements → AI Suggestions → Contact Updates
+   Select Contact → Record Interaction (with/without notes) → Add Topic Tags → Update Tracking
    ```
 
 3. **Information Organization**
    ```
-   Add Hashtags → Assign to Rings → Set Meeting Frequency
+   Add Tags → Set Topic Frequencies → Track Interactions → Monitor Staleness
    ```
 
 4. **Contact Updates**
    ```
-   Record Meeting → Update last_met → AI Process Notes → Update Fields
+   Record Interaction → Update Tracking → Optional Notes → Update Fields
    ```
 
 ## Implementation Notes
