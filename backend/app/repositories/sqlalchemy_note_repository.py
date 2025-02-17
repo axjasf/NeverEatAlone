@@ -122,7 +122,7 @@ class SQLAlchemyNoteRepository(NoteRepository):
             NoteORM.contact_id == contact_id,
             NoteORM.is_interaction == True  # noqa: E712
         ).order_by(NoteORM.interaction_date.desc())
-        notes_orm = self.session.execute(stmt).scalars().all()
+        notes_orm = self.session.execute(stmt).scalars().unique().all()
         return [self._to_domain(note) for note in notes_orm]
 
     def find_interactions_by_tag(self, tag_name: str) -> List[Note]:
@@ -138,7 +138,7 @@ class SQLAlchemyNoteRepository(NoteRepository):
             NoteORM.is_interaction == True,  # noqa: E712
             NoteORM.tags.any(name=tag_name.lower())
         ).order_by(NoteORM.interaction_date.desc())
-        notes_orm = self.session.execute(stmt).scalars().all()
+        notes_orm = self.session.execute(stmt).scalars().unique().all()
         return [self._to_domain(note) for note in notes_orm]
 
     def delete(self, note: Note) -> None:
