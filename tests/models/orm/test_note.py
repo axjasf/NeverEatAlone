@@ -6,7 +6,6 @@ from sqlalchemy.exc import IntegrityError
 from backend.app.models.orm.contact_orm import ContactORM
 from backend.app.models.orm.note_orm import NoteORM
 from backend.app.models.orm.statement_orm import StatementORM
-from backend.app.models.domain.tag_model import EntityType
 
 
 def test_note_creation_with_required_fields(db_session: Session) -> None:
@@ -168,3 +167,155 @@ def test_statement_tagging(db_session: Session) -> None:
     # Verify tags
     assert len(statement.tags) == 2
     assert sorted(t.name for t in statement.tags) == ["#meeting", "#project"]
+
+
+def test_note_timezone_handling(db_session: Session) -> None:
+    """Test timezone handling in notes.
+
+    Verify:
+    1. Timezone-aware interaction dates are stored correctly
+    2. Dates are stored in UTC
+    3. Different input timezones are handled
+    4. Timezone information is preserved
+    """
+    from datetime import datetime, UTC
+    from zoneinfo import ZoneInfo
+
+    # Create a contact
+    contact = ContactORM(name="John Doe")
+    db_session.add(contact)
+    db_session.commit()
+
+    # Test with different input timezones
+    sydney_tz = ZoneInfo("Australia/Sydney")
+    ny_tz = ZoneInfo("America/New_York")
+
+    # Create a reference time in Sydney
+    sydney_time = datetime.now(sydney_tz).replace(microsecond=0)
+    expected_utc = sydney_time.astimezone(UTC)
+
+    # Create note with Sydney timezone
+    note_sydney = NoteORM(
+        contact_id=contact.id,
+        content="Meeting in Sydney",
+        is_interaction=True,
+        interaction_date=sydney_time
+    )
+    db_session.add(note_sydney)
+    db_session.commit()
+    db_session.refresh(note_sydney)
+
+    # Verify UTC storage
+    assert note_sydney.interaction_date is not None
+    assert note_sydney.interaction_date.tzinfo == UTC
+    assert note_sydney.interaction_date == expected_utc
+
+    # Create same moment in NY timezone
+    ny_time = sydney_time.astimezone(ny_tz)
+    note_ny = NoteORM(
+        contact_id=contact.id,
+        content="Same meeting from NY perspective",
+        is_interaction=True,
+        interaction_date=ny_time
+    )
+    db_session.add(note_ny)
+    db_session.commit()
+    db_session.refresh(note_ny)
+
+    # Verify both notes represent the same moment
+    assert note_ny.interaction_date is not None
+    assert note_ny.interaction_date == note_sydney.interaction_date
+
+
+def test_note_timezone_edge_cases(db_session: Session) -> None:
+    """Test timezone edge cases in notes.
+
+    Verify:
+    1. Dates near UTC day boundary
+    2. Dates in different DST periods
+    3. Dates with fractional hours offset
+    """
+    from datetime import datetime, UTC
+    from zoneinfo import ZoneInfo
+
+    # Create a contact
+    contact = ContactORM(name="John Doe")
+    db_session.add(contact)
+    db_session.commit()
+
+    # Test date near UTC day boundary with fractional offset
+    india_tz = ZoneInfo("Asia/Kolkata")  # UTC+5:30
+    india_time = datetime.now(india_tz).replace(
+        hour=1, minute=0, second=0, microsecond=0
+    )
+    expected_utc = india_time.astimezone(UTC)
+
+    note_india = NoteORM(
+        contact_id=contact.id,
+        content="Early morning meeting in India",
+        is_interaction=True,
+        interaction_date=india_time
+    )
+    db_session.add(note_india)
+    db_session.commit()
+    db_session.refresh(note_india)
+
+    # Verify UTC conversion
+    assert note_india.interaction_date is not None
+    assert note_india.interaction_date.tzinfo == UTC
+    assert note_india.interaction_date == expected_utc
+
+    # Test DST handling
+    paris_tz = ZoneInfo("Europe/Paris")
+    # Create a time during DST
+    paris_dst_time = datetime(2024, 7, 1, 14, 0, tzinfo=paris_tz)
+    expected_utc = paris_dst_time.astimezone(UTC)
+
+    note_paris = NoteORM(
+        contact_id=contact.id,
+        content="Summer meeting in Paris",
+        is_interaction=True,
+        interaction_date=paris_dst_time
+    )
+    db_session.add(note_paris)
+    db_session.commit()
+    db_session.refresh(note_paris)
+
+    # Verify DST handling
+    assert note_paris.interaction_date is not None
+    assert note_paris.interaction_date.tzinfo == UTC
+    assert note_paris.interaction_date == expected_utc
+
+
+def test_note_created_at_timezone(db_session: Session) -> None:
+    """Test timezone handling for created_at and updated_at fields.
+
+    Verify:
+    1. created_at is in UTC
+    2. updated_at is in UTC
+    3. Both fields are timezone-aware
+    """
+    from datetime import datetime, UTC
+
+    # Create a contact
+    contact = ContactORM(name="John Doe")
+    db_session.add(contact)
+    db_session.commit()
+
+    # Create note
+    note = NoteORM(
+        contact_id=contact.id,
+        content="Test note"
+    )
+    db_session.add(note)
+    db_session.commit()
+    db_session.refresh(note)
+
+    # Verify created_at
+    assert note.created_at.tzinfo == UTC
+    assert note.created_at <= datetime.now(UTC)
+
+    # Verify updated_at
+    assert note.updated_at.tzinfo == UTC
+    assert note.updated_at <= datetime.now(UTC)
+    assert note.updated_at >= note.created_at
