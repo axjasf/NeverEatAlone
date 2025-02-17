@@ -196,7 +196,7 @@ jobs:
             --cov=app \
             --cov-report=xml:coverage.xml \
             --cov-report=term-missing \
-            --junitxml=pytest-report.xml \
+            --junitxml=test-results.xml \
             -v \
             --reruns 2 \
             --reruns-delay 1 \
@@ -210,7 +210,7 @@ jobs:
         if: always()
         run: |
           echo "::group::Test Summary"
-          if [ -f pytest-report.xml ]; then
+          if [ -f test-results.xml ]; then
             echo "Test Results Summary:"
             python -m pytest --report-log=test-report.log || true
             cat test-report.log
@@ -229,7 +229,7 @@ jobs:
           name: backend-test-results
           path: |
             ${{ env.PYTHON_ROOT }}/coverage.xml
-            ${{ env.PYTHON_ROOT }}/pytest-report.xml
+            ${{ env.PYTHON_ROOT }}/test-results.xml
             ${{ env.PYTHON_ROOT }}/.coverage
             ${{ env.PYTHON_ROOT }}/logs/
           retention-days: 14
@@ -488,8 +488,8 @@ jobs:
             -Dsonar.tests=tests,frontend/src
             -Dsonar.test.inclusions=frontend/src/**/*.test.tsx,frontend/src/**/*.test.ts,tests/**/*_test.py
             -Dsonar.test.exclusions=frontend/src/setupTests.ts
-            -Dsonar.python.coverage.reportPaths=coverage.xml
-            -Dsonar.python.xunit.reportPath=test-results.xml
+            -Dsonar.python.coverage.reportPaths=backend/coverage.xml
+            -Dsonar.python.xunit.reportPath=backend/test-results.xml
             -Dsonar.javascript.lcov.reportPaths=frontend/coverage/lcov.info
             -Dsonar.coverage.exclusions=frontend/src/**/*.test.tsx,frontend/src/**/*.test.ts,tests/**/*_test.py
             -Dsonar.cpd.exclusions=frontend/src/**/*.test.tsx,frontend/src/**/*.test.ts
