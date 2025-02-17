@@ -184,30 +184,28 @@ jobs:
         env:
           COVERAGE_FAIL_UNDER: ${{ env.COVERAGE_THRESHOLD }}
           PYTEST_ADDOPTS: ${{ env.PYTEST_ADDOPTS }} ${{ env.DEBUG && '-vv --capture=no' || '' }}
+        working-directory: ${{ env.PYTHON_ROOT }}
         run: |
           echo "::group::Running pytest with coverage"
-          cd ${{ env.PYTHON_ROOT }}
-
           echo "Environment: ${{ env.ENVIRONMENT }}"
           echo "Coverage threshold: ${{ env.COVERAGE_THRESHOLD }}%"
 
           # Run tests with retries for potentially flaky tests
           python -m pytest \
             --cov=app \
-            --cov-report=xml:coverage.xml \
+            --cov-report=xml:../coverage.xml \
             --cov-report=term-missing \
-            --junitxml=test-results.xml \
+            --junitxml=../test-results.xml \
             -v \
-            --reruns 2 \
-            --reruns-delay 1 \
-            ../tests || (
+            tests || {
               echo "::error::Tests failed. Check the logs for details."
               exit 1
-            )
+            }
           echo "::endgroup::"
 
       - name: Generate test summary
         if: always()
+        working-directory: ${{ github.workspace }}
         run: |
           echo "::group::Test Summary"
           if [ -f test-results.xml ]; then
@@ -228,10 +226,10 @@ jobs:
         with:
           name: backend-test-results
           path: |
-            ${{ env.PYTHON_ROOT }}/coverage.xml
-            ${{ env.PYTHON_ROOT }}/test-results.xml
-            ${{ env.PYTHON_ROOT }}/.coverage
-            ${{ env.PYTHON_ROOT }}/logs/
+            coverage.xml
+            test-results.xml
+            .coverage
+            logs/
           retention-days: 14
 
   frontend-lint:
@@ -359,6 +357,7 @@ jobs:
 
       - name: Generate test summary
         if: always()
+        working-directory: ${{ env.NODE_ROOT }}
         run: |
           echo "::group::Test Summary"
           if [ -d "coverage" ]; then
@@ -488,8 +487,8 @@ jobs:
             -Dsonar.tests=tests,frontend/src
             -Dsonar.test.inclusions=frontend/src/**/*.test.tsx,frontend/src/**/*.test.ts,tests/**/*_test.py
             -Dsonar.test.exclusions=frontend/src/setupTests.ts
-            -Dsonar.python.coverage.reportPaths=backend/coverage.xml
-            -Dsonar.python.xunit.reportPath=backend/test-results.xml
+            -Dsonar.python.coverage.reportPaths=coverage.xml
+            -Dsonar.python.xunit.reportPath=test-results.xml
             -Dsonar.javascript.lcov.reportPaths=frontend/coverage/lcov.info
             -Dsonar.coverage.exclusions=frontend/src/**/*.test.tsx,frontend/src/**/*.test.ts,tests/**/*_test.py
             -Dsonar.cpd.exclusions=frontend/src/**/*.test.tsx,frontend/src/**/*.test.ts
