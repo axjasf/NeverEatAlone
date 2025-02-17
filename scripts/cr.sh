@@ -1,11 +1,55 @@
 #!/bin/bash
 
+# Constants for directory structure
+CR_BASE_DIR="docs/implementation/changes"
+CR_BACKLOG_DIR="$CR_BASE_DIR/1-backlog"
+CR_SPRINT_DIR="$CR_BASE_DIR/2-sprint-backlog"
+CR_PROGRESS_DIR="$CR_BASE_DIR/3-in-progress"
+CR_REVIEW_DIR="$CR_BASE_DIR/4-in-review"
+CR_DONE_DIR="$CR_BASE_DIR/5-done"
+CR_TEMPLATE="$CR_BASE_DIR/CHANGE_REQUEST_TEMPLATE.md"
+
+# Function to ensure directories exist
+ensure_directories() {
+    mkdir -p "$CR_BACKLOG_DIR"
+    mkdir -p "$CR_SPRINT_DIR"
+    mkdir -p "$CR_PROGRESS_DIR"
+    mkdir -p "$CR_REVIEW_DIR"
+    mkdir -p "$CR_DONE_DIR"
+}
+
+# Function to get target directory based on status
+get_target_dir() {
+    local status="$1"
+    case "$status" in
+        "backlog") echo "$CR_BACKLOG_DIR" ;;
+        "sprint-backlog") echo "$CR_SPRINT_DIR" ;;
+        "in-progress") echo "$CR_PROGRESS_DIR" ;;
+        "in-review") echo "$CR_REVIEW_DIR" ;;
+        "done")
+            local year_month=$(date +"%Y/%m")
+            local target="$CR_DONE_DIR/$year_month"
+            mkdir -p "$target"
+            echo "$target"
+            ;;
+        *) echo "$CR_BACKLOG_DIR" ;;  # Default to backlog
+    esac
+}
+
 # Function to create a new CR
 create_cr() {
     local title="$1"
     local description="$2"
     local type="$3"
     local today=$(date +%Y.%m.%d)
+
+    ensure_directories
+
+    # Verify template exists
+    if [ ! -f "$CR_TEMPLATE" ]; then
+        echo "Error: Template file $CR_TEMPLATE not found"
+        exit 1
+    fi
 
     # Create GitHub issue
     echo "Creating GitHub issue..."
@@ -17,9 +61,8 @@ create_cr() {
 
     # Create CR document
     echo "Creating CR document..."
-    cr_number="CR-$today-1"
-    cp docs/implementation/changes/CHANGE_REQUEST_TEMPLATE.md \
-       "docs/implementation/changes/$cr_number.md"
+    cr_number="CR-$today-$issue_number"
+    cp "$CR_TEMPLATE" "$CR_BACKLOG_DIR/$cr_number.md"
 
     # Update Implementation Plan
     echo "Updating Implementation Plan..."
@@ -30,7 +73,7 @@ create_cr() {
     sed -i '' "s/^Version: .*/Version: $today-1/" docs/implementation/WORKING_NOTES.md
 
     # Stage changes
-    git add "docs/implementation/changes/$cr_number.md"
+    git add "$CR_BACKLOG_DIR/$cr_number.md"
     git add docs/implementation/IMPLEMENTATION_PLAN.md
     git add docs/implementation/WORKING_NOTES.md
 
@@ -40,7 +83,7 @@ create_cr() {
     echo "✅ Created:"
     echo "- Issue #$issue_number"
     echo "- Branch feature/$issue_number-${title// /-}"
-    echo "- CR Document $cr_number"
+    echo "- CR Document $cr_number in backlog"
     echo "- Updated Implementation Plan and Working Notes"
 }
 
@@ -49,6 +92,21 @@ update_progress() {
     local issue_number="$1"
     local status="$2"
     local message="$3"
+    local cr_file
+
+    # Find the CR file
+    cr_file=$(find "$CR_BASE_DIR" -type f -name "CR-*.md" -exec grep -l "Issue Number: #$issue_number" {} \;)
+
+    if [ -z "$cr_file" ]; then
+        echo "Error: Could not find CR file for issue #$issue_number"
+        exit 1
+    fi
+
+    # Get target directory
+    target_dir=$(get_target_dir "$status")
+
+    # Move CR file to new status directory
+    mv "$cr_file" "$target_dir/$(basename "$cr_file")"
 
     # Update GitHub issue status
     gh issue edit "$issue_number" --add-label "$status"
@@ -62,8 +120,9 @@ update_progress() {
     echo -e "\n### Progress Update ($(date +%Y-%m-%d))\n$message" >> docs/implementation/WORKING_NOTES.md
 
     # Commit updates
+    git add "$target_dir/$(basename "$cr_file")"
     git add docs/implementation/WORKING_NOTES.md
-    git commit -m "docs(progress): update status for #$issue_number"
+    git commit -m "docs(progress): update status for #$issue_number to $status"
 }
 
 # Function to finalize CR

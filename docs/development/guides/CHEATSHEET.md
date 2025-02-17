@@ -1,18 +1,60 @@
 # NeverEatAlone Development Quick Reference
 
+## Project Structure
+```
+/
+├── backend/              # Backend Python code
+│   ├── app/             # Application code
+│   │   ├── models/      # Domain and ORM models
+│   │   └── repositories/# Data access layer
+│   └── tests/           # Test suite
+├── docs/                # Documentation
+│   ├── brd/            # Business requirements
+│   ├── development/    # Development guides
+│   └── implementation/ # Implementation details
+│       └── changes/    # Change requests
+│           ├── 1-backlog/
+│           ├── 2-sprint-backlog/
+│           ├── 3-in-progress/
+│           ├── 4-in-review/
+│           └── 5-done/YYYY/MM/
+└── scripts/            # Development scripts
+```
+
 ## Daily Development Setup
 
 ```bash
 # 1. Start in project root
-cd C:/Users/D047951/Documents/GitHub/NeverEatAlone
+cd /Users/axeljanssen/Documents/GitHub/NeverEatAlone
 
 # 2. Activate backend environment
 cd backend
-.\venv\Scripts\activate
+source venv/bin/activate  # For macOS/Linux
+# OR .\venv\Scripts\activate  # For Windows
 
 # 3. Verify environment
-python -m pytest -v  # Should show contact tests
+python -m pytest -v  # Should show all tests passing
 ```
+
+## Change Request Management
+```bash
+# Create new CR
+./scripts/cr.sh create "Feature title" "Description" "feature"
+
+# Update CR status
+./scripts/cr.sh update <issue-number> "in-progress" "Started implementation"
+./scripts/cr.sh update <issue-number> "in-review" "Ready for review"
+
+# Finalize CR
+./scripts/cr.sh finalize <issue-number> "CR-YYYY.MM-N"
+```
+
+CR Directory Structure:
+- `1-backlog/`: New CRs awaiting refinement
+- `2-sprint-backlog/`: CRs selected for current sprint
+- `3-in-progress/`: CRs being actively worked on
+- `4-in-review/`: CRs with open PRs
+- `5-done/YYYY/MM/`: Completed CRs by date
 
 ## Test Structure and Independence
 
@@ -85,8 +127,9 @@ def test_something(db_session: Session):
 ## VS Code Essential Tasks
 
 1. **Switch/Verify Python Environment**:
-   - `Ctrl+Shift+P` → "Python: Select Interpreter"
-   - Choose: `backend/venv/Scripts/python.exe`
+   - `Cmd+Shift+P` → "Python: Select Interpreter" (macOS)
+   - `Ctrl+Shift+P` → "Python: Select Interpreter" (Windows)
+   - Choose: `backend/venv/bin/python` (macOS) or `backend/venv/Scripts/python.exe` (Windows)
 
 2. **Run/Debug Tests**:
    - Click beaker icon in sidebar
@@ -216,12 +259,15 @@ def test_timezone_handling(client, test_dt, description):
 
    ```bash
    # Check current Python
-   where python  # Should show backend/venv/Scripts/python.exe
+   which python  # macOS/Linux
+   where python  # Windows
+   # Should show backend/venv/bin/python or backend/venv/Scripts/python.exe
 
    # If wrong, reactivate:
    deactivate  # if needed
    cd backend
-   .\venv\Scripts\activate
+   source venv/bin/activate  # macOS/Linux
+   .\venv\Scripts\activate   # Windows
    ```
 
 4. **Database session issues**:
@@ -244,134 +290,76 @@ def test_timezone_handling(client, test_dt, description):
    - Test with various timezone inputs
    - Remember daylight saving time considerations
 
-## Current Project Structure
+## Change Request Process
+For creating and managing Change Requests (CRs), refer to:
+1. Quick Reference: `docs/implementation/changes/CR_QUICK_REFERENCE.md`
+2. Full Process: `docs/implementation/changes/CHANGE_REQUEST_PROCESS.md`
+3. Template: `docs/implementation/changes/CHANGE_REQUEST_TEMPLATE.md`
 
-```
-/backend
-  /app
-    main.py              # FastAPI contact endpoints
-    /models
-      contact.py         # Contact model
-      base.py           # Base model with common fields
-  /tests
-    conftest.py         # Test fixtures and setup
-    /api
-      test_contact_endpoints.py
-    /models
-      test_contact.py
-```
+## Documentation Update Flow
+When making changes:
 
-## Git Workflow
+1. **Create Change Request**
+   ```bash
+   ./scripts/cr.sh create "Update feature X" "Description" "feature"
+   ```
 
-```bash
-# Before starting work
-git checkout feature/contact-management-core
-git pull
+2. **Update Documentation**
+   - Functional Requirements: `docs/brd/modules/*/requirements/`
+   - Technical Design: `docs/brd/modules/*/technical/`
+   - Implementation Notes: `docs/implementation/`
+   - Test Documentation: `docs/development/TESTING.md`
 
-# Committing changes
-git add backend/app/main.py tests/api/test_contact_endpoints.py
-git commit -m "feat(api): Add contact creation endpoint"
-
-# Push changes
-git push origin feature/contact-management-core
-```
+3. **Track Progress**
+   ```bash
+   ./scripts/cr.sh update <issue-number> "in-progress" "Updated documentation"
+   ```
 
 ## Documentation Update Sequence
-
-### Propagating Functional Changes
-
-When making significant changes to functional requirements, update documentation in this sequence:
+When making significant changes, update documentation in this sequence:
 
 1. **Functional Requirements** (`docs/brd/modules/contact_management/requirements/functional.md`)
    - Core requirements and behaviors
-   - System capabilities and constraints
-   - Create feature branch for changes
+2. **Technical Design** (`docs/brd/modules/contact_management/technical/`)
+   - Architecture updates
+   - Data model changes
+   - Interface modifications
+3. **Implementation Notes** (`docs/implementation/`)
+   - Update working notes
+   - Add implementation details
+4. **Test Documentation** (`docs/development/TESTING.md`)
+   - Test coverage requirements
+   - New test patterns
 
-2. **Architecture** (`docs/brd/modules/contact_management/technical/architecture.md`)
-   - How the system will deliver these requirements
-   - Component relationships
-   - Data flows
+## Git Workflow with CRs
+```bash
+# 1. Create CR and branch
+./scripts/cr.sh create "New feature" "Description" "feature"
 
-3. **Interfaces** (`docs/brd/modules/contact_management/technical/interfaces.md`)
-   - API contracts that implement the architecture
-   - Data structures
-   - Operations
+# 2. Work on feature
+git checkout feature/<issue-number>-feature-name
+# Make changes...
+git add .
+git commit -m "feat: implement feature"
 
-4. **Non-Functional Requirements** (`docs/brd/modules/contact_management/requirements/non_functional.md`)
-   - Performance implications
-   - Scalability considerations
-   - Security requirements
+# 3. Update progress
+./scripts/cr.sh update <issue-number> "in-progress" "Implementation complete"
 
-5. **User Stories** (`docs/brd/modules/contact_management/requirements/user_stories.md`)
-   - Concrete usage scenarios
-   - Acceptance criteria
-   - User interactions
+# 4. Create PR
+./scripts/cr.sh finalize <issue-number> "CR-YYYY.MM-N"
+```
 
-6. **Data Model** (`docs/brd/modules/contact_management/technical/data_model.md`)
-   - Database schema
-   - Entity relationships
-   - Data integrity rules
+## Project Management
+Key files and locations:
+- Change Requests: `docs/implementation/changes/`
+- Development Journal: `docs/implementation/DEVELOPMENT_JOURNAL.md`
+- Implementation Plan: `docs/implementation/IMPLEMENTATION_PLAN.md`
+- Test Documentation: `docs/development/TESTING.md`
+- Business Requirements: `docs/brd/modules/`
 
-7. **Implementation Details**
-   - Implementation plan (`docs/implementation/IMPLEMENTATION_PLAN.md`)
-   - Working notes (`docs/implementation/WORKING_NOTES.md`)
-   - Development guides
-   - Test plans
-
-### Best Practices for Doc Updates
-
-- Create feature branch for documentation changes
-- Update documents in sequence to maintain consistency
-- Commit changes per document with clear messages
-- Review cross-document dependencies
-- Update examples and code snippets to match new requirements
-
-### Implementation Documentation Updates
-
-When working on implementation tasks, update these documents in the following order:
-
-1. **Working Notes** (`docs/implementation/WORKING_NOTES.md`)
-   - Update at the start of each coding session
-   - Document current focus and decisions
-   - Track technical challenges
-   - Version format: YYYY.MM.DD-N (e.g., 2024.02.13-1)
-
-2. **Implementation Plan** (`docs/implementation/IMPLEMENTATION_PLAN.md`)
-   - Update when sprint goals change
-   - Track progress on current tasks
-   - Update success criteria
-   - Version in sync with Working Notes
-
-3. **History** (`docs/implementation/HISTORY.md`)
-   - Update after completing major features
-   - Document technical decisions
-   - Archive completed work
-   - Keep version history
-
-4. **Backlog** (`docs/implementation/BACKLOG.md`)
-   - Update when reprioritizing work
-   - Add new feature ideas
-   - Track future sprints
-   - Maintain sprint sequence
-
-5. **Phases** (`docs/implementation/PHASES.md`)
-   - Update when changing implementation sequence
-   - Track phase dependencies
-   - Document phase completion criteria
-   - Keep aligned with Implementation Plan
-
-When to Update:
-
-- **Working Notes**: Daily, as you work
-- **Implementation Plan**: Start of sprint, major changes
-- **History**: After completing features
-- **Backlog**: During sprint planning
-- **Phases**: When restructuring implementation sequence
-
-Version Number Rules:
-
-- Format: YYYY.MM.DD-N
-- Increment N when making multiple updates in one day
-- All implementation docs should share same version
-- Include version history section in each doc
-- Commit message format: "docs: reorganize implementation docs with versioning (YYYY.MM.DD-N)"
+Documentation hierarchy:
+1. Business Requirements (BRD)
+2. Technical Design
+3. Implementation Details
+4. Change Requests
+5. Test Documentation

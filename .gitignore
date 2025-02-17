@@ -198,3 +198,4 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 backend/test-results.xml
+.DS_Store
