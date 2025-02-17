@@ -272,3 +272,41 @@ def test_disable_tag_frequency(
     assert len(found) == 1
     assert found[0].frequency_days is None
     assert found[0].last_contact is None
+
+
+def test_tag_interaction_tracking(
+    tag_repository: SQLAlchemyTagRepository, db_session: Session
+) -> None:
+    """Test tracking interactions through notes.
+
+    Should:
+    - Update last_contact when handling note interactions
+    - Only update contact tags (not note or statement tags)
+    - Preserve timezone information
+    """
+    # Create tags for different entity types
+    contact_tag = Tag(entity_id=TEST_UUID, entity_type=EntityType.CONTACT, name="#test")
+    note_tag = Tag(entity_id=TEST_UUID, entity_type=EntityType.NOTE, name="#test")
+    statement_tag = Tag(entity_id=TEST_UUID, entity_type=EntityType.STATEMENT, name="#test")
+
+    # Save all tags
+    tag_repository.save(contact_tag)
+    tag_repository.save(note_tag)
+    tag_repository.save(statement_tag)
+    db_session.commit()
+
+    # Simulate note interaction
+    interaction_time = datetime.now(UTC)
+    for tag in [contact_tag, note_tag, statement_tag]:
+        tag.handle_note_interaction(True, interaction_time)
+        tag_repository.save(tag)
+    db_session.commit()
+
+    # Verify only contact tag was updated
+    found_contact = tag_repository.find_by_entity(TEST_UUID, EntityType.CONTACT)[0]
+    found_note = tag_repository.find_by_entity(TEST_UUID, EntityType.NOTE)[0]
+    found_statement = tag_repository.find_by_entity(TEST_UUID, EntityType.STATEMENT)[0]
+
+    assert found_contact.last_contact == interaction_time
+    assert found_note.last_contact is None
+    assert found_statement.last_contact is None

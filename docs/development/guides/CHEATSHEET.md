@@ -152,6 +152,51 @@ def test_pattern(client: TestClient, db_session: Session):
     assert data["name"] == "Test"  # For success responses
 ```
 
+## Test Data Patterns
+
+```python
+# Common test data
+VALID_CONTACT = {
+    "name": "Test Contact",
+    "first_name": "Test",
+    "hashtags": ["#test"],
+    "sub_information": {"key": "value"}
+}
+
+# Timezone test data
+TIMEZONE_TEST_DATA = [
+    (datetime.now(), "naive datetime"),
+    (datetime.now(timezone.utc), "UTC datetime"),
+    (datetime.now(timezone(timedelta(hours=1))), "non-UTC timezone"),
+]
+
+INVALID_DATA_PATTERNS = [
+    ({}, "Field required"),
+    ({"name": ""}, "String should have at least 1 character"),
+    ({"name": "a" * 101}, "String should have at most 100 characters"),
+]
+
+# Use in parametrized tests
+@pytest.mark.parametrize("invalid_data,expected_error", INVALID_DATA_PATTERNS)
+def test_validation(client, invalid_data, expected_error):
+    response = client.post("/api/contacts", json=invalid_data)
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert expected_error in response.json()["error"]
+
+# Timezone test pattern
+@pytest.mark.parametrize("test_dt,description", TIMEZONE_TEST_DATA)
+def test_timezone_handling(client, test_dt, description):
+    """Test timezone handling in API endpoints."""
+    response = client.post("/api/contacts", json={
+        "name": "Test Contact",
+        "last_interaction_at": test_dt.isoformat()
+    })
+    assert response.status_code == 201
+    data = response.json()
+    saved_dt = datetime.fromisoformat(data["last_interaction_at"])
+    assert saved_dt.tzinfo == timezone.utc
+```
+
 ## Common Issues & Solutions
 
 1. **"Import 'backend' could not be resolved" in VS Code**:
@@ -191,6 +236,14 @@ def test_pattern(client: TestClient, db_session: Session):
    - Use proper UUID format in URLs
    - Remember to commit db changes before API calls
 
+6. **Timezone-related issues**:
+   - Ensure datetime fields include timezone information
+   - Use ISO8601 format for datetime strings
+   - Check timezone conversion in repository layer
+   - Verify UTC storage in database
+   - Test with various timezone inputs
+   - Remember daylight saving time considerations
+
 ## Current Project Structure
 
 ```
@@ -206,31 +259,6 @@ def test_pattern(client: TestClient, db_session: Session):
       test_contact_endpoints.py
     /models
       test_contact.py
-```
-
-## Test Data Patterns
-
-```python
-# Common test data
-VALID_CONTACT = {
-    "name": "Test Contact",
-    "first_name": "Test",
-    "hashtags": ["#test"],
-    "sub_information": {"key": "value"}
-}
-
-INVALID_DATA_PATTERNS = [
-    ({}, "Field required"),
-    ({"name": ""}, "String should have at least 1 character"),
-    ({"name": "a" * 101}, "String should have at most 100 characters"),
-]
-
-# Use in parametrized tests
-@pytest.mark.parametrize("invalid_data,expected_error", INVALID_DATA_PATTERNS)
-def test_validation(client, invalid_data, expected_error):
-    response = client.post("/api/contacts", json=invalid_data)
-    assert response.status_code == HTTPStatus.BAD_REQUEST
-    assert expected_error in response.json()["error"]
 ```
 
 ## Git Workflow

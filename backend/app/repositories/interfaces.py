@@ -45,6 +45,28 @@ class NoteRepository(Protocol):
         """
         ...
 
+    def find_interactions(self, contact_id: UUID) -> List[Note]:
+        """Find all interaction notes for a contact.
+
+        Args:
+            contact_id: The contact's ID
+
+        Returns:
+            List of interaction notes for the contact, ordered by date descending
+        """
+        ...
+
+    def find_interactions_by_tag(self, tag_name: str) -> List[Note]:
+        """Find all interaction notes with a specific tag.
+
+        Args:
+            tag_name: The tag name to search for
+
+        Returns:
+            List of interaction notes with the tag, ordered by date descending
+        """
+        ...
+
     def find_by_tag(self, tag_name: str) -> List[Note]:
         """Find all notes with a specific tag.
 

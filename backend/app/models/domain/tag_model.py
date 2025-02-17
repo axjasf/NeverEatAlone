@@ -122,3 +122,21 @@ class Tag(BaseModel):
 
         time_since_contact = self.get_current_time() - self.last_contact
         return time_since_contact.days > self.frequency_days
+
+    def handle_note_interaction(self, is_interaction: bool, interaction_date: Optional[datetime] = None) -> None:
+        """Handle a note being marked as an interaction.
+
+        This method should be called when a note with this tag is created or updated.
+        It will update the last_contact timestamp for contact tags.
+
+        Args:
+            is_interaction: Whether the note represents an interaction
+            interaction_date: When the interaction occurred (required if is_interaction is True)
+        """
+        # Only update last_contact for contact tags
+        if self.entity_type != EntityType.CONTACT.value:
+            return
+
+        # Update last_contact if this is an interaction
+        if is_interaction and interaction_date:
+            self.update_last_contact(interaction_date)

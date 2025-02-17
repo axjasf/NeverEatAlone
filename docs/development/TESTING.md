@@ -102,6 +102,35 @@ def test_contact_creation_with_required_fields(db_session: Session) -> None:
     assert saved_contact.name == "John Doe"
 ```
 
+### Timezone Test Examples
+```python
+from datetime import datetime, timezone, timedelta
+
+def test_datetime_timezone_handling(db_session: Session) -> None:
+    """Test that datetime fields are properly stored and retrieved with timezone information."""
+    # Test with timezone-naive datetime
+    naive_dt = datetime.now()
+    contact = Contact(
+        name="Test Contact",
+        last_interaction_at=naive_dt
+    )
+    db_session.add(contact)
+    db_session.commit()
+
+    saved_contact = db_session.get(Contact, contact.id)
+    assert saved_contact.last_interaction_at.tzinfo == timezone.utc
+
+    # Test with non-UTC timezone
+    est = timezone(timedelta(hours=-5))
+    est_dt = datetime.now(est)
+    contact.last_interaction_at = est_dt
+    db_session.commit()
+
+    saved_contact = db_session.get(Contact, contact.id)
+    assert saved_contact.last_interaction_at.tzinfo == timezone.utc
+    assert saved_contact.last_interaction_at == est_dt.astimezone(timezone.utc)
+```
+
 ### API Test Example
 ```python
 def test_create_contact_with_minimal_data(client: TestClient) -> None:

@@ -1,0 +1,62 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "CR: Create New",
+            "type": "shell",
+            "command": "./scripts/cr.sh create ${input:crTitle} ${input:crDescription} ${input:crType}",
+            "problemMatcher": []
+        },
+        {
+            "label": "CR: Update Progress",
+            "type": "shell",
+            "command": "./scripts/cr.sh update ${input:issueNumber} ${input:status} ${input:message}",
+            "problemMatcher": []
+        },
+        {
+            "label": "CR: Finalize",
+            "type": "shell",
+            "command": "./scripts/cr.sh finalize ${input:issueNumber} ${input:crNumber}",
+            "problemMatcher": []
+        }
+    ],
+    "inputs": [
+        {
+            "id": "crTitle",
+            "description": "CR Title",
+            "type": "promptString"
+        },
+        {
+            "id": "crDescription",
+            "description": "CR Description",
+            "type": "promptString"
+        },
+        {
+            "id": "crType",
+            "description": "CR Type",
+            "type": "pickString",
+            "options": ["feature", "bugfix", "refactor", "documentation"]
+        },
+        {
+            "id": "issueNumber",
+            "description": "Issue Number",
+            "type": "promptString"
+        },
+        {
+            "id": "status",
+            "description": "Status",
+            "type": "pickString",
+            "options": ["in-progress", "review", "completed"]
+        },
+        {
+            "id": "message",
+            "description": "Progress Message",
+            "type": "promptString"
+        },
+        {
+            "id": "crNumber",
+            "description": "CR Number (e.g., CR-2024.02.13-1)",
+            "type": "promptString"
+        }
+    ]
+}
