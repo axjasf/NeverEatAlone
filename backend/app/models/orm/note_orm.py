@@ -4,11 +4,12 @@ from datetime import datetime, timezone
 from typing import List, Optional, TYPE_CHECKING
 from uuid import UUID, uuid4
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import Text, ForeignKey, Boolean, DateTime, CheckConstraint
+from sqlalchemy import Text, ForeignKey, Boolean, CheckConstraint
 from ...database import Base
 from .statement_orm import StatementORM
 from .tag_orm import TagORM
 from .reminder_orm import ReminderORM
+from .base_orm import UTCDateTime
 
 if TYPE_CHECKING:
     from .contact_orm import ContactORM
@@ -24,13 +25,17 @@ class NoteORM(Base):
     content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     is_interaction: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     interaction_date: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        UTCDateTime, nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
-        nullable=False, default=lambda: datetime.now(timezone.utc)
+        UTCDateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc)
     )
     updated_at: Mapped[datetime] = mapped_column(
-        nullable=False, default=lambda: datetime.now(timezone.utc)
+        UTCDateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc)
     )
 
     # Relationships
@@ -71,13 +76,6 @@ class NoteORM(Base):
             (is_interaction = FALSE AND interaction_date IS NULL)
             """,
             name="valid_content_note"
-        ),
-        # Interaction date cannot be in future
-        CheckConstraint(
-            """
-            interaction_date <= CURRENT_TIMESTAMP
-            """,
-            name="valid_interaction_date"
         ),
     )
 
