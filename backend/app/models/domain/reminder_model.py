@@ -26,7 +26,6 @@ class RecurrenceUnit(str, Enum):
 
 class DateValidationError(ValueError):
     """Custom error for date validation failures."""
-
     pass
 
 
