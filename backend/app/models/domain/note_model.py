@@ -1,6 +1,6 @@
 """Note domain model."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 from typing import List, Optional, TYPE_CHECKING
 from uuid import UUID
 from .base_model import BaseModel
@@ -83,8 +83,10 @@ class Note(BaseModel):
     - interaction_date must be None
 
     For interaction notes:
-    - interaction_date is required
+    - interaction_date is required (must be timezone-aware, stored in UTC)
     - content is optional
+
+    All datetime fields are stored in UTC internally.
     """
 
     def __init__(
@@ -101,6 +103,7 @@ class Note(BaseModel):
             content: The note content (required for non-interaction notes)
             is_interaction: Whether this note represents an interaction
             interaction_date: When the interaction occurred (required for interaction notes)
+                           Must be timezone-aware, will be stored in UTC
 
         Raises:
             ValueError: If validation fails:
@@ -108,6 +111,7 @@ class Note(BaseModel):
                 - Interaction notes require date
                 - Content notes cannot have interaction date
                 - Interaction date cannot be in future
+                - Interaction date must be timezone-aware
         """
         super().__init__()
 
@@ -115,17 +119,29 @@ class Note(BaseModel):
         if is_interaction:
             if not interaction_date:
                 raise ValueError("Interaction notes require a date")
-            if interaction_date > datetime.now(timezone.utc):
+
+            # Ensure timezone awareness
+            if interaction_date.tzinfo is None:
+                raise ValueError("Interaction date must be timezone-aware")
+
+            # Convert to UTC for storage
+            utc_date = interaction_date.astimezone(UTC)
+
+            # Validate not in future
+            if utc_date > datetime.now(UTC):
                 raise ValueError("Interaction date cannot be in the future")
+
+            # Store in UTC
+            self.interaction_date = utc_date
         else:
             if not content or not content.strip():
                 raise ValueError("Content notes require content")
             if interaction_date is not None:
                 raise ValueError("Content notes cannot have interaction date")
+            self.interaction_date = None
 
         self.contact_id = contact_id
         self.is_interaction = is_interaction
-        self.interaction_date = interaction_date
         self.content = content.strip() if content else None
         self.statements: List[Statement] = []
         self.tags: List["Tag"] = []
