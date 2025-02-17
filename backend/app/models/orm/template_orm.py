@@ -3,8 +3,8 @@
 from datetime import datetime
 from typing import Any, Dict
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import JSON, Integer, DateTime, PrimaryKeyConstraint
-from .base_orm import BaseORMModel, GUID
+from sqlalchemy import JSON, Integer, PrimaryKeyConstraint
+from .base_orm import BaseORMModel, GUID, UTCDateTime
 import uuid
 
 
@@ -21,10 +21,10 @@ class TemplateVersionORM(BaseORMModel):
         JSON, nullable=False, default=dict
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
+        UTCDateTime, nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
+        UTCDateTime, nullable=False
     )
 
     __table_args__ = (
