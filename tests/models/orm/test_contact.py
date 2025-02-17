@@ -1,12 +1,15 @@
 """Tests for the Contact ORM model."""
 
 import pytest
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, StatementError
 from sqlalchemy.orm import Session
 from backend.app.models.orm.contact_orm import ContactORM
 from backend.app.models.orm.note_orm import NoteORM
 from backend.app.models.orm.tag_orm import TagORM
 from backend.app.models.domain.tag_model import EntityType
+from datetime import datetime, UTC
+from uuid import uuid4
+from zoneinfo import ZoneInfo
 
 
 def test_contact_creation_with_required_fields(db_session: Session) -> None:
@@ -131,3 +134,92 @@ def test_contact_tag_relationship(db_session: Session) -> None:
     db_session.delete(saved_contact)
     db_session.commit()
     assert db_session.query(TagORM).count() == 2
+
+
+def test_contact_creation(db_session: Session) -> None:
+    """Test creating a contact."""
+    now = datetime.now(UTC)
+    contact = ContactORM(
+        id=uuid4(),
+        name="Test Contact",
+        first_name="Test",
+        briefing_text="Test briefing",
+        sub_information={"key": "value"},
+        last_contact=now,
+        contact_briefing_text="Last interaction",
+    )
+
+    db_session.add(contact)
+    db_session.flush()
+    db_session.refresh(contact)
+
+    # Verify it was saved
+    saved = db_session.get(ContactORM, contact.id)
+    assert saved is not None
+    assert saved.name == "Test Contact"
+    assert saved.first_name == "Test"
+    assert saved.briefing_text == "Test briefing"
+    assert saved.sub_information == {"key": "value"}
+    assert saved.last_contact == now
+    assert saved.contact_briefing_text == "Last interaction"
+
+
+def test_contact_timezone_handling(db_session: Session) -> None:
+    """Test that timezone information is properly stored and retrieved.
+
+    The ORM should:
+    1. Accept timezone-aware datetimes
+    2. Store them in UTC
+    3. Return them with UTC timezone
+    4. Handle different input timezones correctly
+    """
+    # Create contact with different timezone
+    tokyo_time = datetime.now(ZoneInfo("Asia/Tokyo"))
+    ny_time = datetime.now(ZoneInfo("America/New_York"))
+
+    contact = ContactORM(
+        id=uuid4(),
+        name="Test Contact",
+        last_contact=tokyo_time,
+    )
+
+    db_session.add(contact)
+    db_session.flush()
+    db_session.refresh(contact)
+
+    # Verify timezone handling
+    saved = db_session.get(ContactORM, contact.id)
+    assert saved is not None
+
+    # Times should be converted to UTC but represent the same moment
+    assert saved.last_contact is not None
+    assert saved.last_contact.tzinfo == UTC
+    assert saved.last_contact == tokyo_time.astimezone(UTC)
+
+    # Update with different timezone
+    saved.last_contact = ny_time
+    db_session.flush()
+    db_session.refresh(saved)
+
+    assert saved.last_contact == ny_time.astimezone(UTC)
+    assert saved.last_contact.tzinfo == UTC
+
+
+def test_contact_naive_datetime_rejection(db_session: Session) -> None:
+    """Test that naive datetimes are rejected.
+
+    The ORM should:
+    1. Reject naive datetimes (without timezone info)
+    2. Raise an error with a clear message
+    """
+    # Try to create with naive datetime
+    naive_time = datetime.now()  # Naive datetime without timezone
+
+    with pytest.raises(StatementError, match="Cannot store naive datetime"):
+        contact = ContactORM(
+            id=uuid4(),
+            name="Test Contact",
+            last_contact=naive_time,
+        )
+        db_session.add(contact)
+        db_session.flush()

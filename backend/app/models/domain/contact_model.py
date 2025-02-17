@@ -1,7 +1,7 @@
 """Contact domain model."""
 
 from typing import Dict, Any, List, TYPE_CHECKING, Optional
-from datetime import datetime
+from datetime import datetime, UTC
 from .base_model import BaseModel
 
 if TYPE_CHECKING:
@@ -150,7 +150,7 @@ class Contact(BaseModel):
         """Record an interaction with this contact.
 
         Args:
-            interaction_date: When the interaction occurred
+            interaction_date: When the interaction occurred (must be timezone-aware)
             content: Optional description of the interaction
 
         Returns:
@@ -159,28 +159,44 @@ class Contact(BaseModel):
         Raises:
             ValueError: If validation fails:
                 - interaction_date is required
+                - interaction_date must be timezone-aware
                 - interaction_date cannot be in future
                 - content cannot be empty if provided
         """
         # Import here to avoid circular dependency
         from .note_model import Note
 
+        # Validate interaction_date
+        if interaction_date is None:
+            raise ValueError("Interaction notes require a date")
+
+        # Ensure timezone awareness
+        if interaction_date.tzinfo is None:
+            raise ValueError("Interaction date must be timezone-aware")
+
+        # Convert to UTC for storage
+        utc_date = interaction_date.astimezone(UTC)
+
+        # Validate not in future
+        if utc_date > datetime.now(UTC):
+            raise ValueError("Interaction date cannot be in the future")
+
         # Create the interaction note
         note = Note(
             contact_id=self.id,
             content=content,
             is_interaction=True,
-            interaction_date=interaction_date
+            interaction_date=utc_date  # Store in UTC
         )
 
         # Update contact tracking
-        self.last_contact = interaction_date
+        self.last_contact = utc_date  # Store in UTC
         if content:
             self.contact_briefing_text = content
 
         # Update all contact tags
         for tag in self.tags:
-            tag.handle_note_interaction(True, interaction_date)
+            tag.handle_note_interaction(True, utc_date)  # Pass UTC time
 
         # Add note to contact
         self.notes.append(note)

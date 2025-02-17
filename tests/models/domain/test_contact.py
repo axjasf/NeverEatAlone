@@ -1,10 +1,11 @@
 """Tests for the Contact domain model."""
 
 import pytest
-from datetime import datetime, UTC
+from datetime import datetime, UTC, timezone, timedelta
 from uuid import UUID
 from typing import Any, cast
 from backend.app.models.domain.contact_model import Contact
+from zoneinfo import ZoneInfo
 
 
 TEST_UUID = UUID("11111111-1111-1111-1111-111111111111")
@@ -227,3 +228,79 @@ def test_invalid_interaction_recording():
     interaction_time = datetime.now(UTC)
     note = contact.add_interaction(interaction_date=interaction_time)
     assert note.content is None
+
+
+def test_contact_timezone_handling():
+    """Test timezone handling for last_contact field.
+
+    Requirements:
+    1. Accepts timezone-aware datetimes
+    2. Converts to UTC internally
+    3. Preserves timezone information
+    4. Rejects naive datetimes
+    5. Handles different input timezones
+    """
+    # Test with UTC time
+    utc_time = datetime.now(UTC)
+    contact = Contact(name="Test Contact")
+    contact.add_interaction(interaction_date=utc_time)
+    assert contact.last_contact is not None
+    assert contact.last_contact == utc_time
+    assert contact.last_contact.tzinfo == UTC
+
+    # Test with different timezone (Tokyo)
+    tokyo_time = datetime.now(ZoneInfo("Asia/Tokyo"))
+    contact.add_interaction(interaction_date=tokyo_time)
+    assert contact.last_contact is not None
+    assert contact.last_contact == tokyo_time.astimezone(UTC)
+    assert contact.last_contact.tzinfo == UTC
+
+    # Test with custom timezone offset
+    custom_tz = timezone(timedelta(hours=5, minutes=30))  # UTC+5:30
+    custom_time = datetime.now(custom_tz)
+    contact.add_interaction(interaction_date=custom_time)
+    assert contact.last_contact is not None
+    assert contact.last_contact == custom_time.astimezone(UTC)
+    assert contact.last_contact.tzinfo == UTC
+
+    # Test rejection of naive datetime
+    naive_time = datetime.now()
+    with pytest.raises(ValueError, match="Interaction date must be timezone-aware"):
+        contact.add_interaction(interaction_date=naive_time)
+
+
+def test_contact_timezone_preservation():
+    """Test that timezone information is preserved through updates.
+
+    Requirements:
+    1. Multiple interactions maintain timezone consistency
+    2. All datetime operations preserve timezone info
+    3. DST transitions are handled correctly
+    """
+    contact = Contact(name="Test Contact")
+
+    # Test multiple interactions
+    times = [
+        datetime.now(ZoneInfo("America/New_York")),
+        datetime.now(ZoneInfo("Europe/London")),
+        datetime.now(ZoneInfo("Asia/Tokyo")),
+    ]
+
+    for time in times:
+        contact.add_interaction(interaction_date=time)
+        assert contact.last_contact is not None
+        assert contact.last_contact == time.astimezone(UTC)
+        assert contact.last_contact.tzinfo == UTC
+
+    # Test DST transition
+    ny_tz = ZoneInfo("America/New_York")
+    winter_time = datetime(2024, 1, 1, 12, 0, tzinfo=ny_tz)  # During EST
+    summer_time = datetime(2024, 7, 1, 12, 0, tzinfo=ny_tz)  # During EDT
+
+    contact.add_interaction(interaction_date=winter_time)
+    assert contact.last_contact is not None
+    assert contact.last_contact == winter_time.astimezone(UTC)
+
+    contact.add_interaction(interaction_date=summer_time)
+    assert contact.last_contact is not None
+    assert contact.last_contact == summer_time.astimezone(UTC)
