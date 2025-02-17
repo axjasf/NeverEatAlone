@@ -312,7 +312,8 @@ def test_note_timezone_edge_cases():
     # Verify correct UTC conversion
     assert note_india.interaction_date is not None
     assert note_india.interaction_date.tzinfo == UTC
-    assert note_india.interaction_date < india_time
+    # Convert both to UTC for comparison of the actual moment in time
+    assert note_india.interaction_date == india_time.astimezone(UTC)
 
     # Test DST transition handling
     paris_tz = ZoneInfo("Europe/Paris")
@@ -329,7 +330,7 @@ def test_note_timezone_edge_cases():
     # Verify DST handling
     assert note_paris.interaction_date is not None
     assert note_paris.interaction_date.tzinfo == UTC
-    assert note_paris.interaction_date.hour == 12  # UTC+2 during DST
+    assert note_paris.interaction_date == paris_dst_time.astimezone(UTC)
 
 
 def test_note_interaction_timezone_consistency():
