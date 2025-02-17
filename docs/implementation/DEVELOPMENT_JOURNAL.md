@@ -31,7 +31,10 @@ Current decisions:
   - Tag Model:
     - last_contact field already has timezone handling (good!)
   - Note Model:
-    - Already inherits timezone handling from BaseModel (good!)
+    - ✅ Domain model aligned with Contact BO timezone pattern
+    - ✅ Added comprehensive domain-level timezone tests
+    - [ ] Verify ORM layer timezone handling
+    - [ ] Verify repository layer timezone handling
   - Statement Model:
     - Already inherits timezone handling from BaseModel (good!)
   - Reminder Model:
@@ -44,10 +47,11 @@ Current decisions:
     - ✅ Architectural cohesion verified across all three layers
 
 ### Recent Progress ✅
-- Started Note BO timezone verification:
-  - Created branch feature/23.2-note-timezone-handling
-  - Initial assessment shows some timezone handling exists
-  - Planning comprehensive timezone test coverage
+- Note BO timezone handling:
+  - ✅ Aligned domain model with Contact BO pattern
+  - ✅ Added comprehensive domain-level test suite
+  - ✅ Fixed timezone edge case comparisons
+  - 🔄 Next: Verify ORM and repository layers
 
 ### Technical Decisions 🔨
 - Using Python's datetime with UTC
