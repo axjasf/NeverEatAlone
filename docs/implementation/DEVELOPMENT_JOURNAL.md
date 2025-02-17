@@ -63,17 +63,25 @@ Current decisions:
 - Simplified SQLAlchemy session configuration for better maintainability
 
 ### Next Steps 📋
-1. Note BO Timezone Enhancement
-   - [ ] Add comprehensive timezone test cases
-   - [ ] Verify timezone handling in domain model
+1. Complete Note BO Timezone Implementation
+   - ✅ Add comprehensive domain-level timezone tests
+   - ✅ Verify timezone handling in domain model
    - [ ] Check ORM layer timezone support
    - [ ] Validate repository layer handling
    - [ ] Update documentation
 
-2. Remaining Tasks
-   - [ ] Statement BO verification
-   - [ ] Reminder BO verification
-   - [ ] Tag BO verification
+2. Backport Test Pattern Improvements
+   - [ ] Review and document Note BO test improvements
+   - [ ] Update Contact BO timezone tests
+   - [ ] Update Template BO timezone tests
+   - [ ] Document timezone test best practices
+   - [ ] Create test pattern guide for future BOs
+   See CR-2024.02-23 "Note BO Implementation and Test Pattern Discovery" section for detailed patterns and examples.
+
+3. Remaining BO Verifications
+   - [ ] Statement BO verification (using improved test patterns)
+   - [ ] Reminder BO verification (using improved test patterns)
+   - [ ] Tag BO verification (using improved test patterns)
    - [ ] Cross-cutting documentation
 
 ### Backlog
@@ -82,6 +90,11 @@ Current decisions:
    - Add timezone conversion utilities
    - Update documentation
    - Add timezone tests
+   - Improve timezone test patterns:
+     - [ ] Backport Note BO timezone comparison improvements to Contact/Template tests
+     - [ ] Replace hour-specific DST tests with moment-based comparisons
+     - [ ] Ensure consistent timezone test patterns across all BOs
+     - [ ] Document timezone test best practices
 
 2. Model Improvements
    - Add validation utilities
