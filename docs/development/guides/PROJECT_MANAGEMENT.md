@@ -32,9 +32,32 @@ This guide describes our project management workflow, from idea to implementatio
 
 ## Change Request (CR) Process
 
+### CR Directory Structure
+CRs are organized in `docs/implementation/changes/` to match the project board:
+
+1. **1-backlog/**
+   - CRs that are defined but not yet ready
+   - Matches "Backlog" column
+
+2. **2-sprint-backlog/**
+   - CRs selected for current sprint
+   - Matches "Sprint Backlog" column
+
+3. **3-in-progress/**
+   - CRs actively being worked on
+   - Matches "In Progress" column
+
+4. **4-in-review/**
+   - CRs with PRs waiting for review
+   - Matches "In Review" column
+
+5. **5-done/YYYY/MM/**
+   - Completed CRs by year/month
+   - Matches "Done" column
+
 ### CR Creation Flow
 1. Create GitHub issue
-2. Create CR document
+2. Create CR document from TEMPLATE.md
 3. Create feature branch
 4. Update Implementation Plan
 5. Update Working Notes
@@ -48,7 +71,7 @@ This guide describes our project management workflow, from idea to implementatio
 ./scripts/cr.sh update 23 "in-progress" "Started implementing TimezoneAwareBase"
 
 # 3. Finalize CR
-./scripts/cr.sh finalize 23 "CR-2025.02.16-1"
+./scripts/cr.sh finalize 23 "CR-2024.02-23"
 ```
 
 ### CR Document Structure
