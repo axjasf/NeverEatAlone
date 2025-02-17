@@ -235,6 +235,12 @@ git commit -m "feat(api): Add contact creation endpoint"
 git push origin feature/contact-management-core
 ```
 
+## Change Request Process
+For creating and managing Change Requests (CRs), refer to:
+1. Quick Reference: `docs/implementation/changes/CR_QUICK_REFERENCE.md`
+2. Full Process: `docs/implementation/changes/CHANGE_REQUEST_PROCESS.md`
+3. Template: `docs/implementation/changes/CHANGE_REQUEST_TEMPLATE.md`
+
 ## Documentation Update Sequence
 
 ### Propagating Functional Changes

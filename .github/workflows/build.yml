@@ -2,9 +2,9 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
 
 env:
   PYTHON_VERSION: '3.11'
@@ -14,9 +14,11 @@ env:
   # Test Configuration
   COVERAGE_THRESHOLD: 80
   PYTEST_ADDOPTS: '--color=yes'
-  # Debug Mode for Verbose Logging
+  # Environment Detection
+  ENVIRONMENT: ${{ github.ref == 'refs/heads/main' && 'production' || github.ref == 'refs/heads/develop' && 'staging' || 'development' }}
+  # Debug Mode (enables verbose logging)
   DEBUG: ${{ github.event_name == 'pull_request' }}
-  # SonarCloud Configuration - Configured via Organization Settings
+  # SonarCloud Configuration
   SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
   SONAR_ORGANIZATION: ${{ secrets.SONAR_ORGANIZATION }}
 
@@ -27,7 +29,12 @@ jobs:
     defaults:
       run:
         working-directory: ${{ env.PYTHON_ROOT }}
-
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || github.ref == 'refs/heads/develop' && 'staging' || 'development' }}
+    env:
+      DATABASE_URL: sqlite:///./dev.db
+      TEST_DATABASE_URL: sqlite:///./test.db
+      SECRET_KEY: ${{ secrets.SECRET_KEY || 'dev-secret-key-123' }}
+      CORS_ORIGINS: ${{ secrets.CORS_ORIGINS || 'http://localhost:3000' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -138,12 +145,12 @@ jobs:
     needs: backend-lint  # Keep the dependency but tests will run anyway
     if: always()  # This ensures tests run even if linting fails
     runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || github.ref == 'refs/heads/develop' && 'staging' || 'development' }}
     env:
       DATABASE_URL: sqlite:///./test.db
       TEST_DATABASE_URL: sqlite:///./test.db
-      SECRET_KEY: test-secret-key-123
+      SECRET_KEY: ${{ secrets.SECRET_KEY || 'test-secret-key-123' }}
       CORS_ORIGINS: http://localhost:3000
-
     steps:
       - uses: actions/checkout@v4
 
@@ -176,61 +183,42 @@ jobs:
         id: tests
         env:
           COVERAGE_FAIL_UNDER: ${{ env.COVERAGE_THRESHOLD }}
-        working-directory: ${{ env.PYTHON_ROOT }}  # Set working directory for the entire step
+          PYTEST_ADDOPTS: ${{ env.PYTEST_ADDOPTS }} ${{ env.DEBUG && '-vv --capture=no' || '' }}
         run: |
-          echo "::group::Test Environment"
-          echo "Python path: $PYTHONPATH"
-          echo "Coverage threshold: $COVERAGE_FAIL_UNDER"
-          echo "Working directory: $(pwd)"
-          echo "::endgroup::"
-
           echo "::group::Running pytest with coverage"
+          cd ${{ env.PYTHON_ROOT }}
+
+          echo "Environment: ${{ env.ENVIRONMENT }}"
+          echo "Coverage threshold: ${{ env.COVERAGE_THRESHOLD }}%"
+
+          # Run tests with retries for potentially flaky tests
           python -m pytest \
             --cov=app \
             --cov-report=xml:coverage.xml \
-            --cov-report=html:coverage_html \
             --cov-report=term-missing \
-            --junitxml=test-results.xml \
+            --junitxml=pytest-report.xml \
             -v \
-            ../tests || {
-              echo "::error::Tests failed"
+            --reruns 2 \
+            --reruns-delay 1 \
+            ../tests || (
+              echo "::error::Tests failed. Check the logs for details."
               exit 1
-            }
-          # Move reports to root directory
-          mv coverage.xml ../coverage.xml || true
-          mv test-results.xml ../test-results.xml || true
-          mv coverage_html ../coverage_html || true
+            )
           echo "::endgroup::"
 
-      - name: Process test results
+      - name: Generate test summary
         if: always()
         run: |
           echo "::group::Test Summary"
-          if [ -f "test-results.xml" ]; then
-            echo "Test report generated successfully"
-            echo "Coverage report available in artifacts"
+          if [ -f pytest-report.xml ]; then
+            echo "Test Results Summary:"
+            python -m pytest --report-log=test-report.log || true
+            cat test-report.log
+          fi
 
-            # Create a summary of test results
-            echo "=== Test Execution Summary ===" > test_summary.txt
-            echo "Date: $(date)" >> test_summary.txt
-            echo "Python Version: ${{ env.PYTHON_VERSION }}" >> test_summary.txt
-            echo "" >> test_summary.txt
-
-            # Extract key metrics from pytest report
-            if [ -f "coverage.xml" ]; then
-              echo "Coverage Report:" >> test_summary.txt
-              grep -A 5 "<coverage" "coverage.xml" >> test_summary.txt
-            fi
-
-            if [ -f "test-results.xml" ]; then
-              echo "" >> test_summary.txt
-              echo "Test Results:" >> test_summary.txt
-              grep -A 5 "<testsuite" "test-results.xml" >> test_summary.txt
-            fi
-          else
-            echo "::error::Test report generation failed"
-            echo "Test execution failed" > test_summary.txt
-            echo "No test reports generated" >> test_summary.txt
+          if [ -f coverage.xml ]; then
+            echo "Coverage Summary:"
+            python -m coverage report
           fi
           echo "::endgroup::"
 
@@ -240,34 +228,165 @@ jobs:
         with:
           name: backend-test-results
           path: |
-            coverage.xml
-            coverage_html/**
-            test-results.xml
-            .coverage
-            test_summary.txt
+            ${{ env.PYTHON_ROOT }}/coverage.xml
+            ${{ env.PYTHON_ROOT }}/pytest-report.xml
+            ${{ env.PYTHON_ROOT }}/.coverage
+            ${{ env.PYTHON_ROOT }}/logs/
+          retention-days: 14
+
+  frontend-lint:
+    name: Frontend Linting
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.NODE_ROOT }}
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || github.ref == 'refs/heads/develop' && 'staging' || 'development' }}
+    env:
+      REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL || 'http://localhost:8000' }}
+      REACT_APP_ENVIRONMENT: ${{ github.event.ref == 'refs/heads/main' && 'production' || github.event.ref == 'refs/heads/develop' && 'staging' || 'development' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.NODE_ROOT }}/package-lock.json
+
+      - name: Install dependencies
+        id: install
+        run: |
+          echo "::group::Environment Information"
+          node --version
+          npm --version
+          echo "Working directory: $(pwd)"
+          echo "::endgroup::"
+
+          echo "::group::Install npm dependencies"
+          npm ci
+          echo "::endgroup::"
+
+      - name: Run ESLint
+        id: eslint
+        continue-on-error: true
+        run: |
+          echo "::group::Running ESLint"
+          npm run lint > eslint-report.txt || (
+            echo "::error::ESLint issues found. Check the report for details."
+            cat eslint-report.txt
+            exit 1
+          )
+          echo "::endgroup::"
+
+      - name: Run Type Check
+        id: typecheck
+        continue-on-error: true
+        run: |
+          echo "::group::Running TypeScript Check"
+          npm run type-check > typescript-report.txt || (
+            echo "::error::TypeScript issues found. Check the report for details."
+            cat typescript-report.txt
+            exit 1
+          )
+          echo "::endgroup::"
+
+      - name: Check for linting failures
+        if: steps.eslint.outcome == 'failure' || steps.typecheck.outcome == 'failure'
+        run: |
+          echo "::error::Frontend linting checks failed. Please fix the issues above."
+          exit 1
+
+      - name: Upload linting results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-lint-results
+          path: |
+            eslint-report.txt
+            typescript-report.txt
+          retention-days: 7
+          if-no-files-found: warn
+
+  frontend-test:
+    name: Frontend Tests
+    needs: frontend-lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.NODE_ROOT }}
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || github.ref == 'refs/heads/develop' && 'staging' || 'development' }}
+    env:
+      REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL || 'http://localhost:8000' }}
+      REACT_APP_ENVIRONMENT: ${{ github.event.ref == 'refs/heads/main' && 'production' || github.event.ref == 'refs/heads/develop' && 'staging' || 'development' }}
+      REACT_APP_VERSION: ${{ github.sha }}
+      CI: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.NODE_ROOT }}/package-lock.json
+
+      - name: Install dependencies
+        id: install
+        run: |
+          echo "::group::Environment Setup"
+          node --version
+          npm --version
+          echo "Working directory: $(pwd)"
+          echo "::endgroup::"
+
+          npm ci
+
+      - name: Run tests
+        id: tests
+        run: |
+          echo "::group::Running Jest tests with coverage"
+          mkdir -p coverage
+
+          echo "Environment: ${{ env.REACT_APP_ENVIRONMENT }}"
+          echo "Coverage threshold: ${{ env.COVERAGE_THRESHOLD }}%"
+
+          npm run test:ci || (
+            echo "::error::Tests failed. Check the coverage report for details."
+            exit 1
+          )
+          echo "::endgroup::"
+
+      - name: Generate test summary
+        if: always()
+        run: |
+          echo "::group::Test Summary"
+          if [ -d "coverage" ]; then
+            echo "Coverage Report:"
+            cat coverage/coverage-summary.json | jq -r '.total | to_entries | .[] | "\(.key): \(.value.pct)%"'
+          fi
+          echo "::endgroup::"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-test-results
+          path: |
+            coverage/
+            junit.xml
           retention-days: 14
           if-no-files-found: warn
 
-  # Comment out frontend jobs for now
-  # frontend-lint:
-  #   name: Frontend Linting
-  #   runs-on: ubuntu-latest
-  #   ...
-
-  # frontend-test:
-  #   name: Frontend Tests
-  #   needs: frontend-lint
-  #   runs-on: ubuntu-latest
-  #   ...
-
   build:
     name: Build
-    needs: [backend-test]
+    needs: [backend-test, frontend-test]
     runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || github.ref == 'refs/heads/develop' && 'staging' || 'development' }}
     env:
-      REACT_APP_API_URL: http://localhost:8000
+      REACT_APP_API_URL: ${{ github.ref == 'refs/heads/main' && secrets.PROD_API_URL || github.ref == 'refs/heads/develop' && secrets.STAGING_API_URL || 'http://localhost:8000' }}
+      REACT_APP_ENVIRONMENT: ${{ github.event.ref == 'refs/heads/main' && 'production' || github.event.ref == 'refs/heads/develop' && 'staging' || 'development' }}
       REACT_APP_VERSION: ${{ github.sha }}
-
     steps:
       - uses: actions/checkout@v4
 
@@ -286,8 +405,7 @@ jobs:
           echo "::group::Environment Information"
           node --version
           npm --version
-          echo "Working directory: $(pwd)"
-          echo "Build version: $REACT_APP_VERSION"
+          echo "Environment: ${{ env.REACT_APP_ENVIRONMENT }}"
           echo "::endgroup::"
 
           echo "::group::Install dependencies"
@@ -295,10 +413,10 @@ jobs:
           echo "::endgroup::"
 
           echo "::group::Build frontend"
-          npm run build || {
-            echo "::error::Build failed"
+          npm run build || (
+            echo "::error::Build failed. Check the logs for details."
             exit 1
-          }
+          )
           echo "::endgroup::"
 
       - name: Generate build summary
@@ -431,4 +549,3 @@ jobs:
         with:
           name: workflow-summary
           path: workflow_summary.md
-          retention-days: 14

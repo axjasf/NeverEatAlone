@@ -1,14 +1,9 @@
 """Tests for the Note domain model."""
 
 import pytest
-from datetime import datetime, UTC
+from datetime import datetime, UTC, timedelta
 from uuid import UUID
-from typing import List
-
-# We'll create these domain models next
-from backend.app.models.domain.note_model import Note, Statement
-from backend.app.models.domain.tag_model import Tag
-
+from backend.app.models.domain.note_model import Note
 
 TEST_UUID = UUID("11111111-1111-1111-1111-111111111111")
 
@@ -34,16 +29,16 @@ def test_note_content_validation():
     """Test note content validation.
 
     Content validation rules:
-    1. Content cannot be empty
+    1. Content notes require content
     2. Content cannot be just whitespace
     3. Content is trimmed
     """
     # Test empty content
-    with pytest.raises(ValueError, match="Content cannot be empty"):
+    with pytest.raises(ValueError, match="Content notes require content"):
         Note(contact_id=TEST_UUID, content="")
 
     # Test whitespace content
-    with pytest.raises(ValueError, match="Content cannot be empty"):
+    with pytest.raises(ValueError, match="Content notes require content"):
         Note(contact_id=TEST_UUID, content="   ")
 
     # Test content trimming
@@ -155,3 +150,91 @@ def test_note_update_tracking():
     time.sleep(0.001)
     note.add_tag("#newtag")
     assert note.updated_at > original_updated_at
+
+
+def test_note_interaction_creation():
+    """Test creating an interaction note.
+
+    Interaction notes:
+    1. Must have interaction_date
+    2. Content is optional
+    3. Update contact's last_contact_at
+    """
+    # Test valid interaction note with content
+    interaction_time = datetime.now(UTC)
+    note = Note(
+        contact_id=TEST_UUID,
+        content="Met for coffee",
+        is_interaction=True,
+        interaction_date=interaction_time
+    )
+    assert note.is_interaction
+    assert note.interaction_date == interaction_time
+    assert note.content == "Met for coffee"
+
+    # Test valid interaction note without content
+    note_no_content = Note(
+        contact_id=TEST_UUID,
+        is_interaction=True,
+        interaction_date=interaction_time
+    )
+    assert note_no_content.is_interaction
+    assert note_no_content.interaction_date == interaction_time
+    assert note_no_content.content is None
+
+
+def test_note_interaction_validation():
+    """Test interaction note validation rules.
+
+    Validation rules:
+    1. If is_interaction=True, must have interaction_date
+    2. If is_interaction=False, must have content
+    3. If is_interaction=False, cannot have interaction_date
+    4. interaction_date cannot be in the future
+    """
+    # Test missing interaction_date
+    with pytest.raises(ValueError, match="Interaction notes require a date"):
+        Note(
+            contact_id=TEST_UUID,
+            is_interaction=True
+        )
+
+    # Test content note without content
+    with pytest.raises(ValueError, match="Content notes require content"):
+        Note(
+            contact_id=TEST_UUID,
+            is_interaction=False
+        )
+
+    # Test content note with interaction_date
+    with pytest.raises(ValueError, match="Content notes cannot have interaction date"):
+        Note(
+            contact_id=TEST_UUID,
+            content="Test",
+            is_interaction=False,
+            interaction_date=datetime.now(UTC)
+        )
+
+    # Test future interaction_date
+    future_time = datetime.now(UTC) + timedelta(days=1)
+    with pytest.raises(ValueError, match="Interaction date cannot be in the future"):
+        Note(
+            contact_id=TEST_UUID,
+            is_interaction=True,
+            interaction_date=future_time
+        )
+
+
+def test_note_interaction_defaults():
+    """Test default values for notes.
+
+    Default rules:
+    1. is_interaction defaults to False
+    2. interaction_date defaults to None
+    3. Content notes work as before
+    """
+    # Test regular content note
+    note = Note(contact_id=TEST_UUID, content="Test note")
+    assert not note.is_interaction
+    assert note.interaction_date is None
+    assert note.content == "Test note"

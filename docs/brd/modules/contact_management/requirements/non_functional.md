@@ -38,6 +38,9 @@
 - NFR3.2.4: System MUST preserve historical data during template evolution
 - NFR3.2.5: System MUST maintain data consistency across tag frequency updates
 - NFR3.2.6: System MUST validate AI-generated content before storage
+- NFR3.2.7: System MUST ensure timezone consistency in all datetime operations
+- NFR3.2.8: System MUST handle daylight saving time transitions correctly
+- NFR3.2.9: System MUST maintain timezone information during data migrations
 
 ## 4. Usability Requirements
 

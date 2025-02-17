@@ -37,7 +37,10 @@ The model layer implements a rich domain model with clean separation between dom
   - `sub_information`: Flexible JSON data structure
   - `notes`: List of associated notes
   - `tags`: List of associated tags
-- Methods for note and tag management
+  - `last_contact`: Optional timestamp of last general contact
+- Methods:
+  - Note and tag management
+  - Contact tracking updates
 - Validation rules for all fields
 
 #### Note
@@ -67,8 +70,10 @@ The order of statements within a note is maintained through their position in th
   - `entity_type`: Type of tagged entity (Contact/Note/Statement)
   - `name`: Tag text (starts with #)
   - `frequency_days`: Optional reminder frequency
-  - `last_contact`: Last contact timestamp
-- Methods for frequency and staleness management
+  - `last_contact`: Last contact timestamp for this specific tag
+- Methods:
+  - Frequency and staleness management
+  - Tag-specific contact tracking
 - Validation rules for tag names
 
 ### ORM Models

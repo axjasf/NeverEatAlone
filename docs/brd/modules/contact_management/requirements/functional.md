@@ -6,6 +6,8 @@
 - FR1.1.1: System MUST require a name for each contact
 - FR1.1.2: System MUST track creation and update timestamps
 - FR1.1.3: System MUST support contact briefing text
+- FR1.1.4: System MUST track last interaction date at contact level
+- FR1.1.5: System MUST track last interaction date per contact-tag combination
 
 ### 1.2 Sub-Information Management
 - FR1.2.1: System MUST support a single user-defined JSON template with categories and fields
@@ -27,40 +29,41 @@
 ### 2.1 Basic Tag Functionality
 - FR2.1.1: System MUST support tag creation with # prefix
 - FR2.1.2: System MUST normalize tags to lowercase
-- FR2.1.3: System MUST prevent duplicate tags
+- FR2.1.3: System MUST prevent duplicate tags per contact
 - FR2.1.4: System MUST support assigning multiple tags to contacts
+- FR2.1.5: System MUST support tagging notes for context
 
-### 2.2 Reminder Functionality
-- FR2.2.1: System MUST support optional contact frequency setting per tag
+### 2.2 Contact Frequency Tracking
+- FR2.2.1: System MUST support optional contact frequency setting per contact-tag combination
 - FR2.2.2: System MUST track last contact date per contact-tag combination
 - FR2.2.3: System MUST calculate staleness for each frequency-enabled tag independently
-- FR2.2.4: System MUST allow enabling/disabling frequency tracking for any tag
-- FR2.2.5: System MUST maintain reminders independently from their source fields
-
-### 2.3 Tag Management
-- FR2.3.1: System MUST support adding/removing tags from contacts
-- FR2.3.2: System MUST provide tag-based contact filtering
-- FR2.3.3: System MUST display contacts by tag with staleness information when frequency is enabled
-- FR2.3.4: System MUST track single frequency setting per frequency-enabled tag
+- FR2.2.4: System MUST allow enabling/disabling frequency tracking for any contact-tag combination
+- FR2.2.5: System MUST update contact-tag last contact dates only from interaction notes
+- FR2.2.6: System MUST update general contact last interaction date from any interaction note
 
 ## 3. Note and Interaction System
 
 ### 3.1 Note Management
-- FR3.1.1: System MUST support note creation with content and date
-- FR3.1.2: System MUST allow referencing JSON fields in notes for context
+- FR3.1.1: System MUST support two types of notes:
+  - Content notes with actual information
+  - Pure interaction records without content
+- FR3.1.2: System MUST require either content or interaction flag for notes
 - FR3.1.3: System MUST allow tagging notes for context
-- FR3.1.4: System MUST break down notes into statements
-- FR3.1.5: System MUST maintain link between notes and statements
-- FR3.1.6: System MUST allow editing of statements
-- FR3.1.7: System MUST support tagging individual statements
-- FR3.1.8: System MUST maintain tag relationships when splitting notes into statements
-- FR3.1.9: System MUST allow filtering statements by tags
+- FR3.1.4: System MUST update relevant contact tracking based on interaction notes
+- FR3.1.5: System MUST maintain accurate timestamps for all interactions
+- FR3.1.6: System MUST allow filtering notes by type (content vs interaction)
+- FR3.1.7: System MUST allow filtering notes by tags
 
-### 3.2 Voice Processing
-- FR3.2.1: System MUST transcribe voice notes to text
-- FR3.2.2: System MUST extract individual statements from transcribed text
-- FR3.2.3: System MUST summarize notes
-- FR3.2.4: System MUST identify key information in statements
+### 3.2 Interaction Tracking
+- FR3.2.1: System MUST update contact's last_interaction_at when creating interaction notes
+- FR3.2.2: System MUST update contact-tag last_contact dates based on note tags
+- FR3.2.3: System MUST support recording interactions without content
+- FR3.2.4: System MUST maintain interaction history with tags
+- FR3.2.5: System MUST validate interaction dates
+- FR3.2.6: System MUST prevent future interaction dates
+- FR3.2.7: System MUST store all datetime fields in UTC timezone
+- FR3.2.8: System MUST preserve timezone information when retrieving datetime fields
+- FR3.2.9: System MUST handle timezone conversion consistently across all layers
 
 ### 3.3 Information Extraction
 - FR3.3.1: System MUST analyze statements for JSON-compatible information
@@ -71,12 +74,6 @@
 - FR3.3.6: System MUST detect potential reminder triggers in notes and suggest creating reminders with field reference
 - FR3.3.7: System MUST suggest relevant tags for statements based on content
 - FR3.3.8: System MUST maintain tag context when suggesting JSON updates
-
-### 3.4 Interaction Tracking
-- FR3.4.1: System MUST use notes to track all contact interactions
-- FR3.4.2: System MUST update relevant contact-tag last contact dates based on notes
-- FR3.4.3: System MUST support querying interaction history by tags and fields
-- FR3.4.4: System MUST enable rich context searching across notes
 
 ## 4. Dashboard and Display
 
