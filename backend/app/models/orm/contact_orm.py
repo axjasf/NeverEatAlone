@@ -3,8 +3,8 @@
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, JSON, DateTime
-from .base_orm import BaseORMModel
+from sqlalchemy import String, JSON
+from .base_orm import BaseORMModel, UTCDateTime
 from .tag_orm import TagORM
 from .note_orm import NoteORM
 from .reminder_orm import ReminderORM
@@ -22,7 +22,7 @@ class ContactORM(BaseORMModel):
     sub_information: Mapped[Dict[str, Any]] = mapped_column(
         JSON, nullable=True, default=dict
     )
-    last_contact: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    last_contact: Mapped[Optional[datetime]] = mapped_column(UTCDateTime, nullable=True)
     contact_briefing_text: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
     # Relationships
