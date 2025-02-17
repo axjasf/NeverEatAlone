@@ -140,26 +140,62 @@ git checkout -b feature/23-implement-timezone-handling
    - Requirements and implementation notes
    - Created via `./scripts/cr.sh create`
 
-3. **Development Journal** (`docs/implementation/WORKING_NOTES.md`)
+3. **Development Journal** (`docs/implementation/DEVELOPMENT_JOURNAL.md`)
    - Combined implementation plan and working notes
-   - Informal, chronological entries
-   - Daily updates and decisions
+   - Tracks current sprint progress and decisions
+   - Fine-granular observations and progress tracking
    - Format:
      ```markdown
      # Development Journal
+     Version: YYYY.MM.DD-N
 
-     ## Current Focus (Updated: YYYY-MM-DD)
-     What I'm working on right now and why
+     ## Current Focus
+     What the sprint is focusing on right now
 
-     ## Recent Updates
-     ### YYYY-MM-DD
-     - What I did
-     - Decisions made
-     - Next steps
+     ## What I'm Working On
+     Current implementation tasks and progress
+
+     ## Recent Progress
+     Completed items and achievements
+
+     ## Technical Decisions
+     Architecture and implementation choices
+
+     ## Next Steps
+     Immediate tasks and plans
 
      ## Backlog
-     Things I want to do next, in rough priority order
+     Future work items with priorities
+
+     ## History
+     Version changelog
      ```
+
+4. **Development Journal Management**
+
+### Sprint Branch Workflow
+1. Each sprint has a dedicated branch (`sprint/YYYY-MM`)
+   - Contains the single source of truth for development journal
+   - All feature branches branch from here
+
+2. Feature Branch Process
+   - Branch from current sprint branch
+   - Update development journal in sprint branch
+   - All progress tracked in sprint branch journal
+
+3. Sprint Completion
+   - Sprint branch merges to main
+   - New sprint branch created
+   - Ongoing features rebase onto new sprint branch
+
+4. Journal Structure
+   - Current Focus: What the sprint is focusing on right now
+   - What I'm Working On: Current implementation tasks
+   - Recent Progress: Completed items and achievements
+   - Technical Decisions: Architecture and implementation choices
+   - Next Steps: Immediate tasks and plans
+   - Backlog: Future work items with priorities
+   - History: Version changelog
 
 ### Simple Workflow
 1. **Starting Work**
@@ -168,21 +204,21 @@ git checkout -b feature/23-implement-timezone-handling
    ./scripts/cr.sh create "Add feature X" "Description" "feature"
 
    # Update journal
-   echo "Starting work on feature X..." >> docs/implementation/WORKING_NOTES.md
+   # Make updates in sprint branch's DEVELOPMENT_JOURNAL.md
    ```
 
-2. **Daily Updates**
+2. **Progress Updates**
    - Move cards on project board
-   - Add journal entry with progress
-   - Update CR if major milestone
+   - Update development journal with progress
+   - Update CR if major milestone or major insights relevant to the CR
 
 3. **Completing Work**
    ```bash
    # Finalize CR
    ./scripts/cr.sh finalize <issue-number> <cr-number>
 
-   # Add completion note
-   echo "Completed feature X" >> docs/implementation/WORKING_NOTES.md
+   # Add completion to journal
+   # Document completion in sprint branch's DEVELOPMENT_JOURNAL.md
    ```
 
 ## Best Practices
@@ -261,8 +297,8 @@ Let's follow a complete example of implementing a new feature:
 
 ### Updating Progress
 1. Use `./scripts/cr.sh update` for status changes
-2. Keep Working Notes updated
-3. Update Implementation Plan as needed
+2. Update development journal in sprint branch
+3. Document technical decisions and progress
 
 ### Code Review Process
 1. Create PR

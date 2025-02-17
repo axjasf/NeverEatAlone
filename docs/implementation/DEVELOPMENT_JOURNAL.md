@@ -90,6 +90,11 @@ Current decisions:
    - [ ] Tag BO verification (using improved test patterns)
    - [ ] Cross-cutting documentation
 
+4. Process Improvements
+   - [ ] Migrate to sprint branch structure for development journal management
+   - [ ] Create first sprint branch and update workflow
+   - [ ] Document transition in project management guide
+
 ### Backlog
 1. Timezone Support
    - Ensure consistent timezone handling
@@ -116,6 +121,11 @@ Current decisions:
 - Consider documenting common SQLAlchemy warnings in test suite
 
 ## History
+### 2024.02.16-4
+- Decided on sprint-based branch management for future development
+- Development journal will move to sprint branches after timezone implementation
+- See Process Improvements in Next Steps for migration plan
+
 ### 2024.02.16-3
 - Reorganized development journal
 - Moved Contact BO timezone verification to completed status
