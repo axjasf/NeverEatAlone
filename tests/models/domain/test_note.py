@@ -2,6 +2,7 @@
 
 import pytest
 from datetime import datetime, UTC, timedelta
+from zoneinfo import ZoneInfo
 from uuid import UUID
 from backend.app.models.domain.note_model import Note
 
@@ -238,3 +239,135 @@ def test_note_interaction_defaults():
     assert not note.is_interaction
     assert note.interaction_date is None
     assert note.content == "Test note"
+
+
+def test_note_timezone_handling():
+    """Test timezone handling in notes.
+
+    Timezone rules:
+    1. Interaction dates must be timezone-aware
+    2. Different input timezones are converted to UTC
+    3. Timezone information is preserved
+    4. Future date validation works across timezones
+    """
+    # Test timezone-naive date rejection
+    naive_date = datetime.now()
+    with pytest.raises(ValueError, match="Interaction date must be timezone-aware"):
+        Note(
+            contact_id=TEST_UUID,
+            is_interaction=True,
+            interaction_date=naive_date
+        )
+
+    # Test different input timezones
+    sydney_tz = ZoneInfo("Australia/Sydney")
+    ny_tz = ZoneInfo("America/New_York")
+
+    # Create a reference time in Sydney
+    sydney_time = datetime.now(sydney_tz).replace(microsecond=0)
+    expected_utc = sydney_time.astimezone(UTC)
+
+    note_sydney = Note(
+        contact_id=TEST_UUID,
+        content="Meeting in Sydney",
+        is_interaction=True,
+        interaction_date=sydney_time
+    )
+
+    # Verify conversion to UTC
+    assert note_sydney.interaction_date is not None
+    assert note_sydney.interaction_date == expected_utc
+    assert note_sydney.interaction_date.tzinfo == UTC
+
+    # Test future date validation across timezones
+    future_ny_time = datetime.now(ny_tz) + timedelta(days=1)
+    with pytest.raises(ValueError, match="Interaction date cannot be in the future"):
+        Note(
+            contact_id=TEST_UUID,
+            is_interaction=True,
+            interaction_date=future_ny_time
+        )
+
+
+def test_note_timezone_edge_cases():
+    """Test edge cases in timezone handling.
+
+    Edge cases:
+    1. Dates near UTC day boundary
+    2. Dates in different DST periods
+    3. Dates with fractional hours offset
+    """
+    # Test date near UTC day boundary
+    india_tz = ZoneInfo("Asia/Kolkata")  # UTC+5:30
+    # Create a time that's the next day in India but same day in UTC
+    india_time = datetime.now(india_tz).replace(hour=1, minute=0, second=0, microsecond=0)
+
+    note_india = Note(
+        contact_id=TEST_UUID,
+        content="Early morning meeting in India",
+        is_interaction=True,
+        interaction_date=india_time
+    )
+
+    # Verify correct UTC conversion
+    assert note_india.interaction_date is not None
+    assert note_india.interaction_date.tzinfo == UTC
+    assert note_india.interaction_date < india_time
+
+    # Test DST transition handling
+    paris_tz = ZoneInfo("Europe/Paris")
+    # Create a time during DST
+    paris_dst_time = datetime(2024, 7, 1, 14, 0, tzinfo=paris_tz)
+
+    note_paris = Note(
+        contact_id=TEST_UUID,
+        content="Summer meeting in Paris",
+        is_interaction=True,
+        interaction_date=paris_dst_time
+    )
+
+    # Verify DST handling
+    assert note_paris.interaction_date is not None
+    assert note_paris.interaction_date.tzinfo == UTC
+    assert note_paris.interaction_date.hour == 12  # UTC+2 during DST
+
+
+def test_note_interaction_timezone_consistency():
+    """Test timezone consistency in interaction notes.
+
+    Consistency rules:
+    1. All datetime fields use UTC internally
+    2. Timezone information is preserved in conversions
+    3. Comparison operations work correctly
+    """
+    tokyo_tz = ZoneInfo("Asia/Tokyo")
+    la_tz = ZoneInfo("America/Los_Angeles")
+
+    # Create two notes with different timezone inputs
+    tokyo_time = datetime.now(tokyo_tz).replace(microsecond=0)
+    la_time = tokyo_time.astimezone(la_tz)
+
+    note_tokyo = Note(
+        contact_id=TEST_UUID,
+        content="Tokyo meeting",
+        is_interaction=True,
+        interaction_date=tokyo_time
+    )
+
+    note_la = Note(
+        contact_id=TEST_UUID,
+        content="LA meeting",
+        is_interaction=True,
+        interaction_date=la_time
+    )
+
+    # Verify both notes have same UTC time
+    assert note_tokyo.interaction_date is not None
+    assert note_la.interaction_date is not None
+    assert note_tokyo.interaction_date == note_la.interaction_date
+    assert note_tokyo.interaction_date.tzinfo == UTC
+    assert note_la.interaction_date.tzinfo == UTC
+
+    # Verify original timezone info can be recovered
+    assert note_tokyo.interaction_date.astimezone(tokyo_tz).hour == tokyo_time.hour
+    assert note_la.interaction_date.astimezone(la_tz).hour == la_time.hour
