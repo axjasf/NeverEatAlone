@@ -40,6 +40,8 @@ class SQLAlchemyContactRepository:
             first_name=contact.first_name,
             briefing_text=contact.briefing_text,
             sub_information=contact.sub_information,
+            last_contact=contact.last_contact,
+            contact_briefing_text=contact.contact_briefing_text,
         )
 
         # Merge to handle both insert and update
@@ -87,6 +89,8 @@ class SQLAlchemyContactRepository:
             sub_information=contact_orm.sub_information,
         )
         contact.id = contact_orm.id
+        contact.last_contact = contact_orm.last_contact
+        contact.contact_briefing_text = contact_orm.contact_briefing_text
 
         # Add tags
         for tag_orm in contact_orm.tags:
@@ -201,6 +205,56 @@ class SQLAlchemyContactRepository:
                 sub_information=contact_orm.sub_information,
             )
             contact.id = contact_orm.id
+            contact.last_contact = contact_orm.last_contact
+            contact.contact_briefing_text = contact_orm.contact_briefing_text
+
+            # Add tags
+            for tag_orm in contact_orm.tags:
+                tag = Tag(
+                    entity_id=tag_orm.entity_id,
+                    entity_type=EntityType.CONTACT,
+                    name=tag_orm.name,
+                )
+                if tag_orm.frequency_days is not None:
+                    tag.set_frequency(tag_orm.frequency_days)
+                    if tag_orm.last_contact is not None:
+                        tag.update_last_contact(tag_orm.last_contact)
+                contact.tags.append(tag)
+
+            contacts.append(contact)
+
+        return contacts
+
+    def find_by_last_contact_before(self, date: datetime) -> List[Contact]:
+        """Find contacts with last contact before a given date.
+
+        Args:
+            date: The date to compare against (timezone-aware)
+
+        Returns:
+            List of contacts with last contact before the given date
+        """
+        # Ensure we're working with UTC for comparison
+        utc_date = date.astimezone(UTC)
+
+        stmt = (
+            select(ContactORM)
+            .options(selectinload(ContactORM.tags))
+            .where(ContactORM.last_contact < utc_date)
+        )
+        contact_orms = self._session.execute(stmt).unique().scalars().all()
+
+        contacts = []
+        for contact_orm in contact_orms:
+            contact = Contact(
+                name=contact_orm.name,
+                first_name=contact_orm.first_name,
+                briefing_text=contact_orm.briefing_text,
+                sub_information=contact_orm.sub_information,
+            )
+            contact.id = contact_orm.id
+            contact.last_contact = contact_orm.last_contact
+            contact.contact_briefing_text = contact_orm.contact_briefing_text
 
             # Add tags
             for tag_orm in contact_orm.tags:
