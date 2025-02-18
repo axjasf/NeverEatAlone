@@ -308,6 +308,181 @@ Let's follow a complete example of implementing a new feature:
 5. Get approval
 6. Merge and finalize CR
 
+## Pattern Evolution Process
+
+### Overview
+Pattern evolution occurs when we discover better ways to implement or test features. This process ensures improvements are systematically applied across the codebase.
+
+### Pattern Discovery Flow
+1. **Discovery and Documentation**
+   ```bash
+   # 1. Document new pattern
+   ./scripts/cr.sh update <cr-number> "in-progress" "Discovered improved pattern for <area>"
+
+   # 2. Update pattern guide
+   # Example: Update TEST_PATTERNS.md with new test pattern
+   ```
+
+2. **Impact Analysis**
+   - Identify affected components
+   - Assess urgency:
+     - High: Security/correctness issues
+     - Medium: Significant improvements
+     - Low: Style/readability improvements
+   - Create backport tasks
+   - Set timeline for consistency
+
+3. **Implementation Planning**
+   ```bash
+   # Create backport CR
+   ./scripts/cr.sh create "Backport <pattern> to existing components" "..." "refactor"
+
+   # Link to original CR
+   ./scripts/cr.sh link <original-cr> <backport-cr>
+   ```
+
+### Pattern Consistency Checks
+
+#### Regular Reviews
+1. **Sprint Planning**
+   - Review pattern consistency status
+   - Prioritize critical pattern alignments
+   - Schedule pattern alignment sprints
+
+2. **Code Review**
+   - Check for pattern adherence
+   - Identify pattern deviations
+   - Document new pattern discoveries
+
+3. **Automated Checks**
+   - Pattern violation detection
+   - Test coverage for pattern requirements
+   - Pattern consistency metrics
+
+#### Example: Test Pattern Evolution
+```bash
+# 1. Pattern Discovery
+./scripts/cr.sh update 23 "in-progress" "Discovered better timezone test patterns"
+
+# 2. Document Pattern
+# Update TEST_PATTERNS.md
+
+# 3. Create Backport Tasks
+./scripts/cr.sh create "Backport timezone test patterns" "Apply improved patterns..." "refactor"
+
+# 4. Track Progress
+./scripts/cr.sh update <backport-cr> "in-progress" "Updating Contact BO tests"
+```
+
+### Pattern Evolution Checklist
+1. **Discovery Phase**
+   - [ ] Document new pattern
+   - [ ] Update relevant guides
+   - [ ] Assess impact and urgency
+   - [ ] Create backport tasks
+
+2. **Planning Phase**
+   - [ ] Set consistency timeline
+   - [ ] Prioritize backport tasks
+   - [ ] Schedule pattern alignment
+   - [ ] Update sprint planning
+
+3. **Implementation Phase**
+   - [ ] Create backport CR
+   - [ ] Update affected components
+   - [ ] Verify pattern consistency
+   - [ ] Update documentation
+
+4. **Verification Phase**
+   - [ ] Run automated checks
+   - [ ] Conduct pattern review
+   - [ ] Verify all components
+   - [ ] Update status tracking
+
+### Best Practices
+
+1. **Pattern Documentation**
+   - Clear, concise pattern description
+   - Example implementations
+   - Migration guidelines
+   - Known limitations
+
+2. **Consistency Management**
+   - Regular pattern audits
+   - Automated consistency checks
+   - Pattern evolution tracking
+   - Clear timeline for alignment
+
+3. **Implementation Strategy**
+   - Prioritize by impact
+   - Incremental updates
+   - Verify each change
+   - Maintain traceability
+
+4. **Review Process**
+   - Pattern adherence checks
+   - Consistency verification
+   - Documentation updates
+   - Knowledge sharing
+
+### Example Story: Test Pattern Evolution
+
+1. **Discovery**
+   ```bash
+   # Document discovery in CR
+   ./scripts/cr.sh update 23 "in-progress" "Found better timezone test patterns:
+   1. UTC moment-based comparisons
+   2. DST transition handling
+   3. Edge case coverage"
+   ```
+
+2. **Documentation**
+   ```bash
+   # Update pattern guide
+   # Add to TEST_PATTERNS.md:
+   # - New pattern description
+   # - Migration guidelines
+   # - Example implementations
+   ```
+
+3. **Planning**
+   ```bash
+   # Create backport CR
+   ./scripts/cr.sh create "Backport timezone patterns" "Apply improved patterns..." "refactor"
+
+   # Update sprint planning
+   # Add to next sprint's backlog
+   ```
+
+4. **Implementation**
+   ```bash
+   # Start backport
+   ./scripts/cr.sh update <backport-cr> "in-progress" "Updating Contact BO tests"
+
+   # Track progress
+   ./scripts/cr.sh update <backport-cr> "in-progress" "2/3 BOs updated"
+   ```
+
+### Troubleshooting
+
+1. **Pattern Conflicts**
+   - Document conflicts
+   - Resolve through team review
+   - Update pattern guide
+   - Communicate changes
+
+2. **Implementation Challenges**
+   - Break down into smaller tasks
+   - Focus on high-impact changes
+   - Maintain incremental progress
+   - Regular status updates
+
+3. **Consistency Issues**
+   - Run automated checks
+   - Review pattern adherence
+   - Update documentation
+   - Schedule alignment sprints
+
 ## Troubleshooting
 
 ### Common Issues
