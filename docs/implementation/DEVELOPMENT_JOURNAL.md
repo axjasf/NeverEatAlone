@@ -23,13 +23,19 @@ Current decisions:
    - [ ] Create test pattern guide for future BOs
    See CR-2024.02-23 "Note BO Implementation and Test Pattern Discovery" section for detailed patterns and examples.
 
-2. Remaining BO Verifications
+2. Testing Documentation
+   - [ ] Document test patterns and best practices in `docs/implementation/backend/patterns/TEST_PATTERNS.md`
+   - [ ] Document test organization structure in `docs/implementation/backend/patterns/TEST_PATTERNS.md`
+   - [ ] Document timezone test patterns from `tests/models/orm/test_tag.py`
+   Reference: See current test implementation in `tests/repositories/test_contact_repository.py` and Note BO patterns in CR-2024.02-23
+
+3. Remaining BO Verifications
    - [ ] Statement BO verification (using improved test patterns)
    - [ ] Reminder BO verification (using improved test patterns)
    - [ ] Tag BO verification (using improved test patterns)
    - [ ] Cross-cutting documentation
 
-3. Process Improvements
+4. Process Improvements
    - [ ] Migrate to sprint branch structure for development journal management
    - [ ] Create first sprint branch and update workflow
    - [ ] Document transition in project management guide
@@ -61,6 +67,32 @@ Current decisions:
    - Improve error messages
    - Add audit logging
    - Enhance test coverage
+
+3. Documentation Improvements
+   - Documentation Structure and Links
+     - [ ] Fix broken README links in `/README.md` and `/docs/README.md`
+     - [ ] Implement documentation validation checks in `.github/workflows/build.yml`
+     - [ ] Create documentation map/index in `/docs/README.md`
+     - [ ] Add automated link checker to `.github/workflows/build.yml`
+     - Reference: See `docs/README.md` for current structure
+
+   - Data Model Documentation
+     - [ ] Create comprehensive data model documentation in `docs/brd/modules/contact_management/technical/data_model.md`
+     - [ ] Document domain model relationships in `docs/implementation/backend/MODEL_LAYER.md`
+     - [ ] Add ER diagrams for all major subsystems in `docs/brd/modules/contact_management/technical/architecture.md`
+     - [ ] Add relationship maps between bounded contexts in `docs/brd/modules/contact_management/technical/architecture.md`
+     - Reference: See current model patterns in `docs/implementation/backend/MODEL_LAYER.md`
+
+   - Development Workflow Documentation
+     - [ ] Add branch naming convention section to `docs/development/guides/PROJECT_MANAGEMENT.md`
+     - [ ] Document PR template location and usage in `.github/pull_request_template.md`
+     - [ ] Link to existing CI/CD documentation in `docs/development/guides/DEVELOPMENT.md`
+     - [ ] Add quick-start guide for new developers in `docs/development/guides/CHEATSHEET.md`
+     - Reference: See current workflow in `docs/development/guides/PROJECT_MANAGEMENT.md`
+
+   - Testing Documentation
+     - [ ] Add test data management guidelines in `docs/development/guides/TESTING.md`
+     - [ ] Create test troubleshooting guide in `docs/development/guides/TESTING.md`
 
 ### Notes & Reminders
 - Keep test coverage above 80%
