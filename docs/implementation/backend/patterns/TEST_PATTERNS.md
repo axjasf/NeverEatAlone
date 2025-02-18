@@ -1,105 +1,254 @@
-# Backend Test Patterns
+# Test Patterns Guide
 
 ## Overview
-This document details specific test patterns discovered and standardized during the implementation of our business objects. It serves as a companion to the general `TESTING.md` guide, providing concrete patterns and examples.
+This guide documents the comprehensive test patterns established during the Note BO implementation (CR-2024.02-23). It covers testing strategies across all aspects of a business object, from basic CRUD to complex temporal logic, using the Note BO as our reference implementation.
 
-## Timezone Test Patterns
+Key aspects covered:
+- Basic patterns: Creation, validation, and state management
+- Relationship patterns: Collections, associations, and object graphs
+- Complex patterns: Timezone handling, DST, and cross-cutting concerns
 
-### Context & Discovery
-These patterns were initially discovered during Note BO implementation (see CR-2024.02-23) and have been established as our standard approach for all timezone-aware business objects.
+The patterns are organized by:
+1. Layer (domain, ORM, repository)
+2. Category (basic, relationship, temporal)
+3. Complexity (common → complex)
 
-### Core Patterns
+Each pattern is demonstrated with concrete examples from the Note BO implementation, showing how to handle everything from simple validation to complex timezone scenarios.
 
-#### 1. UTC Storage Pattern
-```python
-def test_timestamp_stored_as_utc(db_session: Session) -> None:
-    """Verify timestamps are always stored in UTC regardless of input timezone."""
-    local_time = datetime.now(tz=ZoneInfo("Europe/Berlin"))
-    note = Note(
-        title="Test Note",
-        content="Content",
-        created_at=local_time
-    )
-    db_session.add(note)
-    db_session.commit()
+## Test Organization
 
-    # Verify stored in UTC
-    stored_note = db_session.get(Note, note.id)
-    assert stored_note.created_at.tzinfo == timezone.utc
-    assert stored_note.created_at == local_time.astimezone(timezone.utc)
-```
+### 1. Domain Layer Tests
+Tests for business logic and invariants.
 
-#### 2. DST-Aware Comparison Pattern
-```python
-def test_timestamp_comparison_across_dst(db_session: Session) -> None:
-    """Verify timestamp comparisons work correctly across DST boundaries."""
-    # Use moment-based comparisons instead of hard-coded hours
-    winter_time = datetime(2024, 1, 1, 10, 0, tzinfo=ZoneInfo("Europe/Berlin"))
-    summer_time = datetime(2024, 7, 1, 10, 0, tzinfo=ZoneInfo("Europe/Berlin"))
+#### Basic Tests (Common)
+1. **Creation Tests**
+   ```python
+   def test_note_creation():
+       """Test creating an entity with required fields."""
+   ```
+   - Verify required fields
+   - Check default values
+   - Validate initial state
 
-    note_winter = Note(title="Winter Note", created_at=winter_time)
-    note_summer = Note(title="Summer Note", created_at=summer_time)
+2. **Validation Tests**
+   ```python
+   def test_note_content_validation():
+       """Test validation rules."""
+   ```
+   - Input validation
+   - Business rules
+   - Error cases
 
-    db_session.add_all([note_winter, note_summer])
-    db_session.commit()
+3. **Update Tests**
+   ```python
+   def test_note_update_tracking():
+       """Test state changes and tracking."""
+   ```
+   - State modifications
+   - Audit field updates
+   - Change tracking
 
-    # Compare moments in time rather than wall clock times
-    stored_winter = db_session.get(Note, note_winter.id)
-    stored_summer = db_session.get(Note, note_summer.id)
+#### Relationship Tests (Common)
+1. **Collection Management**
+   ```python
+   def test_note_statement_management():
+       """Test managing child collections."""
+   ```
+   - Adding items
+   - Removing items
+   - Ordering
+   - Validation
 
-    assert stored_winter.created_at < stored_summer.created_at
-    assert (stored_summer.created_at - stored_winter.created_at).days == 181
-```
+2. **Association Tests**
+   ```python
+   def test_note_tag_management():
+       """Test managing associations."""
+   ```
+   - Adding associations
+   - Removing associations
+   - Validation rules
 
-#### 3. Timezone Preservation Pattern
-```python
-def test_timezone_info_preserved_in_conversions(db_session: Session) -> None:
-    """Verify timezone information is preserved through save/load cycles."""
-    original_tz = ZoneInfo("Asia/Tokyo")
-    tokyo_time = datetime.now(tz=original_tz)
+#### Temporal Tests (Complex)
+1. **Timezone Handling**
+   ```python
+   def test_note_timezone_handling():
+       """Test timezone-aware operations."""
+   ```
+   - UTC conversion
+   - Timezone preservation
+   - Different input timezones
 
-    note = Note(title="Tokyo Note", created_at=tokyo_time)
-    db_session.add(note)
-    db_session.commit()
+2. **Timezone Edge Cases**
+   ```python
+   def test_note_timezone_edge_cases():
+       """Test timezone edge cases."""
+   ```
+   - DST transitions
+   - Day boundaries
+   - Fractional offsets
 
-    stored_note = db_session.get(Note, note.id)
-    # Should be in UTC in database
-    assert stored_note.created_at.tzinfo == timezone.utc
+### 2. ORM Layer Tests
+Tests for persistence mapping and constraints.
 
-    # Should convert back to original timezone correctly
-    tokyo_time_restored = stored_note.created_at.astimezone(original_tz)
-    assert tokyo_time_restored.tzinfo == original_tz
-    assert tokyo_time_restored == tokyo_time
-```
+#### Basic Tests (Common)
+1. **Persistence Tests**
+   ```python
+   def test_note_creation_with_required_fields():
+       """Test basic persistence."""
+   ```
+   - Required fields
+   - Default values
+   - Constraints
 
-### Best Practices
+2. **Constraint Tests**
+   ```python
+   def test_note_requires_contact():
+       """Test database constraints."""
+   ```
+   - Foreign key constraints
+   - Unique constraints
+   - Not null constraints
 
-1. **Always Use Timezone-Aware Datetimes**
-   - Never use naive datetimes in tests
-   - Always specify timezone info explicitly
-   - Use `ZoneInfo` for reliable timezone handling
+#### Relationship Tests (Common)
+1. **Collection Persistence**
+   ```python
+   def test_note_statement_creation():
+       """Test persisting collections."""
+   ```
+   - Save collections
+   - Load collections
+   - Maintain order
 
-2. **Moment-Based Comparisons**
-   - Compare moments in time, not wall clock times
-   - Account for DST transitions in comparisons
-   - Use timedelta for duration calculations
+2. **Cascade Operations**
+   ```python
+   def test_note_statement_deletion():
+       """Test cascade operations."""
+   ```
+   - Cascade delete
+   - Orphan handling
+   - Relationship cleanup
 
-3. **Explicit Timezone Conversions**
-   - Always be explicit about timezone conversions
-   - Verify both storage and retrieval preserve timezone info
-   - Test with multiple different timezones
+#### Temporal Tests (Complex)
+1. **Timezone Storage**
+   ```python
+   def test_note_timezone_handling():
+       """Test timezone persistence."""
+   ```
+   - UTC storage
+   - Timezone conversion
+   - Load/save consistency
 
-### Implementation Checklist
+2. **Timezone Edge Cases**
+   ```python
+   def test_note_timezone_edge_cases():
+       """Test timezone storage edge cases."""
+   ```
+   - DST handling
+   - Date boundaries
+   - Offset preservation
 
-For each Business Object with timestamp fields:
+### 3. Repository Layer Tests
+Tests for data access patterns and queries.
 
-- [ ] Implement UTC storage tests
-- [ ] Implement DST handling tests
-- [ ] Implement timezone preservation tests
-- [ ] Verify timezone-aware query operations
-- [ ] Test timezone conversions in API layer
+#### Basic Tests (Common)
+1. **CRUD Operations**
+   ```python
+   def test_note_save_and_find():
+       """Test basic CRUD."""
+   ```
+   - Save
+   - Find by ID
+   - Update
+   - Delete
 
-### Related Documentation
-- See `TESTING.md` for general testing guidelines
-- See `MODEL_LAYER.md` for ORM implementation details
-- See CR-2024.02-23 for original pattern discovery and rationale
+2. **Query Tests**
+   ```python
+   def test_note_find_by_contact():
+       """Test query operations."""
+   ```
+   - Find by field
+   - Find by relationship
+   - Collection queries
+
+#### Relationship Tests (Common)
+1. **Graph Loading**
+   ```python
+   def test_note_with_statements():
+       """Test loading object graphs."""
+   ```
+   - Load relationships
+   - Eager/lazy loading
+   - Collection handling
+
+2. **Graph Operations**
+   ```python
+   def test_note_with_statement_tags():
+       """Test operations on graphs."""
+   ```
+   - Save graphs
+   - Update graphs
+   - Delete graphs
+
+#### Temporal Tests (Complex)
+1. **Timezone Queries**
+   ```python
+   def test_note_timezone_query_handling():
+       """Test timezone-aware queries."""
+   ```
+   - Date range queries
+   - Timezone conversion
+   - Sorting by date
+
+2. **Timezone Edge Cases**
+   ```python
+   def test_note_timezone_edge_cases():
+       """Test timezone query edge cases."""
+   ```
+   - DST boundaries
+   - Date boundaries
+   - Cross-timezone queries
+
+## Best Practices
+
+1. **Test Organization**
+   - Group by complexity (basic → complex)
+   - Group by feature type
+   - Clear test names and docstrings
+
+2. **Test Structure**
+   - Arrange: Setup test data
+   - Act: Perform operation
+   - Assert: Verify results
+   - Clean: Cleanup if needed
+
+3. **Timezone Testing**
+   - Always use explicit timezones
+   - Test multiple timezone inputs
+   - Cover DST transitions
+   - Test date boundaries
+
+4. **Documentation**
+   - Document test purpose
+   - List business rules tested
+   - Explain complex scenarios
+   - Reference related tests
+
+## Common Patterns
+
+1. **Validation Testing**
+   - Test empty/null values
+   - Test boundary values
+   - Test invalid formats
+   - Test business rules
+
+2. **Relationship Testing**
+   - Test adding/removing
+   - Test ordering
+   - Test constraints
+   - Test cascades
+
+3. **Temporal Testing**
+   - Test timezone handling
+   - Test date comparisons
+   - Test range queries
+   - Test edge cases
