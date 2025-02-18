@@ -1,4 +1,4 @@
-# Development Journal - [Sprint-2024-02]
+# Development Journal - [Sprint-2025-02]
 Version: 2024.02.17-6-sprint-02
 
 ## Current Focus [sprint-02]

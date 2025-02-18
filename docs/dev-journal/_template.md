@@ -1,5 +1,5 @@
 # Development Journal - [branch-name]
-Version: YYYY.MM.DD-VERSION-branch-id
+Version: YYYY.MM.DD-VERSION-branch-id (current year is 2025)
 
 ## Current Focus [branch-id]
 ### Parent Feature [parent-branch]
