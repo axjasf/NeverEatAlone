@@ -8,6 +8,7 @@ Tests are organized by complexity and frequency of use:
 """
 
 import pytest
+import time
 from datetime import datetime, UTC, timedelta, timezone
 from zoneinfo import ZoneInfo
 from uuid import UUID
@@ -164,8 +165,6 @@ def test_note_update_tracking():
     original_updated_at = note.updated_at
 
     # Wait a moment to ensure timestamp difference
-    import time
-
     time.sleep(0.001)
 
     # Test content update
@@ -383,5 +382,97 @@ def test_note_timezone_edge_cases():
     )
 
     assert ny_note.interaction_date == tokyo_note.interaction_date
+
+# endregion
+
+
+# region Statement-Specific Tests (New)
+
+def test_statement_timestamp_handling():
+    """Test Statement timestamp handling.
+
+    Timestamp rules:
+    1. created_at is in UTC
+    2. updated_at is in UTC
+    3. updated_at changes when tags are modified
+    """
+    note = Note(contact_id=TEST_UUID, content="Test note")
+    statement = note.add_statement("Test statement")
+
+    # Verify UTC timezone
+    assert statement.created_at.tzinfo == UTC
+    assert statement.updated_at.tzinfo == UTC
+
+    # Test tag modification updates timestamp
+    original_updated_at = statement.updated_at
+    time.sleep(0.001)
+    statement.add_tag("#test")
+    assert statement.updated_at > original_updated_at
+
+    # Test tag removal updates timestamp
+    original_updated_at = statement.updated_at
+    time.sleep(0.001)
+    test_tag = next(t for t in statement.tags if t.name == "#test")
+    statement.remove_tag(test_tag)
+    assert statement.updated_at > original_updated_at
+
+
+def test_statement_sequence_preservation():
+    """Test Statement sequence preservation within Note.
+
+    Sequence rules:
+    1. Statements maintain insertion order
+    2. Order preserved after removals
+    3. Order preserved after note content update
+    """
+    note = Note(contact_id=TEST_UUID, content="Test note")
+
+    # Add statements in sequence
+    first = note.add_statement("First")
+    second = note.add_statement("Second")
+    third = note.add_statement("Third")
+
+    assert note.statements == [first, second, third]
+
+    # Test order after middle removal
+    note.remove_statement(second)
+    assert note.statements == [first, third]
+
+    # Test order preserved after note update
+    note.update_content("Updated content")
+    assert note.statements == [first, third]
+
+
+def test_statement_content_validation_edge_cases():
+    """Test Statement content validation edge cases.
+
+    Validation rules:
+    1. Content cannot be empty
+    2. Content cannot be only whitespace
+    3. Content is properly trimmed
+    4. Unicode characters are preserved
+    5. Special characters are allowed
+    """
+    note = Note(contact_id=TEST_UUID, content="Test note")
+
+    # Test various whitespace patterns
+    with pytest.raises(ValueError):
+        note.add_statement("\n\n")
+    with pytest.raises(ValueError):
+        note.add_statement("\t  \t")
+
+    # Test content trimming
+    statement = note.add_statement("  Padded content  ")
+    assert statement.content == "Padded content"
+
+    # Test Unicode content
+    unicode_content = "Test 🚀 emoji and üñîçødé"
+    statement = note.add_statement(unicode_content)
+    assert statement.content == unicode_content
+
+    # Test special characters
+    special_chars = "!@#$%^&*()_+-=[]{}|;:'\",.<>/?"
+    statement = note.add_statement(special_chars)
+    assert statement.content == special_chars
 
 # endregion
