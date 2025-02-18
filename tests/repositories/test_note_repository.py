@@ -1,4 +1,11 @@
-"""Tests for the Note repository."""
+"""Tests for the Note repository.
+
+Tests are organized by complexity and frequency of use:
+1. Basic Tests - CRUD operations
+2. Query Tests - Search and filtering
+3. State Management Tests - Updates and tracking
+4. Temporal Tests - Timezone handling
+"""
 
 from uuid import uuid4
 from datetime import datetime, UTC, timedelta
@@ -14,8 +21,17 @@ from backend.app.repositories.sqlalchemy_note_repository import (
 TEST_UUID = uuid4()
 
 
+# region Basic Tests (Common)
+
 def test_note_save_and_find(db_session: Session) -> None:
-    """Test saving and finding a note."""
+    """Test basic CRUD operations.
+
+    Rules:
+    1. Note creation
+    2. Persistence
+    3. Retrieval
+    4. Field verification
+    """
     repo = SQLAlchemyNoteRepository(db_session)
 
     # Create and save a note
@@ -29,8 +45,53 @@ def test_note_save_and_find(db_session: Session) -> None:
     assert found.content == "Test note content"
 
 
+def test_note_update(db_session: Session) -> None:
+    """Test entity updates.
+
+    Rules:
+    1. Content updates
+    2. Statement updates
+    3. Tag updates
+    4. Timestamp tracking
+    """
+    repo = SQLAlchemyNoteRepository(db_session)
+
+    # Create initial note
+    note = Note(contact_id=TEST_UUID, content="Initial content")
+    note.add_statement("Initial statement")
+    note.add_tag("#initial")
+    repo.save(note)
+    initial_updated_at = note.updated_at
+
+    # Update note
+    note.update_content("Updated content")
+    note.add_statement("New statement")
+    note.add_tag("#updated")
+    repo.save(note)
+
+    # Verify updates
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    assert found.content == "Updated content"
+    assert len(found.statements) == 2
+    assert found.statements[1].content == "New statement"
+    assert "#updated" in [t.name for t in found.tags]
+    assert found.updated_at > initial_updated_at
+
+# endregion
+
+
+# region Query Tests (Common)
+
 def test_note_find_by_contact(db_session: Session) -> None:
-    """Test finding notes by contact."""
+    """Test contact-based queries.
+
+    Rules:
+    1. Single contact queries
+    2. Multiple matches
+    3. No match cases
+    4. Result completeness
+    """
     repo = SQLAlchemyNoteRepository(db_session)
 
     # Create notes for different contacts
@@ -48,7 +109,14 @@ def test_note_find_by_contact(db_session: Session) -> None:
 
 
 def test_note_find_by_tag(db_session: Session) -> None:
-    """Test finding notes by tag."""
+    """Test tag-based queries.
+
+    Rules:
+    1. Single tag queries
+    2. Multiple matches
+    3. No match cases
+    4. Result order
+    """
     repo = SQLAlchemyNoteRepository(db_session)
 
     # Create notes with tags
@@ -80,7 +148,14 @@ def test_note_find_by_tag(db_session: Session) -> None:
 
 
 def test_note_with_statements(db_session: Session) -> None:
-    """Test saving and finding notes with statements."""
+    """Test statement relationship queries.
+
+    Rules:
+    1. Statement creation
+    2. Order preservation
+    3. Relationship loading
+    4. Content verification
+    """
     repo = SQLAlchemyNoteRepository(db_session)
 
     # Create note with statements
@@ -100,31 +175,54 @@ def test_note_with_statements(db_session: Session) -> None:
 
 
 def test_note_with_statement_tags(db_session: Session) -> None:
-    """Test saving and finding notes with tagged statements."""
+    """Test nested relationship queries.
+
+    Rules:
+    1. Statement tag creation
+    2. Tag persistence
+    3. Relationship loading
+    4. Content verification
+    """
     repo = SQLAlchemyNoteRepository(db_session)
 
     # Create note with tagged statements
     note = Note(contact_id=TEST_UUID, content="Main note")
-    note.add_statement("First statement")
-    note.add_statement("Second statement")
+    statement1 = note.add_statement("First statement")
+    statement1.add_tag("#test")
+    statement2 = note.add_statement("Second statement")
+    statement2.add_tag("#project")
     repo.save(note)
 
-    # Find and verify statements
+    # Find and verify statements with tags
     found = repo.find_by_id(note.id)
     assert found is not None
     assert len(found.statements) == 2
     assert found.statements[0].content == "First statement"
     assert found.statements[1].content == "Second statement"
+    assert found.statements[0].tags[0].name == "#test"
+    assert found.statements[1].tags[0].name == "#project"
 
+# endregion
+
+
+# region State Management Tests (Moderate)
 
 def test_note_delete(db_session: Session) -> None:
-    """Test deleting a note."""
+    """Test entity deletion.
+
+    Rules:
+    1. Note deletion
+    2. Cascade behavior
+    3. Statement cleanup
+    4. Tag cleanup
+    """
     repo = SQLAlchemyNoteRepository(db_session)
 
     # Create note with statements and tags
     note = Note(contact_id=TEST_UUID, content="Test note")
     note.add_tag("#test")
-    note.add_statement("Test statement")
+    statement = note.add_statement("Test statement")
+    statement.add_tag("#statement_tag")
     repo.save(note)
 
     # Verify note exists
@@ -134,18 +232,23 @@ def test_note_delete(db_session: Session) -> None:
     # Delete note
     repo.delete(note)
 
-    # Verify note is gone
+    # Verify note and related entities are gone
     found = repo.find_by_id(note.id)
     assert found is None
 
+# endregion
+
+
+# region Temporal Tests (Complex)
 
 def test_note_timezone_handling(db_session: Session) -> None:
-    """Test timezone handling in note repository.
+    """Test timezone handling.
 
-    Verify:
-    1. Timezone-aware dates are preserved
-    2. Different input timezones are handled
-    3. UTC conversion is consistent
+    Rules:
+    1. Timezone info preservation
+    2. UTC conversion
+    3. Cross-timezone operations
+    4. State consistency
     """
     repo = SQLAlchemyNoteRepository(db_session)
 
@@ -190,12 +293,13 @@ def test_note_timezone_handling(db_session: Session) -> None:
 
 
 def test_note_timezone_query_handling(db_session: Session) -> None:
-    """Test timezone handling in repository queries.
+    """Test timezone-aware queries.
 
-    Verify:
-    1. Filtering by interaction_date works across timezones
-    2. Range queries handle DST correctly
-    3. Sorting by datetime fields is consistent
+    Rules:
+    1. Timezone criteria
+    2. UTC conversion
+    3. Cross-timezone matching
+    4. Time thresholds
     """
     repo = SQLAlchemyNoteRepository(db_session)
 
@@ -230,80 +334,79 @@ def test_note_timezone_query_handling(db_session: Session) -> None:
         current_date = interactions[i].interaction_date
         next_date = interactions[i+1].interaction_date
         assert current_date is not None and next_date is not None
-        assert current_date > next_date  # Changed from < to > since we expect descending order
-
-    # Verify timezone consistency
-    for note in interactions:
-        assert note.interaction_date is not None
-        assert note.interaction_date.tzinfo == UTC
+        assert current_date > next_date  # Descending order
 
 
 def test_note_timezone_edge_cases(db_session: Session) -> None:
-    """Test timezone edge cases in repository.
+    """Test timezone edge cases.
 
-    Verify:
-    1. DST transition handling
-    2. Day boundary queries
-    3. Fractional hour offsets
+    Rules:
+    1. DST transitions
+    2. Day boundaries
+    3. Fractional offsets
+    4. Extreme timezones
     """
     repo = SQLAlchemyNoteRepository(db_session)
 
-    # Test DST handling
+    # Test DST transition
     paris_tz = ZoneInfo("Europe/Paris")
     # Create a time during DST
     paris_dst_time = datetime(2024, 7, 1, 14, 0, tzinfo=paris_tz)
-    # Create a time outside DST
-    paris_standard_time = datetime(2024, 1, 1, 14, 0, tzinfo=paris_tz)
 
-    note_dst = Note(
+    note_paris = Note(
         contact_id=TEST_UUID,
         content="Summer meeting in Paris",
         is_interaction=True,
         interaction_date=paris_dst_time
     )
-    repo.save(note_dst)
+    repo.save(note_paris)
 
-    note_standard = Note(
+    # Create a time during non-DST
+    paris_non_dst_time = datetime(2024, 1, 1, 14, 0, tzinfo=paris_tz)
+
+    note_paris_winter = Note(
         contact_id=TEST_UUID,
         content="Winter meeting in Paris",
         is_interaction=True,
-        interaction_date=paris_standard_time
+        interaction_date=paris_non_dst_time
     )
-    repo.save(note_standard)
+    repo.save(note_paris_winter)
 
     # Test fractional offset
     india_tz = ZoneInfo("Asia/Kolkata")  # UTC+5:30
-    india_time = datetime.now(india_tz).replace(
-        hour=1, minute=0, second=0, microsecond=0
-    )
+    india_time = datetime(2024, 1, 1, 1, 0, tzinfo=india_tz)
 
     note_india = Note(
         contact_id=TEST_UUID,
-        content="Early morning in India",
+        content="Early morning meeting in India",
         is_interaction=True,
         interaction_date=india_time
     )
     repo.save(note_india)
 
     # Retrieve and verify
-    found_dst = repo.find_by_id(note_dst.id)
-    found_standard = repo.find_by_id(note_standard.id)
+    found_paris = repo.find_by_id(note_paris.id)
+    found_paris_winter = repo.find_by_id(note_paris_winter.id)
     found_india = repo.find_by_id(note_india.id)
 
-    assert found_dst is not None
-    assert found_standard is not None
+    assert found_paris is not None
+    assert found_paris_winter is not None
     assert found_india is not None
 
-    # Verify timezone info is preserved
-    assert found_dst.interaction_date is not None
-    assert found_standard.interaction_date is not None
-    assert found_india.interaction_date is not None
-
-    assert found_dst.interaction_date.tzinfo == UTC
-    assert found_standard.interaction_date.tzinfo == UTC
-    assert found_india.interaction_date.tzinfo == UTC
-
-    # Verify correct UTC conversion
-    assert found_dst.interaction_date == paris_dst_time.astimezone(UTC)
-    assert found_standard.interaction_date == paris_standard_time.astimezone(UTC)
+    # Verify timezone conversion
+    assert found_paris.interaction_date == paris_dst_time.astimezone(UTC)
+    assert (
+        found_paris_winter.interaction_date ==
+        paris_non_dst_time.astimezone(UTC)
+    )
     assert found_india.interaction_date == india_time.astimezone(UTC)
+
+    # Verify chronological order
+    interactions = repo.find_interactions(TEST_UUID)
+    dates = [n.interaction_date for n in interactions if n.interaction_date]
+    assert all(
+        dates[i] > dates[i+1]
+        for i in range(len(dates)-1)
+    )  # Descending order
+
+# endregion

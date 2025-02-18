@@ -1,4 +1,11 @@
-"""Tests for the Contact ORM model."""
+"""Tests for the Contact ORM model.
+
+Tests are organized by complexity and frequency of use:
+1. Basic Tests - Creation and constraints
+2. Data Structure Tests - JSON storage
+3. Relationship Tests - Notes and tags
+4. Temporal Tests - Timezone handling
+"""
 
 import pytest
 from sqlalchemy.exc import IntegrityError, StatementError
@@ -12,8 +19,10 @@ from uuid import uuid4
 from zoneinfo import ZoneInfo
 
 
+# region Basic Tests (Common)
+
 def test_contact_creation_with_required_fields(db_session: Session) -> None:
-    """Test creating a contact with only required fields."""
+    """Test basic creation with required fields."""
     contact = ContactORM(name="John Doe")
     db_session.add(contact)
     db_session.commit()
@@ -28,7 +37,7 @@ def test_contact_creation_with_required_fields(db_session: Session) -> None:
 
 
 def test_contact_creation_with_all_fields(db_session: Session) -> None:
-    """Test creating a contact with all available fields."""
+    """Test creation with all optional fields."""
     sub_info = {"family_status": "Married", "professional_situation": "CEO"}
 
     contact = ContactORM(
@@ -50,15 +59,27 @@ def test_contact_creation_with_all_fields(db_session: Session) -> None:
 
 
 def test_contact_name_required(db_session: Session) -> None:
-    """Test that name is required."""
+    """Test required field constraints."""
     contact = ContactORM()  # type: ignore
     db_session.add(contact)
     with pytest.raises(IntegrityError):
         db_session.commit()
 
 
+# endregion
+
+
+# region Data Structure Tests (Complex)
+
 def test_contact_sub_information_json_storage(db_session: Session) -> None:
-    """Test that sub_information is properly stored as JSON."""
+    """Test complex JSON data persistence.
+
+    Verifies:
+    1. Nested object storage
+    2. Array handling
+    3. Mixed data types
+    4. Deep object graphs
+    """
     sub_info = {
         "personal": {
             "hobbies": ["reading", "hiking"],
@@ -76,8 +97,20 @@ def test_contact_sub_information_json_storage(db_session: Session) -> None:
     assert saved_contact.sub_information == sub_info
 
 
+# endregion
+
+
+# region Relationship Tests (Common)
+
 def test_contact_note_relationship(db_session: Session) -> None:
-    """Test the relationship between contacts and notes."""
+    """Test note relationships.
+
+    Verifies:
+    1. Note addition
+    2. Order preservation
+    3. Cascade deletion
+    4. Relationship integrity
+    """
     contact = ContactORM(name="John Doe")
     db_session.add(contact)
 
@@ -102,7 +135,14 @@ def test_contact_note_relationship(db_session: Session) -> None:
 
 
 def test_contact_tag_relationship(db_session: Session) -> None:
-    """Test the relationship between contacts and tags."""
+    """Test tag relationships.
+
+    Verifies:
+    1. Tag addition
+    2. No cascade deletion
+    3. Many-to-many integrity
+    4. Order preservation
+    """
     contact = ContactORM(name="John Doe")
     db_session.add(contact)
     db_session.commit()  # Save contact first to get its ID
@@ -136,42 +176,19 @@ def test_contact_tag_relationship(db_session: Session) -> None:
     assert db_session.query(TagORM).count() == 2
 
 
-def test_contact_creation(db_session: Session) -> None:
-    """Test creating a contact."""
-    now = datetime.now(UTC)
-    contact = ContactORM(
-        id=uuid4(),
-        name="Test Contact",
-        first_name="Test",
-        briefing_text="Test briefing",
-        sub_information={"key": "value"},
-        last_contact=now,
-        contact_briefing_text="Last interaction",
-    )
+# endregion
 
-    db_session.add(contact)
-    db_session.flush()
-    db_session.refresh(contact)
 
-    # Verify it was saved
-    saved = db_session.get(ContactORM, contact.id)
-    assert saved is not None
-    assert saved.name == "Test Contact"
-    assert saved.first_name == "Test"
-    assert saved.briefing_text == "Test briefing"
-    assert saved.sub_information == {"key": "value"}
-    assert saved.last_contact == now
-    assert saved.contact_briefing_text == "Last interaction"
-
+# region Temporal Tests (Complex)
 
 def test_contact_timezone_handling(db_session: Session) -> None:
-    """Test that timezone information is properly stored and retrieved.
+    """Test timezone handling.
 
-    The ORM should:
-    1. Accept timezone-aware datetimes
-    2. Store them in UTC
-    3. Return them with UTC timezone
-    4. Handle different input timezones correctly
+    Verifies:
+    1. Timezone-aware input
+    2. UTC storage
+    3. Timezone preservation
+    4. Cross-timezone operations
     """
     # Create contact with different timezone
     tokyo_time = datetime.now(ZoneInfo("Asia/Tokyo"))
@@ -206,11 +223,12 @@ def test_contact_timezone_handling(db_session: Session) -> None:
 
 
 def test_contact_naive_datetime_rejection(db_session: Session) -> None:
-    """Test that naive datetimes are rejected.
+    """Test naive datetime rejection.
 
-    The ORM should:
-    1. Reject naive datetimes (without timezone info)
-    2. Raise an error with a clear message
+    Verifies:
+    1. Rejection of naive datetimes
+    2. Clear error messaging
+    3. Validation consistency
     """
     # Try to create with naive datetime
     naive_time = datetime.now()  # Naive datetime without timezone
@@ -223,3 +241,6 @@ def test_contact_naive_datetime_rejection(db_session: Session) -> None:
         )
         db_session.add(contact)
         db_session.flush()
+
+
+# endregion

@@ -14,7 +14,13 @@ from ..models.orm.tag_orm import TagORM
 
 
 class SQLAlchemyContactRepository:
-    """SQLAlchemy implementation of Contact repository."""
+    """SQLAlchemy implementation of Contact repository.
+
+    All datetime fields are handled in UTC timezone:
+    - Input datetimes must be timezone-aware
+    - Storage is always in UTC
+    - Retrieved datetimes are always in UTC
+    """
 
     def __init__(self, session: Session) -> None:
         """Initialize repository with database session.
@@ -32,15 +38,19 @@ class SQLAlchemyContactRepository:
 
         Returns:
             The saved contact with any updates from the database
+
+        Note:
+            All datetime fields are stored in UTC timezone.
         """
         # Convert domain model to ORM
+        # last_contact is already in UTC from domain model
         contact_orm = ContactORM(
             id=contact.id,
             name=contact.name,
             first_name=contact.first_name,
             briefing_text=contact.briefing_text,
             sub_information=contact.sub_information,
-            last_contact=contact.last_contact,
+            last_contact=contact.last_contact,  # Already in UTC
             contact_briefing_text=contact.contact_briefing_text,
         )
 
@@ -48,14 +58,14 @@ class SQLAlchemyContactRepository:
         contact_orm = self._session.merge(contact_orm)
         self._session.flush()
 
-        # Save tags
+        # Save tags (last_contact is already in UTC)
         for tag in contact.tags:
             tag_orm = TagORM(
                 entity_id=contact.id,
                 entity_type=EntityType.CONTACT,
                 name=tag.name,
                 frequency_days=tag.frequency_days,
-                last_contact=tag.last_contact,
+                last_contact=tag.last_contact,  # Already in UTC
             )
             self._session.merge(tag_orm)
 
@@ -70,6 +80,9 @@ class SQLAlchemyContactRepository:
 
         Returns:
             Contact if found, None otherwise
+
+        Note:
+            Retrieved datetime fields are in UTC timezone.
         """
         stmt = (
             select(ContactORM)
@@ -82,17 +95,18 @@ class SQLAlchemyContactRepository:
             return None
 
         # Convert to domain model
+        # last_contact from DB is already in UTC
         contact = Contact(
             name=contact_orm.name,
             first_name=contact_orm.first_name,
             briefing_text=contact_orm.briefing_text,
             sub_information=contact_orm.sub_information,
+            last_contact=contact_orm.last_contact,  # Already in UTC
         )
         contact.id = contact_orm.id
-        contact.last_contact = contact_orm.last_contact
         contact.contact_briefing_text = contact_orm.contact_briefing_text
 
-        # Add tags
+        # Add tags (last_contact from DB is already in UTC)
         for tag_orm in contact_orm.tags:
             tag = Tag(
                 entity_id=tag_orm.entity_id,
@@ -102,7 +116,7 @@ class SQLAlchemyContactRepository:
             if tag_orm.frequency_days is not None:
                 tag.set_frequency(tag_orm.frequency_days)
                 if tag_orm.last_contact is not None:
-                    tag.update_last_contact(tag_orm.last_contact)
+                    tag.update_last_contact(tag_orm.last_contact)  # Already in UTC
             contact.tags.append(tag)
 
         return contact
@@ -139,6 +153,9 @@ class SQLAlchemyContactRepository:
 
         Returns:
             List of contacts that have at least one stale tag
+
+        Note:
+            All datetime comparisons are done in UTC timezone.
         """
         now = datetime.now(UTC)
 
@@ -154,7 +171,7 @@ class SQLAlchemyContactRepository:
                     text("julianday(:now) - julianday(last_contact) > frequency_days"),
                 )
             )
-            .params(now=now.isoformat())
+            .params(now=now.isoformat())  # UTC ISO format
         )
 
         # Execute the query
@@ -229,12 +246,19 @@ class SQLAlchemyContactRepository:
         """Find contacts with last contact before a given date.
 
         Args:
-            date: The date to compare against (timezone-aware)
+            date: The date to compare against (must be timezone-aware)
 
         Returns:
             List of contacts with last contact before the given date
+
+        Raises:
+            ValueError: If date is not timezone-aware
         """
-        # Ensure we're working with UTC for comparison
+        # Ensure input date is timezone-aware
+        if date.tzinfo is None:
+            raise ValueError("Input date must be timezone-aware")
+
+        # Convert to UTC for comparison
         utc_date = date.astimezone(UTC)
 
         stmt = (
@@ -246,17 +270,18 @@ class SQLAlchemyContactRepository:
 
         contacts = []
         for contact_orm in contact_orms:
+            # Convert to domain model (last_contact from DB is already in UTC)
             contact = Contact(
                 name=contact_orm.name,
                 first_name=contact_orm.first_name,
                 briefing_text=contact_orm.briefing_text,
                 sub_information=contact_orm.sub_information,
+                last_contact=contact_orm.last_contact,  # Already in UTC
             )
             contact.id = contact_orm.id
-            contact.last_contact = contact_orm.last_contact
             contact.contact_briefing_text = contact_orm.contact_briefing_text
 
-            # Add tags
+            # Add tags (last_contact from DB is already in UTC)
             for tag_orm in contact_orm.tags:
                 tag = Tag(
                     entity_id=tag_orm.entity_id,
@@ -266,7 +291,7 @@ class SQLAlchemyContactRepository:
                 if tag_orm.frequency_days is not None:
                     tag.set_frequency(tag_orm.frequency_days)
                     if tag_orm.last_contact is not None:
-                        tag.update_last_contact(tag_orm.last_contact)
+                        tag.update_last_contact(tag_orm.last_contact)  # Already in UTC
                 contact.tags.append(tag)
 
             contacts.append(contact)

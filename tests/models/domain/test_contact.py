@@ -1,4 +1,12 @@
-"""Tests for the Contact domain model."""
+"""Tests for the Contact domain model.
+
+Tests are organized by complexity and frequency of use:
+1. Basic Tests - Creation and validation
+2. Data Structure Tests - Complex object validation
+3. Relationship Tests - Tag and note management
+4. State Management Tests - Interaction tracking
+5. Temporal Tests - Timezone handling
+"""
 
 import pytest
 from datetime import datetime, UTC, timezone, timedelta
@@ -11,15 +19,10 @@ from zoneinfo import ZoneInfo
 TEST_UUID = UUID("11111111-1111-1111-1111-111111111111")
 
 
-def test_contact_creation():
-    """Test creating a contact with basic properties.
+# region Basic Tests (Common)
 
-    A contact must have:
-    1. A name
-    2. Optional first name
-    3. Optional briefing text
-    4. Optional sub_information dictionary
-    """
+def test_contact_creation():
+    """Test basic contact creation with required and optional fields."""
     contact = Contact(name="Test Contact")
     assert contact.name == "Test Contact"
     assert contact.first_name is None
@@ -45,13 +48,7 @@ def test_contact_creation():
 
 
 def test_contact_sub_information_validation():
-    """Test sub_information validation.
-
-    Sub_information rules:
-    1. Must be a dictionary if provided
-    2. Defaults to empty dict if not provided
-    3. Can contain nested dictionaries
-    """
+    """Test sub_information validation rules."""
     # Test invalid type
     with pytest.raises(ValueError):
         Contact(name="John Doe", sub_information=cast(Any, "invalid"))
@@ -72,15 +69,20 @@ def test_contact_sub_information_validation():
     assert contact.sub_information == sub_info
 
 
-def test_contact_tag_management():
-    """Test adding and managing tags.
+# endregion
 
-    Tag management rules:
-    1. Can add tags
-    2. Tags must start with #
-    3. Tags are stored in lowercase
-    4. Duplicate tags are ignored
-    5. Can remove tags
+
+# region Relationship Tests (Common)
+
+def test_contact_tag_management():
+    """Test tag relationship management.
+
+    Rules:
+    1. Tag addition with validation
+    2. Tag format rules
+    3. Case normalization
+    4. Duplicate prevention
+    5. Tag removal
     """
     contact = Contact(name="John Doe")
 
@@ -112,13 +114,13 @@ def test_contact_tag_management():
 
 
 def test_contact_note_management():
-    """Test adding and managing notes.
+    """Test note relationship management.
 
-    Note management rules:
-    1. Can add notes
-    2. Notes maintain order
-    3. Can remove notes
-    4. Note content is validated
+    Rules:
+    1. Note addition with validation
+    2. Order preservation
+    3. Note removal
+    4. Content validation
     """
     contact = Contact(name="John Doe")
 
@@ -147,14 +149,19 @@ def test_contact_note_management():
     assert contact.notes[0].content == "Second note"
 
 
-def test_contact_interaction_recording():
-    """Test recording an interaction with a contact.
+# endregion
 
-    When recording an interaction:
-    1. Creates an interaction note
-    2. Updates last_contact timestamp
-    3. Updates contact_briefing_text
-    4. Updates any contact tags
+
+# region State Management Tests (Moderate)
+
+def test_contact_interaction_recording():
+    """Test state changes from interactions.
+
+    Rules:
+    1. Note creation
+    2. Timestamp updates
+    3. Briefing updates
+    4. State consistency
     """
     contact = Contact(name="Test Contact")
     interaction_time = datetime.now(UTC)
@@ -183,11 +190,12 @@ def test_contact_interaction_recording():
 
 
 def test_contact_tag_interaction_updates():
-    """Test that contact tags update when recording interactions.
+    """Test cascading state updates.
 
-    When recording an interaction:
-    1. All contact tags should update their last_contact
-    2. This should work with or without note content
+    Rules:
+    1. Tag timestamp updates
+    2. State propagation
+    3. State consistency
     """
     contact = Contact(name="Test Contact")
     contact.add_tag("#test")
@@ -206,12 +214,13 @@ def test_contact_tag_interaction_updates():
 
 
 def test_invalid_interaction_recording():
-    """Test validation when recording interactions.
+    """Test interaction state validation.
 
-    Validation rules:
-    1. interaction_date is required
-    2. interaction_date cannot be in future
-    3. content is optional but must not be empty if provided
+    Rules:
+    1. Required fields
+    2. Time constraints
+    3. Content validation
+    4. State rules
     """
     contact = Contact(name="Test Contact")
 
@@ -230,15 +239,19 @@ def test_invalid_interaction_recording():
     assert note.content is None
 
 
-def test_contact_timezone_handling():
-    """Test timezone handling for last_contact field.
+# endregion
 
-    Requirements:
-    1. Accepts timezone-aware datetimes
-    2. Converts to UTC internally
-    3. Preserves timezone information
-    4. Rejects naive datetimes
-    5. Handles different input timezones
+
+# region Temporal Tests (Complex)
+
+def test_contact_timezone_handling():
+    """Test timezone handling.
+
+    Rules:
+    1. Timezone-aware input
+    2. UTC conversion
+    3. Timezone info
+    4. Input validation
     """
     # Test with UTC time
     utc_time = datetime.now(UTC)
@@ -270,12 +283,13 @@ def test_contact_timezone_handling():
 
 
 def test_contact_timezone_preservation():
-    """Test that timezone information is preserved through updates.
+    """Test timezone consistency.
 
-    Requirements:
-    1. Multiple interactions maintain timezone consistency
-    2. All datetime operations preserve timezone info
-    3. DST transitions are handled correctly
+    Rules:
+    1. Multi-timezone ops
+    2. DST handling
+    3. Timezone conversion
+    4. State consistency
     """
     contact = Contact(name="Test Contact")
 
@@ -304,3 +318,6 @@ def test_contact_timezone_preservation():
     contact.add_interaction(interaction_date=summer_time)
     assert contact.last_contact is not None
     assert contact.last_contact == summer_time.astimezone(UTC)
+
+
+# endregion
