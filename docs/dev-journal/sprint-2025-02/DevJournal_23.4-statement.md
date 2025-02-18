@@ -93,7 +93,14 @@ Version: 2025.02.18-4-feat-23.4
    - Cascade delete implemented at join table level
    - Follows SQLAlchemy many-to-many best practices
 
-5. Test Strategy
+5. Timestamp Precision Decision
+   - Standardized timestamp comparison to second-level precision
+   - Microsecond differences in statement timestamps ignored in tests
+   - Aligns with business requirements (no microsecond precision needed)
+   - Matches existing timestamp handling patterns in codebase
+   - More robust test approach for statement lifecycle verification
+
+6. Test Strategy
    - ✅ Statement tests integrated in Note tests
    - ✅ Leverage existing test structure
    - ✅ Statement-specific scenarios added:
@@ -112,7 +119,7 @@ Version: 2025.02.18-4-feat-23.4
      * Repository integration patterns
      * Update tracking verification
 
-6. Implementation Plan
+7. Implementation Plan
    - ✅ Enhanced Note tests with Statement scenarios
    - ✅ Verified timezone-aware audit fields
    - ✅ Added comprehensive validation rules

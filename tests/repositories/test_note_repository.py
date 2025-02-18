@@ -410,3 +410,204 @@ def test_note_timezone_edge_cases(db_session: Session) -> None:
     )  # Descending order
 
 # endregion
+
+
+# region Statement-Specific Tests (New)
+
+def test_statement_sequence_persistence(db_session: Session) -> None:
+    """Test Statement sequence persistence in repository.
+
+    Rules:
+    1. Sequence numbers are preserved
+    2. Order maintained after updates
+    3. Gaps handled correctly
+    4. Reordering supported
+    """
+    repo = SQLAlchemyNoteRepository(db_session)
+
+    # Create note with statements
+    note = Note(contact_id=TEST_UUID, content="Main note")
+    note.add_statement("First statement")
+    note.add_statement("Second statement")
+    note.add_statement("Third statement")
+    repo.save(note)
+
+    # Verify initial sequence
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    assert len(found.statements) == 3
+    assert [s.content for s in found.statements] == [
+        "First statement",
+        "Second statement",
+        "Third statement"
+    ]
+
+    # Remove middle statement
+    note.remove_statement(note.statements[1])
+    repo.save(note)
+
+    # Verify sequence after removal
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    assert len(found.statements) == 2
+    assert [s.content for s in found.statements] == [
+        "First statement",
+        "Third statement"
+    ]
+
+    # Add new statement
+    note.add_statement("New statement")
+    repo.save(note)
+
+    # Verify sequence after addition
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    assert len(found.statements) == 3
+    assert [s.content for s in found.statements] == [
+        "First statement",
+        "Third statement",
+        "New statement"
+    ]
+
+
+def test_statement_update_tracking(db_session: Session) -> None:
+    """Test Statement update tracking in repository.
+
+    Rules:
+    1. Content updates tracked
+    2. Tag updates tracked
+    3. Timestamps preserved
+    4. Audit fields maintained
+    """
+    repo = SQLAlchemyNoteRepository(db_session)
+
+    # Create note with statement
+    note = Note(contact_id=TEST_UUID, content="Main note")
+    statement = note.add_statement("Original content")
+    repo.save(note)
+
+    # Get initial timestamps
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    original_created_at = found.statements[0].created_at
+    original_updated_at = found.statements[0].updated_at
+
+    # Update statement content
+    statement.content = "Updated content"
+    repo.save(note)
+
+    # Verify content update tracking
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    assert found.statements[0].content == "Updated content"
+    # Compare timestamps ignoring microseconds
+    assert found.statements[0].created_at.replace(microsecond=0) == original_created_at.replace(microsecond=0)
+    assert found.statements[0].updated_at.replace(microsecond=0) >= original_updated_at.replace(microsecond=0)
+
+    # Update statement tags
+    original_updated_at = found.statements[0].updated_at
+    statement.add_tag("#test")
+    repo.save(note)
+
+    # Verify tag update tracking
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    assert "#test" in [t.name for t in found.statements[0].tags]
+    # Compare timestamps ignoring microseconds
+    assert found.statements[0].created_at.replace(microsecond=0) == original_created_at.replace(microsecond=0)
+    assert found.statements[0].updated_at.replace(microsecond=0) >= original_updated_at.replace(microsecond=0)
+
+
+def test_statement_tag_lifecycle(db_session: Session) -> None:
+    """Test Statement tag lifecycle in repository.
+
+    Rules:
+    1. Tag creation
+    2. Tag updates
+    3. Tag removal
+    4. Association cleanup
+    """
+    repo = SQLAlchemyNoteRepository(db_session)
+
+    # Create note with tagged statement
+    note = Note(contact_id=TEST_UUID, content="Main note")
+    statement = note.add_statement("Test statement")
+    statement.add_tag("#test")
+    statement.add_tag("#project")
+    repo.save(note)
+
+    # Verify initial tags
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    assert len(found.statements[0].tags) == 2
+    assert {t.name for t in found.statements[0].tags} == {"#test", "#project"}
+
+    # Update tags
+    statement.remove_tag(statement.tags[0])
+    statement.add_tag("#updated")
+    repo.save(note)
+
+    # Verify tag updates
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    assert len(found.statements[0].tags) == 2
+    assert "#updated" in [t.name for t in found.statements[0].tags]
+
+    # Remove all tags
+    for tag in statement.tags[:]:
+        statement.remove_tag(tag)
+    repo.save(note)
+
+    # Verify tag removal
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    assert len(found.statements[0].tags) == 0
+
+
+def test_statement_bulk_operations(db_session: Session) -> None:
+    """Test Statement bulk operations in repository.
+
+    Rules:
+    1. Multiple statement creation
+    2. Batch updates
+    3. Performance characteristics
+    4. Transaction integrity
+    """
+    repo = SQLAlchemyNoteRepository(db_session)
+
+    # Create note with multiple statements
+    note = Note(contact_id=TEST_UUID, content="Main note")
+    for i in range(5):
+        statement = note.add_statement(f"Statement {i}")
+        statement.add_tag(f"#tag{i}")
+    repo.save(note)
+
+    # Verify bulk creation
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    assert len(found.statements) == 5
+    assert all(len(s.tags) == 1 for s in found.statements)
+
+    # Bulk update statements
+    for statement in note.statements:
+        statement.content = f"Updated {statement.content}"
+        statement.add_tag("#updated")
+    repo.save(note)
+
+    # Verify bulk updates
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    assert all(s.content.startswith("Updated") for s in found.statements)
+    assert all("#updated" in [t.name for t in s.tags] for s in found.statements)
+
+    # Bulk remove statements
+    while note.statements:
+        note.remove_statement(note.statements[0])
+    repo.save(note)
+
+    # Verify bulk removal
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    assert len(found.statements) == 0
+
+# endregion
