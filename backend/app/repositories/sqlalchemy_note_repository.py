@@ -47,6 +47,10 @@ class SQLAlchemyNoteRepository(NoteRepository):
         self._session.flush()
 
         # Add statements with tags
+        # First, clear existing statements
+        note_orm.statements = []
+        self._session.flush()
+
         for i, statement in enumerate(note.statements):
             statement_orm = StatementORM(
                 content=statement.content,
@@ -56,14 +60,9 @@ class SQLAlchemyNoteRepository(NoteRepository):
             statement_orm = self._session.merge(statement_orm)
             self._session.flush()
 
-            # Add statement tags
-            for tag in statement.tags:
-                tag_orm = TagORM(
-                    name=tag.name,
-                    entity_type=EntityType.STATEMENT.value,
-                    entity_id=statement_orm.id,
-                )
-                self._session.merge(tag_orm)
+            # Add statement tags using set_tags
+            statement_orm.set_tags([tag.name for tag in statement.tags])
+            note_orm.statements.append(statement_orm)
 
         # Add note tags
         for tag in note.tags:
