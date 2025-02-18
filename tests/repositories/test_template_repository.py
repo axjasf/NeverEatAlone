@@ -1,4 +1,10 @@
-"""Tests for the Template repository."""
+"""Tests for the Template repository.
+
+Tests are organized by complexity and frequency of use:
+1. Basic Tests - CRUD operations
+2. State Management Tests - Version tracking
+3. Temporal Tests - Timezone handling
+"""
 
 from datetime import datetime, UTC
 from uuid import uuid4
@@ -36,8 +42,10 @@ def create_test_template() -> Template:
     )
 
 
+# region Basic Tests (Common)
+
 def test_template_save_and_get(db_session: Session) -> None:
-    """Test saving and retrieving a template."""
+    """Test basic save and retrieve operations."""
     repository = SQLAlchemyTemplateRepository(db_session)
     template = create_test_template()
 
@@ -58,8 +66,30 @@ def test_template_save_and_get(db_session: Session) -> None:
     )  # For versions, updated_at is same as created_at
 
 
+def test_template_get_nonexistent(db_session: Session) -> None:
+    """Test retrieval of nonexistent template."""
+    repository = SQLAlchemyTemplateRepository(db_session)
+    result = repository.get_by_id(uuid4())
+    assert result is None, "Should return None for nonexistent template"
+
+
+def test_template_get_nonexistent_version(db_session: Session) -> None:
+    """Test retrieval of nonexistent version."""
+    repository = SQLAlchemyTemplateRepository(db_session)
+    template = create_test_template()
+    repository.save(template)
+
+    result = repository.get_version(template.id, 999)
+    assert result is None, "Should return None for nonexistent version"
+
+
+# endregion
+
+
+# region State Management Tests (Moderate)
+
 def test_template_get_version(db_session: Session) -> None:
-    """Test getting a specific version of a template."""
+    """Test version-specific retrieval."""
     repository = SQLAlchemyTemplateRepository(db_session)
     template = create_test_template()
     repository.save(template)
@@ -90,7 +120,7 @@ def test_template_get_version(db_session: Session) -> None:
 
 
 def test_template_get_versions(db_session: Session) -> None:
-    """Test getting all versions of a template."""
+    """Test retrieval of version history."""
     repository = SQLAlchemyTemplateRepository(db_session)
     template = create_test_template()
     repository.save(template)
@@ -132,25 +162,15 @@ def test_template_get_versions(db_session: Session) -> None:
     assert "birthday" in versions[2].categories["contact_info"].fields
 
 
-def test_template_get_nonexistent(db_session: Session) -> None:
-    """Test getting a template that doesn't exist."""
-    repository = SQLAlchemyTemplateRepository(db_session)
-    result = repository.get_by_id(uuid4())
-    assert result is None, "Should return None for nonexistent template"
-
-
-def test_template_get_nonexistent_version(db_session: Session) -> None:
-    """Test getting a version that doesn't exist."""
-    repository = SQLAlchemyTemplateRepository(db_session)
-    template = create_test_template()
-    repository.save(template)
-
-    result = repository.get_version(template.id, 999)
-    assert result is None, "Should return None for nonexistent version"
-
-
 def test_template_version_tracking(db_session: Session) -> None:
-    """Test that removed fields are properly tracked across versions."""
+    """Test version state tracking.
+
+    Verifies:
+    1. Field addition tracking
+    2. Field removal tracking
+    3. State preservation
+    4. Version ordering
+    """
     repository = SQLAlchemyTemplateRepository(db_session)
     template = create_test_template()
     repository.save(template)
@@ -185,14 +205,19 @@ def test_template_version_tracking(db_session: Session) -> None:
     assert "email" in versions[2].removed_fields["contact_info"]
 
 
-def test_template_timezone_handling(db_session: Session) -> None:
-    """Test timezone handling in template repository.
+# endregion
 
-    The repository should:
-    1. Accept timezone-aware datetimes from different timezones
-    2. Store all datetimes in UTC
-    3. Return timezone-aware datetimes in UTC
-    4. Preserve the exact point in time during conversions
+
+# region Temporal Tests (Complex)
+
+def test_template_timezone_handling(db_session: Session) -> None:
+    """Test timezone handling.
+
+    Verifies:
+    1. Multi-timezone input
+    2. UTC storage
+    3. Timezone preservation
+    4. Cross-timezone operations
     """
     repository = SQLAlchemyTemplateRepository(db_session)
 
@@ -248,3 +273,6 @@ def test_template_timezone_handling(db_session: Session) -> None:
     assert versions[0].updated_at.tzinfo == UTC
     assert versions[0].created_at == tokyo_time.astimezone(UTC)
     assert versions[0].updated_at == ny_time.astimezone(UTC)
+
+
+# endregion

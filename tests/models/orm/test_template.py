@@ -1,4 +1,10 @@
-"""Test cases for the template ORM model."""
+"""Test cases for the template ORM model.
+
+Tests are organized by complexity and frequency of use:
+1. Basic Tests - Creation and constraints
+2. Data Structure Tests - JSON storage and validation
+3. Temporal Tests - Timezone handling
+"""
 
 from datetime import datetime, UTC
 from uuid import uuid4
@@ -9,8 +15,10 @@ from zoneinfo import ZoneInfo
 from sqlalchemy.orm import Session
 
 
+# region Basic Tests (Common)
+
 def test_template_version_creation(db_session: Session) -> None:
-    """Test creating a template version."""
+    """Test basic template version creation."""
     now = datetime.now(UTC)
     template = TemplateVersionORM(
         id=uuid4(),
@@ -46,7 +54,7 @@ def test_template_version_creation(db_session: Session) -> None:
 
 
 def test_template_version_unique_constraint(db_session: Session) -> None:
-    """Test that version numbers must be unique per template."""
+    """Test version number uniqueness."""
     template_id = uuid4()
     now = datetime.now(UTC)
 
@@ -67,7 +75,7 @@ def test_template_version_unique_constraint(db_session: Session) -> None:
 
 
 def test_template_version_required_fields(db_session: Session) -> None:
-    """Test that required fields are enforced."""
+    """Test required field validation."""
     now = datetime.now(UTC)
 
     # Try to create without version
@@ -89,8 +97,20 @@ def test_template_version_required_fields(db_session: Session) -> None:
     db_session.rollback()
 
 
+# endregion
+
+
+# region Data Structure Tests (Complex)
+
 def test_template_version_json_storage(db_session: Session) -> None:
-    """Test that JSON data is properly stored and retrieved."""
+    """Test complex JSON data storage.
+
+    Verifies:
+    1. Nested object storage
+    2. Array handling
+    3. Mixed data types
+    4. Deep object graphs
+    """
     now = datetime.now(UTC)
     complex_categories = {
         "personal": {
@@ -137,14 +157,19 @@ def test_template_version_json_storage(db_session: Session) -> None:
     assert saved.updated_at == template.updated_at
 
 
-def test_template_version_timezone_handling(db_session: Session) -> None:
-    """Test that timezone information is properly stored and retrieved.
+# endregion
 
-    The ORM should:
-    1. Accept timezone-aware datetimes
-    2. Store them in UTC
-    3. Return them with UTC timezone
-    4. Handle different input timezones correctly
+
+# region Temporal Tests (Complex)
+
+def test_template_version_timezone_handling(db_session: Session) -> None:
+    """Test timezone handling.
+
+    Verifies:
+    1. Timezone-aware datetime acceptance
+    2. UTC storage
+    3. Timezone preservation
+    4. Cross-timezone operations
     """
     # Create template with different timezone
     tokyo_time = datetime.now(ZoneInfo("Asia/Tokyo"))
@@ -174,11 +199,11 @@ def test_template_version_timezone_handling(db_session: Session) -> None:
 
 
 def test_template_version_naive_datetime_rejection(db_session: Session) -> None:
-    """Test that naive datetimes are rejected.
+    """Test naive datetime rejection.
 
-    The ORM should:
-    1. Reject naive datetimes (without timezone info)
-    2. Raise an error with a clear message
+    Verifies:
+    1. Rejection of timezone-naive datetimes
+    2. Clear error messaging
     """
     # Try to create with naive datetime
     naive_time = datetime.now()  # Naive datetime without timezone
@@ -193,3 +218,6 @@ def test_template_version_naive_datetime_rejection(db_session: Session) -> None:
         )
         db_session.add(template)
         db_session.flush()
+
+
+# endregion

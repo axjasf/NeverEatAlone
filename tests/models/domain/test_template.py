@@ -1,4 +1,11 @@
-"""Test cases for the template domain model."""
+"""Test cases for the template domain model.
+
+Tests are organized by complexity and frequency of use:
+1. Basic Tests - Creation and simple validation
+2. Data Structure Tests - Complex object validation
+3. Temporal Tests - Timezone handling
+4. Evolution Tests - Schema changes and migrations
+"""
 
 import pytest
 from datetime import datetime, UTC
@@ -10,6 +17,7 @@ from backend.app.models.domain.template_model import (
 )
 from zoneinfo import ZoneInfo
 
+# region Basic Tests (Common)
 
 def test_field_definition_creation():
     """Test creating a field definition with all properties."""
@@ -91,9 +99,12 @@ def test_template_creation():
     assert len(template.categories) == 1
     assert isinstance(template.categories["contact_info"], CategoryDefinition)
 
+# endregion
+
+# region Data Structure Tests (Complex)
 
 def test_template_validation_success():
-    """Test successful validation of sub_information against template."""
+    """Test validation of complex nested data."""
     now = datetime.now(UTC)
     template = Template(
         id=uuid4(),
@@ -135,7 +146,7 @@ def test_template_validation_success():
 
 
 def test_template_validation_failures():
-    """Test various validation failures."""
+    """Test validation failures for complex data."""
     now = datetime.now(UTC)
     template = Template(
         id=uuid4(),
@@ -181,7 +192,7 @@ def test_template_validation_failures():
 
 
 def test_template_get_filled_fields():
-    """Test getting only filled fields from sub_information."""
+    """Test filtering and processing of nested data."""
     now = datetime.now(UTC)
     template = Template(
         id=uuid4(),
@@ -216,159 +227,17 @@ def test_template_get_filled_fields():
     assert "notes" in filled_fields["contact_info"]
     assert "email" not in filled_fields["contact_info"]
 
+# endregion
 
-def test_template_evolution_add_field():
-    """Test adding a new field to an existing template."""
-    now = datetime.now(UTC)
-    old_template = Template(
-        id=uuid4(),
-        categories={
-            "contact_info": CategoryDefinition(
-                name="contact_info",
-                description="Basic contact information",
-                fields={
-                    "phone": FieldDefinition(
-                        name="phone", type="phone", description="Phone number"
-                    )
-                },
-            )
-        },
-        version=1,
-        created_at=now,
-        updated_at=now,
-    )
-
-    # Create new version with added field
-    new_template = old_template.evolve(
-        new_fields={
-            "contact_info": {
-                "email": FieldDefinition(
-                    name="email", type="email", description="Email address"
-                )
-            }
-        }
-    )
-
-    # Check version increment
-    assert new_template.version == old_template.version + 1
-
-    # Check old field preserved
-    assert "phone" in new_template.categories["contact_info"].fields
-
-    # Check new field added
-    assert "email" in new_template.categories["contact_info"].fields
-
-    # Validate old data still works
-    old_data = {"contact_info": {"phone": "+1 555-555-5555"}}
-    assert new_template.validate_data(old_data) is True
-
-
-def test_template_evolution_remove_field():
-    """Test removing a field while preserving historical data."""
-    now = datetime.now(UTC)
-    old_template = Template(
-        id=uuid4(),
-        categories={
-            "contact_info": CategoryDefinition(
-                name="contact_info",
-                description="Basic contact information",
-                fields={
-                    "phone": FieldDefinition(
-                        name="phone", type="phone", description="Phone number"
-                    ),
-                    "fax": FieldDefinition(  # Field to be removed
-                        name="fax", type="phone", description="Fax number"
-                    ),
-                },
-            )
-        },
-        version=1,
-        created_at=now,
-        updated_at=now,
-    )
-
-    # Create new version without fax field
-    new_template = old_template.evolve(removed_fields={"contact_info": ["fax"]})
-
-    # Check version increment
-    assert new_template.version == old_template.version + 1
-
-    # Check fax field removed
-    assert "fax" not in new_template.categories["contact_info"].fields
-
-    # Check phone field preserved
-    assert "phone" in new_template.categories["contact_info"].fields
-
-    # Old data with removed field should still validate
-    old_data = {
-        "contact_info": {
-            "phone": "+1 555-555-5555",
-            "fax": "+1 555-555-5556",  # Historical data
-        }
-    }
-    assert new_template.validate_data(old_data) is True
-
-
-def test_template_evolution_change_field_type():
-    """Test changing a field type with validation of old data."""
-    now = datetime.now(UTC)
-    old_template = Template(
-        id=uuid4(),
-        categories={
-            "contact_info": CategoryDefinition(
-                name="contact_info",
-                description="Basic contact information",
-                fields={
-                    "birthday": FieldDefinition(
-                        name="birthday",
-                        type="string",  # Initially a string
-                        description="Date of birth",
-                    )
-                },
-            )
-        },
-        version=1,
-        created_at=now,
-        updated_at=now,
-    )
-
-    # Create new version with changed field type
-    new_template = old_template.evolve(
-        changed_fields={
-            "contact_info": {
-                "birthday": FieldDefinition(
-                    name="birthday",
-                    type="date",  # Changed to date type
-                    description="Date of birth",
-                )
-            }
-        }
-    )
-
-    # Check version increment
-    assert new_template.version == old_template.version + 1
-
-    # Check field type changed
-    assert new_template.categories["contact_info"].fields["birthday"].type == "date"
-
-    # Old string data should still validate if it's ISO format
-    old_data = {"contact_info": {"birthday": "1990-01-01"}}  # Valid ISO date string
-    assert new_template.validate_data(old_data) is True
-
-    # Invalid date strings should fail
-    with pytest.raises(ValueError):
-        new_template.validate_data(
-            {"contact_info": {"birthday": "Jan 1, 1990"}}  # Invalid format
-        )
-
+# region Temporal Tests (Complex)
 
 def test_template_timezone_handling():
     """Test timezone handling in Template model.
 
-    Template should:
-    1. Require timezone-aware datetimes for created_at and updated_at
-    2. Preserve timezone information during template evolution
-    3. Convert all datetimes to UTC internally
+    Verifies:
+    1. Timezone-aware datetime requirements
+    2. Timezone preservation during evolution
+    3. UTC conversion for storage
     """
     template_id = uuid4()
     ny_time = datetime.now(ZoneInfo("America/New_York"))
@@ -428,3 +297,153 @@ def test_template_timezone_handling():
     assert evolved.created_at.tzinfo == UTC
     assert evolved.updated_at.tzinfo == UTC
     assert evolved.version == template.version + 1
+
+# endregion
+
+# region Evolution Tests (Rare)
+
+def test_template_evolution_add_field():
+    """Test schema evolution: adding fields."""
+    now = datetime.now(UTC)
+    old_template = Template(
+        id=uuid4(),
+        categories={
+            "contact_info": CategoryDefinition(
+                name="contact_info",
+                description="Basic contact information",
+                fields={
+                    "phone": FieldDefinition(
+                        name="phone", type="phone", description="Phone number"
+                    )
+                },
+            )
+        },
+        version=1,
+        created_at=now,
+        updated_at=now,
+    )
+
+    # Create new version with added field
+    new_template = old_template.evolve(
+        new_fields={
+            "contact_info": {
+                "email": FieldDefinition(
+                    name="email", type="email", description="Email address"
+                )
+            }
+        }
+    )
+
+    # Check version increment
+    assert new_template.version == old_template.version + 1
+
+    # Check old field preserved
+    assert "phone" in new_template.categories["contact_info"].fields
+
+    # Check new field added
+    assert "email" in new_template.categories["contact_info"].fields
+
+    # Validate old data still works
+    old_data = {"contact_info": {"phone": "+1 555-555-5555"}}
+    assert new_template.validate_data(old_data) is True
+
+
+def test_template_evolution_remove_field():
+    """Test schema evolution: removing fields."""
+    now = datetime.now(UTC)
+    old_template = Template(
+        id=uuid4(),
+        categories={
+            "contact_info": CategoryDefinition(
+                name="contact_info",
+                description="Basic contact information",
+                fields={
+                    "phone": FieldDefinition(
+                        name="phone", type="phone", description="Phone number"
+                    ),
+                    "fax": FieldDefinition(  # Field to be removed
+                        name="fax", type="phone", description="Fax number"
+                    ),
+                },
+            )
+        },
+        version=1,
+        created_at=now,
+        updated_at=now,
+    )
+
+    # Create new version without fax field
+    new_template = old_template.evolve(removed_fields={"contact_info": ["fax"]})
+
+    # Check version increment
+    assert new_template.version == old_template.version + 1
+
+    # Check fax field removed
+    assert "fax" not in new_template.categories["contact_info"].fields
+
+    # Check phone field preserved
+    assert "phone" in new_template.categories["contact_info"].fields
+
+    # Old data with removed field should still validate
+    old_data = {
+        "contact_info": {
+            "phone": "+1 555-555-5555",
+            "fax": "+1 555-555-5556",  # Historical data
+        }
+    }
+    assert new_template.validate_data(old_data) is True
+
+
+def test_template_evolution_change_field_type():
+    """Test schema evolution: changing field types."""
+    now = datetime.now(UTC)
+    old_template = Template(
+        id=uuid4(),
+        categories={
+            "contact_info": CategoryDefinition(
+                name="contact_info",
+                description="Basic contact information",
+                fields={
+                    "birthday": FieldDefinition(
+                        name="birthday",
+                        type="string",  # Initially a string
+                        description="Date of birth",
+                    )
+                },
+            )
+        },
+        version=1,
+        created_at=now,
+        updated_at=now,
+    )
+
+    # Create new version with changed field type
+    new_template = old_template.evolve(
+        changed_fields={
+            "contact_info": {
+                "birthday": FieldDefinition(
+                    name="birthday",
+                    type="date",  # Changed to date type
+                    description="Date of birth",
+                )
+            }
+        }
+    )
+
+    # Check version increment
+    assert new_template.version == old_template.version + 1
+
+    # Check field type changed
+    assert new_template.categories["contact_info"].fields["birthday"].type == "date"
+
+    # Old string data should still validate if it's ISO format
+    old_data = {"contact_info": {"birthday": "1990-01-01"}}  # Valid ISO date string
+    assert new_template.validate_data(old_data) is True
+
+    # Invalid date strings should fail
+    with pytest.raises(ValueError):
+        new_template.validate_data(
+            {"contact_info": {"birthday": "Jan 1, 1990"}}  # Invalid format
+        )
+
+# endregion
