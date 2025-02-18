@@ -43,95 +43,107 @@ dev-journal/
 - Example: `future-2025-Q1/DevJournal_Future-2025-Q1.md`
 
 ## Version Format
-- `YYYY.MM.DD-VERSION-branch-id`
+- `YYYY.MM.DD-N-branch-id` (N is a simple counter)
 - Examples:
-  - `2025.02.17-6-sprint-02`
-  - `2025.02.17-6-feat-23`
-  - `2025.02.17-6-feat-23.4`
+  - `2025.02.17-1-sprint-02`
+  - `2025.02.17-2-feat-23`
+  - `2025.02.17-3-feat-23.4`
+
+## Symbol Usage
+### Core Symbols
+- ✅ = Completed items (always at start of line)
+- [ ] = Only for concrete planned/in-progress items
+- 🔄 = Future integration points/architectural evolution ideas
+- 💡 = Specific technical insights/learnings (used in History)
+
+### Usage Rules
+- Symbols always go at the start of lines
+- Don't mix symbols in section headers
+- Leave items without symbols if they're just descriptive
+- History entries focus on completed work (✅), learnings (💡), and evolution points (🔄)
 
 ## Section Structure
+The following sections are fixed and should not be modified:
+
 ### Current Focus [branch-id]
-- Parent feature headline
-- Current activity subheadline
-- Implementation points
+- Parent feature reference
+- Completed and in-progress components
+- Active development points
 Example:
 ```markdown
-### Feature Implementation
-- ✅ Initial setup complete
-- Current task in progress
-- Next task planned
+#### Completed Components
+- ✅ Component A: Complete
+- [ ] Component B: In Progress
+- Component C: Not Started
 ```
 
 ### Progress & Decisions [branch-id]
 - Implementation status with completion indicators
 - Technical decisions with rationale
-- Challenges & solutions
+- Evolution considerations
 Example:
 ```markdown
-### Implementation Status
-1. Core Implementation (40%)
+1. Core Implementation
    - ✅ Initial setup complete
-   - ✅ Base structure defined
-   - Current progress
+   - [ ] Current focus
+   - 🔄 Evolution Points:
+     * Specific consideration
 ```
 
 ### Next Steps [branch-id]
-- Upcoming work with checkboxes
+- Immediate next tasks
 - Dependencies
-- Blockers
 Example:
 ```markdown
-- [ ] Major Task
-  - [✅] Completed sub-task
-  - [ ] Current sub-task
+- [ ] Immediate Next Task
+  - ✅ Completed prerequisite
+  - [ ] Current focus
 ```
 
 ### Status [branch-id]
-- Implementation progress percentage
-- Test coverage status
+- Qualitative implementation status
+- Test coverage assessment
 - Documentation status
 Example:
 ```markdown
-- Implementation: 80%
-- Test Coverage: ✅ Complete
-- Documentation: Current
-```
-
-### Merge Notes [branch-id]
-- Key points for parent branch
-- Technical decisions to preserve
-- Technical debt status
-Example:
-```markdown
-- ✅ Core implementation complete
-- ✅ No technical debt
-- Documentation current
+- Implementation: In Progress/Complete
+- Test Coverage: Adequate/Needs Work
+- Documentation: Current/Needs Update
 ```
 
 ### History [branch-id]
-- Version-based entries with completion status
-- Key changes and decisions
-- Progress milestones
+- Newest entries first
+- Focus on what mattered technically
+- Capture learnings and evolution points
 Example:
 ```markdown
-### 2025.02.17-1
-- ✅ Initial setup complete
-- ✅ Core implementation
-- Started documentation
+### YYYY.MM.DD-N-branch-id
+- ✅ Major milestone achieved
+- 💡 Specific technical insight
+- 🔄 Next: Evolution consideration
 ```
 
 ## Maintenance
 1. Create journals when:
-   - Starting a new sprint (create sprint folder and overview journal)
-   - Creating a feature branch (in current sprint folder)
-   - Creating a sub-feature branch (in current sprint folder)
+   - Starting a new sprint
+   - Creating a feature branch
+   - Creating a sub-feature branch
 
 2. Update journals when:
-   - Making technical decisions
-   - Completing work items (mark with ✅)
-   - Preparing for merges
+   - Making significant technical decisions
+   - Completing meaningful work items
+   - Discovering important technical insights
+   - Identifying evolution points
 
 3. Close journals when:
-   - Sprint completes (archive sprint folder)
+   - Sprint completes
    - Feature merges
    - Branch closes
+
+## Key Principles
+1. Keep entries focused and meaningful
+2. Emphasize technical insights over routine progress
+3. Use history to track what actually mattered
+4. Maintain fixed document structure
+5. Use symbols consistently
+6. Focus on concrete technical aspects
