@@ -140,62 +140,44 @@ git checkout -b feature/23-implement-timezone-handling
    - Requirements and implementation notes
    - Created via `./scripts/cr.sh create`
 
-3. **Development Journal** (`docs/implementation/DEVELOPMENT_JOURNAL.md`)
-   - Combined implementation plan and working notes
-   - Tracks current sprint progress and decisions
-   - Fine-granular observations and progress tracking
-   - Format:
-     ```markdown
-     # Development Journal
-     Version: YYYY.MM.DD-N
-
-     ## Current Focus
-     What the sprint is focusing on right now
-
-     ## What I'm Working On
-     Current implementation tasks and progress
-
-     ## Recent Progress
-     Completed items and achievements
-
-     ## Technical Decisions
-     Architecture and implementation choices
-
-     ## Next Steps
-     Immediate tasks and plans
-
-     ## Backlog
-     Future work items with priorities
-
-     ## History
-     Version changelog
+3. **Development Journals** (`docs/dev-journal/`)
+   - Sprint-based organization
+   - Feature and sub-feature tracking
+   - Progress and decision documentation
+   - Structure:
+     ```
+     dev-journal/
+     ├── sprint-YYYY-MM/              # Sprint folders
+     │   ├── DevJournal_Sprint-*.md   # Sprint overview
+     │   └── DevJournal_*.md          # Feature journals
+     └── future-YYYY-QN/              # Future planning
+         └── DevJournal_Future-*.md   # Future plans
      ```
 
 4. **Development Journal Management**
 
-### Sprint Branch Workflow
-1. Each sprint has a dedicated branch (`sprint/YYYY-MM`)
-   - Contains the single source of truth for development journal
-   - All feature branches branch from here
+### Sprint-Based Journal Workflow
+1. Each sprint has a dedicated folder (`sprint-YYYY-MM/`)
+   - Contains sprint overview journal
+   - Contains all feature journals for the sprint
+   - Matches sprint branch structure
 
-2. Feature Branch Process
-   - Branch from current sprint branch
-   - Update development journal in sprint branch
-   - All progress tracked in sprint branch journal
+2. Feature Journal Process
+   - Created in current sprint folder
+   - Tracks feature-specific progress
+   - Links to sprint overview journal
+   - Follows feature branch lifecycle
 
 3. Sprint Completion
-   - Sprint branch merges to main
-   - New sprint branch created
-   - Ongoing features rebase onto new sprint branch
+   - Archive sprint folder when complete
+   - Move ongoing features to new sprint
+   - Create new sprint folder and journals
 
-4. Journal Structure
-   - Current Focus: What the sprint is focusing on right now
-   - What I'm Working On: Current implementation tasks
-   - Recent Progress: Completed items and achievements
-   - Technical Decisions: Architecture and implementation choices
-   - Next Steps: Immediate tasks and plans
-   - Backlog: Future work items with priorities
-   - History: Version changelog
+4. Journal Types and Structure
+   - Sprint Journals: Overview and roll-up of sprint progress
+   - Feature Journals: Detailed feature implementation tracking
+   - Sub-feature Journals: Component-level progress
+   - Future Planning: Upcoming sprint and feature planning
 
 ### Simple Workflow
 1. **Starting Work**
@@ -203,22 +185,23 @@ git checkout -b feature/23-implement-timezone-handling
    # Create issue and CR
    ./scripts/cr.sh create "Add feature X" "Description" "feature"
 
-   # Update journal
-   # Make updates in sprint branch's DEVELOPMENT_JOURNAL.md
+   # Create feature journal in current sprint folder
+   # Update sprint overview journal
    ```
 
 2. **Progress Updates**
    - Move cards on project board
-   - Update development journal with progress
-   - Update CR if major milestone or major insights relevant to the CR
+   - Update feature journal with progress
+   - Update sprint journal with major milestones
+   - Update CR if major milestone or insights relevant to the CR
 
 3. **Completing Work**
    ```bash
    # Finalize CR
    ./scripts/cr.sh finalize <issue-number> <cr-number>
 
-   # Add completion to journal
-   # Document completion in sprint branch's DEVELOPMENT_JOURNAL.md
+   # Mark completion in feature journal
+   # Update sprint journal with completion
    ```
 
 ## Best Practices

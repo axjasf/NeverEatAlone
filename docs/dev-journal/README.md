@@ -6,12 +6,15 @@ This folder contains development journals tracking progress at sprint and featur
 ## File Organization
 ```
 dev-journal/
-├── README.md                          # This file
-├── DevJournal_Sprint-YYYY-MM.md      # Sprint journals (e.g., DevJournal_Sprint-2024-02.md)
-├── features/                          # Feature-specific journals
-│   ├── DevJournal_XX-name.md         # Feature journals (e.g., DevJournal_23-timezone.md)
-│   └── DevJournal_XX.Y-name.md       # Sub-feature journals (e.g., DevJournal_23.4-statement.md)
-└── _template.md                       # Template for new journals
+├── README.md                                    # This file
+├── _template.md                                 # Template for new journals
+├── sprint-2025-02/                             # Current sprint folder
+│   ├── DevJournal_Sprint-2025-02.md           # Sprint overview
+│   ├── DevJournal_23-timezone.md              # Feature journals
+│   ├── DevJournal_23.4-statement.md           # Sub-feature journals
+│   └── DevJournal_35-blog.md                  # Feature journals
+└── future-2025-Q1/                            # Future planning
+    └── DevJournal_Future-2025-Q1.md           # Future plans
 ```
 
 ## Journal Types
@@ -19,27 +22,32 @@ dev-journal/
 ### Sprint Journals
 - Track sprint-level progress
 - Roll up information from feature journals
-- Name format: `DevJournal_Sprint-YYYY-MM.md`
-- Example: `DevJournal_Sprint-2024-02.md`
+- Located in sprint folder: `sprint-YYYY-MM/DevJournal_Sprint-YYYY-MM.md`
+- Example: `sprint-2025-02/DevJournal_Sprint-2025-02.md`
 
 ### Feature Journals
 - Track feature implementation
 - Follow feature branches
-- Name format: `DevJournal_XX-name.md`
-- Example: `DevJournal_23-timezone.md`
+- Located in sprint folder: `sprint-YYYY-MM/DevJournal_XX-name.md`
+- Example: `sprint-2025-02/DevJournal_23-timezone.md`
 
 ### Sub-feature Journals
 - Track component implementation
 - Follow feature sub-branches
-- Name format: `DevJournal_XX.Y-name.md`
-- Example: `DevJournal_23.4-statement.md`
+- Located in sprint folder: `sprint-YYYY-MM/DevJournal_XX.Y-name.md`
+- Example: `sprint-2025-02/DevJournal_23.4-statement.md`
+
+### Future Planning Journals
+- Track future sprint planning
+- Located in future folder: `future-YYYY-QN/DevJournal_Future-YYYY-QN.md`
+- Example: `future-2025-Q1/DevJournal_Future-2025-Q1.md`
 
 ## Version Format
 - `YYYY.MM.DD-VERSION-branch-id`
 - Examples:
-  - `2024.02.17-6-sprint-02`
-  - `2024.02.17-6-feat-23`
-  - `2024.02.17-6-feat-23.4`
+  - `2025.02.17-6-sprint-02`
+  - `2025.02.17-6-feat-23`
+  - `2025.02.17-6-feat-23.4`
 
 ## Section Structure
 ### Current Focus [branch-id]
@@ -106,7 +114,7 @@ Example:
 - Progress milestones
 Example:
 ```markdown
-### 2024.02.17-1
+### 2025.02.17-1
 - ✅ Initial setup complete
 - ✅ Core implementation
 - Started documentation
@@ -114,9 +122,9 @@ Example:
 
 ## Maintenance
 1. Create journals when:
-   - Starting a new sprint
-   - Creating a feature branch
-   - Creating a sub-feature branch
+   - Starting a new sprint (create sprint folder and overview journal)
+   - Creating a feature branch (in current sprint folder)
+   - Creating a sub-feature branch (in current sprint folder)
 
 2. Update journals when:
    - Making technical decisions
@@ -124,6 +132,6 @@ Example:
    - Preparing for merges
 
 3. Close journals when:
-   - Sprint completes
+   - Sprint completes (archive sprint folder)
    - Feature merges
    - Branch closes
