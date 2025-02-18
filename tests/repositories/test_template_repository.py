@@ -222,24 +222,29 @@ def test_template_timezone_handling(db_session: Session) -> None:
     repository = SQLAlchemyTemplateRepository(db_session)
 
     # Create template with different timezones for created_at and updated_at
-    tokyo_time = datetime.now(ZoneInfo("Asia/Tokyo"))
-    ny_time = datetime.now(ZoneInfo("America/New_York"))
+    tokyo_tz = ZoneInfo("Asia/Tokyo")
+    ny_tz = ZoneInfo("America/New_York")
+
+    # Use fixed timestamps
+    tokyo_time = datetime(2024, 1, 1, 14, 0, tzinfo=tokyo_tz)  # 14:00 JST
+    ny_time = tokyo_time.astimezone(ny_tz)  # Same moment in NY
+
+    # Create a minimal valid category structure
+    test_category = CategoryDefinition(
+        name="test",
+        description="Test category",
+        fields={
+            "field": FieldDefinition(
+                name="field",
+                type="string",
+                description="Test field"
+            )
+        }
+    )
 
     template = Template(
         id=uuid4(),
-        categories={
-            "test": CategoryDefinition(
-                name="test",
-                description="Test category",
-                fields={
-                    "field": FieldDefinition(
-                        name="field",
-                        type="string",
-                        description="Test field"
-                    )
-                }
-            )
-        },
+        categories={"test": test_category},
         version=1,
         created_at=tokyo_time,
         updated_at=ny_time
@@ -257,6 +262,81 @@ def test_template_timezone_handling(db_session: Session) -> None:
     assert retrieved.updated_at.tzinfo == UTC
     assert retrieved.created_at == tokyo_time.astimezone(UTC)
     assert retrieved.updated_at == ny_time.astimezone(UTC)
+
+    # Test DST transition
+    winter_time = datetime(2024, 1, 1, 12, 0, tzinfo=ny_tz)  # During EST
+    summer_time = datetime(2024, 7, 1, 12, 0, tzinfo=ny_tz)  # During EDT
+
+    winter_template = Template(
+        id=uuid4(),
+        categories={"test": test_category},  # Use same valid category
+        version=1,
+        created_at=winter_time,
+        updated_at=winter_time
+    )
+    repository.save(winter_template)
+
+    summer_template = Template(
+        id=uuid4(),
+        categories={"test": test_category},  # Use same valid category
+        version=1,
+        created_at=summer_time,
+        updated_at=summer_time
+    )
+    repository.save(summer_template)
+
+    # Verify DST handling
+    retrieved_winter = repository.get_by_id(winter_template.id)
+    retrieved_summer = repository.get_by_id(summer_template.id)
+    assert retrieved_winter is not None
+    assert retrieved_summer is not None
+    assert retrieved_winter.created_at == winter_time.astimezone(UTC)
+    assert retrieved_summer.created_at == summer_time.astimezone(UTC)
+
+    # Test fractional offset (India UTC+5:30)
+    india_tz = ZoneInfo("Asia/Kolkata")
+    india_time = datetime(2024, 1, 1, 1, 0, tzinfo=india_tz)
+    india_template = Template(
+        id=uuid4(),
+        categories={"test": test_category},  # Use same valid category
+        version=1,
+        created_at=india_time,
+        updated_at=india_time
+    )
+    repository.save(india_template)
+
+    retrieved_india = repository.get_by_id(india_template.id)
+    assert retrieved_india is not None
+    assert retrieved_india.created_at == india_time.astimezone(UTC)
+
+    # Test day boundary transition
+    ny_midnight = datetime(2024, 1, 1, 0, 0, tzinfo=ny_tz)
+    tokyo_time = ny_midnight.astimezone(tokyo_tz)
+
+    ny_template = Template(
+        id=uuid4(),
+        categories={"test": test_category},  # Use same valid category
+        version=1,
+        created_at=ny_midnight,
+        updated_at=ny_midnight
+    )
+    repository.save(ny_template)
+
+    tokyo_template = Template(
+        id=uuid4(),
+        categories={"test": test_category},  # Use same valid category
+        version=1,
+        created_at=tokyo_time,
+        updated_at=tokyo_time
+    )
+    repository.save(tokyo_template)
+
+    # Verify both represent the same moment in UTC
+    retrieved_ny = repository.get_by_id(ny_template.id)
+    retrieved_tokyo = repository.get_by_id(tokyo_template.id)
+    assert retrieved_ny is not None
+    assert retrieved_tokyo is not None
+    assert retrieved_ny.created_at == retrieved_tokyo.created_at
 
     # Test timezone handling in get_version
     version = repository.get_version(template.id, 1)

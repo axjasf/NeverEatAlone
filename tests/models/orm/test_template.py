@@ -173,7 +173,7 @@ def test_template_version_timezone_handling(db_session: Session) -> None:
     """
     # Create template with different timezone
     tokyo_time = datetime.now(ZoneInfo("Asia/Tokyo"))
-    ny_time = datetime.now(ZoneInfo("America/New_York"))
+    ny_time = tokyo_time.astimezone(ZoneInfo("America/New_York"))  # Same moment
 
     template = TemplateVersionORM(
         id=uuid4(),
@@ -197,13 +197,91 @@ def test_template_version_timezone_handling(db_session: Session) -> None:
     assert saved.created_at == tokyo_time.astimezone(UTC)
     assert saved.updated_at == ny_time.astimezone(UTC)
 
+    # Test DST transition
+    ny_tz = ZoneInfo("America/New_York")
+    winter_time = datetime(2024, 1, 1, 12, 0, tzinfo=ny_tz)  # During EST
+    summer_time = datetime(2024, 7, 1, 12, 0, tzinfo=ny_tz)  # During EDT
+
+    winter_template = TemplateVersionORM(
+        id=uuid4(),
+        version=1,
+        categories={},
+        created_at=winter_time,
+        updated_at=winter_time
+    )
+    db_session.add(winter_template)
+    db_session.flush()
+    db_session.refresh(winter_template)
+
+    summer_template = TemplateVersionORM(
+        id=uuid4(),
+        version=1,
+        categories={},
+        created_at=summer_time,
+        updated_at=summer_time
+    )
+    db_session.add(summer_template)
+    db_session.flush()
+    db_session.refresh(summer_template)
+
+    # Verify DST handling
+    assert winter_template.created_at == winter_time.astimezone(UTC)
+    assert summer_template.created_at == summer_time.astimezone(UTC)
+
+    # Test fractional offset (India UTC+5:30)
+    india_tz = ZoneInfo("Asia/Kolkata")
+    india_time = datetime(2024, 1, 1, 1, 0, tzinfo=india_tz)
+    india_template = TemplateVersionORM(
+        id=uuid4(),
+        version=1,
+        categories={},
+        created_at=india_time,
+        updated_at=india_time
+    )
+    db_session.add(india_template)
+    db_session.flush()
+    db_session.refresh(india_template)
+
+    assert india_template.created_at == india_time.astimezone(UTC)
+
+    # Test day boundary transition
+    tokyo_tz = ZoneInfo("Asia/Tokyo")
+    ny_midnight = datetime(2024, 1, 1, 0, 0, tzinfo=ny_tz)
+    tokyo_time = ny_midnight.astimezone(tokyo_tz)
+
+    ny_template = TemplateVersionORM(
+        id=uuid4(),
+        version=1,
+        categories={},
+        created_at=ny_midnight,
+        updated_at=ny_midnight
+    )
+    db_session.add(ny_template)
+    db_session.flush()
+    db_session.refresh(ny_template)
+
+    tokyo_template = TemplateVersionORM(
+        id=uuid4(),
+        version=1,
+        categories={},
+        created_at=tokyo_time,
+        updated_at=tokyo_time
+    )
+    db_session.add(tokyo_template)
+    db_session.flush()
+    db_session.refresh(tokyo_template)
+
+    # Verify both represent the same moment in UTC
+    assert ny_template.created_at == tokyo_template.created_at
+
 
 def test_template_version_naive_datetime_rejection(db_session: Session) -> None:
     """Test naive datetime rejection.
 
     Verifies:
-    1. Rejection of timezone-naive datetimes
+    1. Rejection of naive datetimes
     2. Clear error messaging
+    3. Validation consistency
     """
     # Try to create with naive datetime
     naive_time = datetime.now()  # Naive datetime without timezone

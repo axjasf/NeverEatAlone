@@ -240,7 +240,10 @@ def test_template_timezone_handling():
     3. UTC conversion for storage
     """
     template_id = uuid4()
-    ny_time = datetime.now(ZoneInfo("America/New_York"))
+
+    # Test with different input timezones
+    tokyo_time = datetime.now(ZoneInfo("Asia/Tokyo"))
+    ny_time = tokyo_time.astimezone(ZoneInfo("America/New_York"))  # Same moment, different zone
 
     # Test creation with timezone-aware datetime
     template = Template(
@@ -259,14 +262,14 @@ def test_template_timezone_handling():
             )
         },
         version=1,
-        created_at=ny_time,
+        created_at=tokyo_time,
         updated_at=ny_time
     )
 
-    # Verify datetimes are stored in UTC
+    # Verify datetimes are stored in UTC and represent the same moment
     assert template.created_at.tzinfo == UTC
     assert template.updated_at.tzinfo == UTC
-    assert template.created_at == ny_time.astimezone(UTC)
+    assert template.created_at == tokyo_time.astimezone(UTC)
     assert template.updated_at == ny_time.astimezone(UTC)
 
     # Test rejection of naive datetime
@@ -297,6 +300,65 @@ def test_template_timezone_handling():
     assert evolved.created_at.tzinfo == UTC
     assert evolved.updated_at.tzinfo == UTC
     assert evolved.version == template.version + 1
+
+    # Test DST transition
+    ny_tz = ZoneInfo("America/New_York")
+    winter_time = datetime(2024, 1, 1, 12, 0, tzinfo=ny_tz)  # During EST
+    summer_time = datetime(2024, 7, 1, 12, 0, tzinfo=ny_tz)  # During EDT
+
+    winter_template = Template(
+        id=uuid4(),
+        categories={},
+        version=1,
+        created_at=winter_time,
+        updated_at=winter_time
+    )
+    summer_template = Template(
+        id=uuid4(),
+        categories={},
+        version=1,
+        created_at=summer_time,
+        updated_at=summer_time
+    )
+
+    # Verify DST handling
+    assert winter_template.created_at == winter_time.astimezone(UTC)
+    assert summer_template.created_at == summer_time.astimezone(UTC)
+
+    # Test fractional offset (India UTC+5:30)
+    india_tz = ZoneInfo("Asia/Kolkata")
+    india_time = datetime(2024, 1, 1, 1, 0, tzinfo=india_tz)
+    india_template = Template(
+        id=uuid4(),
+        categories={},
+        version=1,
+        created_at=india_time,
+        updated_at=india_time
+    )
+    assert india_template.created_at == india_time.astimezone(UTC)
+
+    # Test day boundary transition
+    tokyo_tz = ZoneInfo("Asia/Tokyo")
+    ny_midnight = datetime(2024, 1, 1, 0, 0, tzinfo=ny_tz)
+    tokyo_time = ny_midnight.astimezone(tokyo_tz)
+
+    ny_template = Template(
+        id=uuid4(),
+        categories={},
+        version=1,
+        created_at=ny_midnight,
+        updated_at=ny_midnight
+    )
+    tokyo_template = Template(
+        id=uuid4(),
+        categories={},
+        version=1,
+        created_at=tokyo_time,
+        updated_at=tokyo_time
+    )
+
+    # Verify both represent the same moment in UTC
+    assert ny_template.created_at == tokyo_template.created_at
 
 # endregion
 
