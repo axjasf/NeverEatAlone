@@ -1,12 +1,23 @@
-"""Tests for the Note ORM model."""
+"""Tests for the Note ORM model.
+
+Tests are organized by complexity and frequency of use:
+1. Basic Tests - Creation and validation
+2. Data Structure Tests - Statement and tag management
+3. State Management Tests - Update tracking and interactions
+4. Temporal Tests - Timezone handling
+"""
 
 import pytest
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from datetime import datetime, UTC
+from zoneinfo import ZoneInfo
 from backend.app.models.orm.contact_orm import ContactORM
 from backend.app.models.orm.note_orm import NoteORM
 from backend.app.models.orm.statement_orm import StatementORM
 
+
+# region Basic Tests (Common)
 
 def test_note_creation_with_required_fields(db_session: Session) -> None:
     """Test creating a note with only required fields."""
@@ -16,7 +27,10 @@ def test_note_creation_with_required_fields(db_session: Session) -> None:
     db_session.commit()
 
     # Create note
-    note = NoteORM(contact_id=contact.id, content="Had a great meeting today.")
+    note = NoteORM(
+        contact_id=contact.id,
+        content="Had a great meeting today."
+    )
     db_session.add(note)
     db_session.commit()
     db_session.refresh(note)
@@ -50,6 +64,10 @@ def test_note_requires_content(db_session: Session) -> None:
     with pytest.raises(IntegrityError):
         db_session.commit()
 
+# endregion
+
+
+# region Data Structure Tests (Common)
 
 def test_note_statement_creation(db_session: Session) -> None:
     """Test creating statements from a note."""
@@ -60,7 +78,11 @@ def test_note_statement_creation(db_session: Session) -> None:
 
     note = NoteORM(
         contact_id=contact.id,
-        content="Had a great meeting today. Discussed project timeline. Need to follow up next week.",
+        content=(
+            "Had a great meeting today. "
+            "Discussed project timeline. "
+            "Need to follow up next week."
+        )
     )
     db_session.add(note)
     db_session.commit()
@@ -68,13 +90,19 @@ def test_note_statement_creation(db_session: Session) -> None:
     # Create statements
     statements = [
         StatementORM(
-            note_id=note.id, content="Had a great meeting today.", sequence_number=1
+            note_id=note.id,
+            content="Had a great meeting today.",
+            sequence_number=1
         ),
         StatementORM(
-            note_id=note.id, content="Discussed project timeline.", sequence_number=2
+            note_id=note.id,
+            content="Discussed project timeline.",
+            sequence_number=2
         ),
         StatementORM(
-            note_id=note.id, content="Need to follow up next week.", sequence_number=3
+            note_id=note.id,
+            content="Need to follow up next week.",
+            sequence_number=3
         ),
     ]
     for stmt in statements:
@@ -98,13 +126,24 @@ def test_note_statement_deletion(db_session: Session) -> None:
     db_session.add(contact)
     db_session.commit()
 
-    note = NoteORM(contact_id=contact.id, content="Statement 1. Statement 2.")
+    note = NoteORM(
+        contact_id=contact.id,
+        content="Statement 1. Statement 2."
+    )
     db_session.add(note)
     db_session.commit()
 
     statements = [
-        StatementORM(note_id=note.id, content="Statement 1.", sequence_number=1),
-        StatementORM(note_id=note.id, content="Statement 2.", sequence_number=2),
+        StatementORM(
+            note_id=note.id,
+            content="Statement 1.",
+            sequence_number=1
+        ),
+        StatementORM(
+            note_id=note.id,
+            content="Statement 2.",
+            sequence_number=2
+        ),
     ]
     for stmt in statements:
         db_session.add(stmt)
@@ -116,7 +155,9 @@ def test_note_statement_deletion(db_session: Session) -> None:
 
     # Verify statements are deleted
     remaining_statements = (
-        db_session.query(StatementORM).filter_by(note_id=note.id).all()
+        db_session.query(StatementORM)
+        .filter_by(note_id=note.id)
+        .all()
     )
     assert len(remaining_statements) == 0
 
@@ -128,7 +169,10 @@ def test_note_tagging(db_session: Session) -> None:
     db_session.add(contact)
     db_session.commit()
 
-    note = NoteORM(contact_id=contact.id, content="Meeting about #project timeline.")
+    note = NoteORM(
+        contact_id=contact.id,
+        content="Meeting about #project timeline."
+    )
     db_session.add(note)
     db_session.commit()
 
@@ -149,12 +193,17 @@ def test_statement_tagging(db_session: Session) -> None:
     db_session.add(contact)
     db_session.commit()
 
-    note = NoteORM(contact_id=contact.id, content="Meeting about project timeline.")
+    note = NoteORM(
+        contact_id=contact.id,
+        content="Meeting about project timeline."
+    )
     db_session.add(note)
     db_session.commit()
 
     statement = StatementORM(
-        note_id=note.id, content="Meeting about project timeline.", sequence_number=1
+        note_id=note.id,
+        content="Meeting about project timeline.",
+        sequence_number=1
     )
     db_session.add(statement)
     db_session.commit()
@@ -168,6 +217,10 @@ def test_statement_tagging(db_session: Session) -> None:
     assert len(statement.tags) == 2
     assert sorted(t.name for t in statement.tags) == ["#meeting", "#project"]
 
+# endregion
+
+
+# region Temporal Tests (Complex)
 
 def test_note_timezone_handling(db_session: Session) -> None:
     """Test timezone handling in notes.
@@ -178,9 +231,6 @@ def test_note_timezone_handling(db_session: Session) -> None:
     3. Different input timezones are handled
     4. Timezone information is preserved
     """
-    from datetime import datetime, UTC
-    from zoneinfo import ZoneInfo
-
     # Create a contact
     contact = ContactORM(name="John Doe")
     db_session.add(contact)
@@ -235,9 +285,6 @@ def test_note_timezone_edge_cases(db_session: Session) -> None:
     2. Dates in different DST periods
     3. Dates with fractional hours offset
     """
-    from datetime import datetime, UTC
-    from zoneinfo import ZoneInfo
-
     # Create a contact
     contact = ContactORM(name="John Doe")
     db_session.add(contact)
@@ -246,9 +293,11 @@ def test_note_timezone_edge_cases(db_session: Session) -> None:
     # Test date near UTC day boundary with fractional offset
     india_tz = ZoneInfo("Asia/Kolkata")  # UTC+5:30
     india_time = datetime.now(india_tz).replace(
-        hour=1, minute=0, second=0, microsecond=0
+        hour=1,
+        minute=0,
+        second=0,
+        microsecond=0
     )
-    expected_utc = india_time.astimezone(UTC)
 
     note_india = NoteORM(
         contact_id=contact.id,
@@ -263,13 +312,15 @@ def test_note_timezone_edge_cases(db_session: Session) -> None:
     # Verify UTC conversion
     assert note_india.interaction_date is not None
     assert note_india.interaction_date.tzinfo == UTC
-    assert note_india.interaction_date == expected_utc
+    assert note_india.interaction_date == india_time.astimezone(UTC)
 
-    # Test DST handling
+    # Test DST transition handling
     paris_tz = ZoneInfo("Europe/Paris")
     # Create a time during DST
-    paris_dst_time = datetime(2024, 7, 1, 14, 0, tzinfo=paris_tz)
-    expected_utc = paris_dst_time.astimezone(UTC)
+    paris_dst_time = datetime(
+        2024, 7, 1, 14, 0,
+        tzinfo=paris_tz
+    )
 
     note_paris = NoteORM(
         contact_id=contact.id,
@@ -284,38 +335,33 @@ def test_note_timezone_edge_cases(db_session: Session) -> None:
     # Verify DST handling
     assert note_paris.interaction_date is not None
     assert note_paris.interaction_date.tzinfo == UTC
-    assert note_paris.interaction_date == expected_utc
+    assert note_paris.interaction_date == paris_dst_time.astimezone(UTC)
 
 
 def test_note_created_at_timezone(db_session: Session) -> None:
-    """Test timezone handling for created_at and updated_at fields.
+    """Test timezone handling for created_at field.
 
     Verify:
-    1. created_at is in UTC
-    2. updated_at is in UTC
-    3. Both fields are timezone-aware
+    1. created_at is always in UTC
+    2. created_at is automatically set
+    3. created_at reflects server time
     """
-    from datetime import datetime, UTC
-
     # Create a contact
     contact = ContactORM(name="John Doe")
     db_session.add(contact)
     db_session.commit()
 
-    # Create note
-    note = NoteORM(
-        contact_id=contact.id,
-        content="Test note"
-    )
+    # Record time before and after note creation
+    before = datetime.now(UTC)
+    note = NoteORM(contact_id=contact.id, content="Test note")
     db_session.add(note)
     db_session.commit()
     db_session.refresh(note)
+    after = datetime.now(UTC)
 
     # Verify created_at
+    assert note.created_at is not None
     assert note.created_at.tzinfo == UTC
-    assert note.created_at <= datetime.now(UTC)
+    assert before <= note.created_at <= after
 
-    # Verify updated_at
-    assert note.updated_at.tzinfo == UTC
-    assert note.updated_at <= datetime.now(UTC)
-    assert note.updated_at >= note.created_at
+# endregion

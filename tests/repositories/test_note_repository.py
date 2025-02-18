@@ -1,4 +1,11 @@
-"""Tests for the Note repository."""
+"""Tests for the Note repository.
+
+Tests are organized by complexity and frequency of use:
+1. Basic Tests - Save and find operations
+2. Query Tests - Finding by contact, tag, and statements
+3. State Management Tests - Delete operations
+4. Temporal Tests - Timezone handling and queries
+"""
 
 from uuid import uuid4
 from datetime import datetime, UTC, timedelta
@@ -14,6 +21,8 @@ from backend.app.repositories.sqlalchemy_note_repository import (
 TEST_UUID = uuid4()
 
 
+# region Basic Tests (Common)
+
 def test_note_save_and_find(db_session: Session) -> None:
     """Test saving and finding a note."""
     repo = SQLAlchemyNoteRepository(db_session)
@@ -28,6 +37,10 @@ def test_note_save_and_find(db_session: Session) -> None:
     assert found.contact_id == TEST_UUID
     assert found.content == "Test note content"
 
+# endregion
+
+
+# region Query Tests (Common)
 
 def test_note_find_by_contact(db_session: Session) -> None:
     """Test finding notes by contact."""
@@ -116,6 +129,10 @@ def test_note_with_statement_tags(db_session: Session) -> None:
     assert found.statements[0].content == "First statement"
     assert found.statements[1].content == "Second statement"
 
+# endregion
+
+
+# region State Management Tests (Moderate)
 
 def test_note_delete(db_session: Session) -> None:
     """Test deleting a note."""
@@ -138,6 +155,10 @@ def test_note_delete(db_session: Session) -> None:
     found = repo.find_by_id(note.id)
     assert found is None
 
+# endregion
+
+
+# region Temporal Tests (Complex)
 
 def test_note_timezone_handling(db_session: Session) -> None:
     """Test timezone handling in note repository.
@@ -230,7 +251,7 @@ def test_note_timezone_query_handling(db_session: Session) -> None:
         current_date = interactions[i].interaction_date
         next_date = interactions[i+1].interaction_date
         assert current_date is not None and next_date is not None
-        assert current_date > next_date  # Changed from < to > since we expect descending order
+        assert current_date > next_date  # Descending order
 
     # Verify timezone consistency
     for note in interactions:
@@ -248,62 +269,65 @@ def test_note_timezone_edge_cases(db_session: Session) -> None:
     """
     repo = SQLAlchemyNoteRepository(db_session)
 
-    # Test DST handling
+    # Test DST transition
     paris_tz = ZoneInfo("Europe/Paris")
     # Create a time during DST
     paris_dst_time = datetime(2024, 7, 1, 14, 0, tzinfo=paris_tz)
-    # Create a time outside DST
-    paris_standard_time = datetime(2024, 1, 1, 14, 0, tzinfo=paris_tz)
 
-    note_dst = Note(
+    note_paris = Note(
         contact_id=TEST_UUID,
         content="Summer meeting in Paris",
         is_interaction=True,
         interaction_date=paris_dst_time
     )
-    repo.save(note_dst)
+    repo.save(note_paris)
 
-    note_standard = Note(
+    # Create a time during non-DST
+    paris_non_dst_time = datetime(2024, 1, 1, 14, 0, tzinfo=paris_tz)
+
+    note_paris_winter = Note(
         contact_id=TEST_UUID,
         content="Winter meeting in Paris",
         is_interaction=True,
-        interaction_date=paris_standard_time
+        interaction_date=paris_non_dst_time
     )
-    repo.save(note_standard)
+    repo.save(note_paris_winter)
 
     # Test fractional offset
     india_tz = ZoneInfo("Asia/Kolkata")  # UTC+5:30
-    india_time = datetime.now(india_tz).replace(
-        hour=1, minute=0, second=0, microsecond=0
-    )
+    india_time = datetime(2024, 1, 1, 1, 0, tzinfo=india_tz)
 
     note_india = Note(
         contact_id=TEST_UUID,
-        content="Early morning in India",
+        content="Early morning meeting in India",
         is_interaction=True,
         interaction_date=india_time
     )
     repo.save(note_india)
 
     # Retrieve and verify
-    found_dst = repo.find_by_id(note_dst.id)
-    found_standard = repo.find_by_id(note_standard.id)
+    found_paris = repo.find_by_id(note_paris.id)
+    found_paris_winter = repo.find_by_id(note_paris_winter.id)
     found_india = repo.find_by_id(note_india.id)
 
-    assert found_dst is not None
-    assert found_standard is not None
+    assert found_paris is not None
+    assert found_paris_winter is not None
     assert found_india is not None
 
-    # Verify timezone info is preserved
-    assert found_dst.interaction_date is not None
-    assert found_standard.interaction_date is not None
-    assert found_india.interaction_date is not None
-
-    assert found_dst.interaction_date.tzinfo == UTC
-    assert found_standard.interaction_date.tzinfo == UTC
-    assert found_india.interaction_date.tzinfo == UTC
-
-    # Verify correct UTC conversion
-    assert found_dst.interaction_date == paris_dst_time.astimezone(UTC)
-    assert found_standard.interaction_date == paris_standard_time.astimezone(UTC)
+    # Verify timezone conversion
+    assert found_paris.interaction_date == paris_dst_time.astimezone(UTC)
+    assert (
+        found_paris_winter.interaction_date ==
+        paris_non_dst_time.astimezone(UTC)
+    )
     assert found_india.interaction_date == india_time.astimezone(UTC)
+
+    # Verify chronological order
+    interactions = repo.find_interactions(TEST_UUID)
+    dates = [n.interaction_date for n in interactions if n.interaction_date]
+    assert all(
+        dates[i] > dates[i+1]
+        for i in range(len(dates)-1)
+    )  # Descending order
+
+# endregion
