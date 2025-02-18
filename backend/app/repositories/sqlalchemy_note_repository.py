@@ -63,13 +63,15 @@ class SQLAlchemyNoteRepository(NoteRepository):
             statement_orm = self._session.merge(statement_orm)
             self._session.flush()
 
-            # Store current updated_at to restore after setting tags
+            # Store current timestamps to restore after setting tags
+            current_created_at = statement_orm.created_at
             current_updated_at = statement_orm.updated_at
 
             # Add statement tags using set_tags
             statement_orm.set_tags([tag.name for tag in statement.tags])
 
-            # Restore the original updated_at timestamp
+            # Restore the original timestamps
+            statement_orm.created_at = current_created_at
             statement_orm.updated_at = current_updated_at
             note_orm.statements.append(statement_orm)
 
@@ -244,6 +246,8 @@ class SQLAlchemyNoteRepository(NoteRepository):
             # Add statements with their tags
             for statement_orm in note_orm.statements:
                 statement = note.add_statement(statement_orm.content)
+                statement.created_at = statement_orm.created_at
+                statement.updated_at = statement_orm.updated_at
                 # Add statement tags
                 for tag_orm in statement_orm.tags:
                     statement.add_tag(tag_orm.name)

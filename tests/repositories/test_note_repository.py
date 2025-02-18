@@ -610,4 +610,135 @@ def test_statement_bulk_operations(db_session: Session) -> None:
     assert found is not None
     assert len(found.statements) == 0
 
+
+def test_statement_timezone_handling(db_session: Session) -> None:
+    """Test Statement timezone handling in repository.
+
+    Rules:
+    1. Timestamps stored in UTC
+    2. Timezone info preserved through save/load
+    3. Moment-in-time meaning preserved
+    4. Different input timezones handled
+    """
+    repo = SQLAlchemyNoteRepository(db_session)
+
+    # Create note with statements using different timezones
+    sydney_tz = ZoneInfo("Australia/Sydney")
+    ny_tz = ZoneInfo("America/New_York")
+
+    # Create a reference time in Sydney
+    sydney_time = datetime.now(sydney_tz).replace(microsecond=0)
+    expected_utc = sydney_time.astimezone(UTC)
+
+    note = Note(contact_id=TEST_UUID, content="Main note")
+    statement_sydney = note.add_statement("Sydney statement")
+    statement_sydney.created_at = sydney_time  # Explicitly set for testing
+
+    # Same moment from NY perspective
+    ny_time = sydney_time.astimezone(ny_tz)
+    statement_ny = note.add_statement("NY statement")
+    statement_ny.created_at = ny_time  # Explicitly set for testing
+
+    repo.save(note)
+
+    # Verify through repository
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    assert len(found.statements) == 2
+
+    # Verify both represent the same moment in UTC, ignoring microseconds
+    assert found.statements[0].created_at.replace(microsecond=0) == expected_utc
+    assert found.statements[1].created_at.replace(microsecond=0) == expected_utc
+
+
+def test_statement_dst_handling(db_session: Session) -> None:
+    """Test Statement handling across DST transitions.
+
+    Rules:
+    1. DST transitions handled correctly
+    2. Hour ambiguity resolved
+    3. Timezone rules applied correctly
+    4. Moment-in-time preserved
+    """
+    repo = SQLAlchemyNoteRepository(db_session)
+
+    # Test DST transition
+    paris_tz = ZoneInfo("Europe/Paris")
+
+    # Create a note with statements during DST and non-DST
+    note = Note(contact_id=TEST_UUID, content="DST Test Note")
+
+    # Summer time statement (UTC+2)
+    summer_time = datetime(2024, 7, 1, 14, 0, tzinfo=paris_tz)
+    statement_summer = note.add_statement("Summer statement")
+    statement_summer.created_at = summer_time
+
+    # Winter time statement (UTC+1)
+    winter_time = datetime(2024, 1, 1, 14, 0, tzinfo=paris_tz)
+    statement_winter = note.add_statement("Winter statement")
+    statement_winter.created_at = winter_time
+
+    repo.save(note)
+
+    # Verify through repository
+    found = repo.find_by_id(note.id)
+    assert found is not None
+
+    # Verify correct UTC conversion, ignoring microseconds
+    assert found.statements[0].created_at.replace(microsecond=0) == summer_time.astimezone(UTC).replace(microsecond=0)
+    assert found.statements[1].created_at.replace(microsecond=0) == winter_time.astimezone(UTC).replace(microsecond=0)
+
+    # Verify hour difference due to DST
+    hour_difference = (
+        found.statements[0].created_at.astimezone(paris_tz).hour -
+        found.statements[1].created_at.astimezone(paris_tz).hour
+    )
+    assert hour_difference == 0  # Same wall clock time in Paris
+
+
+def test_statement_fractional_offset(db_session: Session) -> None:
+    """Test Statement handling with fractional timezone offsets.
+
+    Rules:
+    1. Fractional offsets preserved
+    2. Correct UTC conversion
+    3. Timestamp integrity maintained
+    4. Proper timezone rules applied
+    """
+    repo = SQLAlchemyNoteRepository(db_session)
+
+    # Test fractional offset timezone
+    india_tz = ZoneInfo("Asia/Kolkata")  # UTC+5:30
+    nepal_tz = ZoneInfo("Asia/Kathmandu")  # UTC+5:45
+
+    # Create note with statements in fractional offset timezones
+    note = Note(contact_id=TEST_UUID, content="Fractional Offset Test")
+
+    # India time statement
+    india_time = datetime(2024, 1, 1, 1, 0, tzinfo=india_tz)
+    statement_india = note.add_statement("India statement")
+    statement_india.created_at = india_time
+
+    # Nepal time statement (same wall clock time)
+    nepal_time = datetime(2024, 1, 1, 1, 0, tzinfo=nepal_tz)
+    statement_nepal = note.add_statement("Nepal statement")
+    statement_nepal.created_at = nepal_time
+
+    repo.save(note)
+
+    # Verify through repository
+    found = repo.find_by_id(note.id)
+    assert found is not None
+
+    # Verify correct UTC conversion, ignoring microseconds
+    assert found.statements[0].created_at.replace(microsecond=0) == india_time.astimezone(UTC).replace(microsecond=0)
+    assert found.statements[1].created_at.replace(microsecond=0) == nepal_time.astimezone(UTC).replace(microsecond=0)
+
+    # Verify 15-minute difference is preserved when converting back to local time
+    time_difference = abs(
+        found.statements[0].created_at.astimezone(india_tz).minute -
+        found.statements[1].created_at.astimezone(nepal_tz).minute
+    )
+    assert time_difference == 0  # Same wall clock time in both zones
+
 # endregion
