@@ -16,9 +16,21 @@ Current decisions:
 
 ### Next Steps 📋
 1. Backport Test Pattern Improvements
-   - [ ] Review and document Note BO test improvements
+   - [x] Review and document Note BO test improvements
    - [ ] Update Contact BO timezone tests
+     - Impact: Medium (Significant improvements in test clarity and coverage)
+     - Affected files:
+       - tests/models/domain/test_contact.py
+       - tests/models/orm/test_contact.py
+       - tests/repositories/test_contact_repository.py
+     - Timeline: Sprint 2024.02
    - [ ] Update Template BO timezone tests
+     - Impact: Medium (Significant improvements in test clarity and coverage)
+     - Affected files:
+       - tests/models/domain/test_template.py
+       - tests/models/orm/test_template.py
+       - tests/repositories/test_template_repository.py
+     - Timeline: Sprint 2024.02
    - [ ] Document timezone test best practices
    - [ ] Create test pattern guide for future BOs
    See CR-2024.02-23 "Note BO Implementation and Test Pattern Discovery" section for detailed patterns and examples.
