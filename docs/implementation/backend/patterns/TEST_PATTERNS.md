@@ -1,27 +1,50 @@
 # Test Patterns Guide
 
 ## Overview
-This guide documents the comprehensive test patterns established during the Note BO implementation (CR-2024.02-23). It covers testing strategies across all aspects of a business object, from basic CRUD to complex temporal logic, using the Note BO as our reference implementation.
+This guide documents the comprehensive test patterns established during the Note BO implementation (CR-2024.02-23) and enhanced with patterns from Contact and Template BOs. The patterns progress from basic to complex, and from common to rare use cases.
 
-Key aspects covered:
-- Basic patterns: Creation, validation, and state management
-- Relationship patterns: Collections, associations, and object graphs
-- Complex patterns: Timezone handling, DST, and cross-cutting concerns
+Test Categories (from common to rare):
+1. **Basic Tests** (All Layers)
+   - Domain creation and validation
+   - ORM persistence
+   - Repository CRUD operations
+
+2. **Relationship Tests** (Common)
+   - Collection management
+   - Association handling
+   - Object graph operations
+
+3. **State Management** (Moderate)
+   - State transitions
+   - Cascading updates
+   - Event tracking
+
+4. **Data Structures** (Complex)
+   - Nested object validation
+   - Complex schema rules
+   - Type-specific validation
+
+5. **Temporal Logic** (Complex)
+   - Basic time handling
+   - Time-based calculations
+   - Timezone edge cases
+
+6. **Evolution** (Rare)
+   - Schema changes
+   - Data migration
+   - Version management
+
+Each category is demonstrated with concrete examples from our reference implementations, showing how to handle everything from simple validation to complex scenarios.
 
 The patterns are organized by:
-1. Layer (domain, ORM, repository)
-2. Category (basic, relationship, temporal)
-3. Complexity (common → complex)
-
-Each pattern is demonstrated with concrete examples from the Note BO implementation, showing how to handle everything from simple validation to complex timezone scenarios.
+1. Frequency (common → rare)
+2. Complexity (basic → complex)
+3. Dependencies (foundational → advanced)
 
 ## Test Organization
 
-### 1. Domain Layer Tests
-Tests for business logic and invariants.
-
-#### Basic Tests (Common)
-1. **Creation Tests**
+### 1. Basic Tests (Common, All Layers)
+1. **Domain Creation & Validation**
    ```python
    def test_note_creation():
        """Test creating an entity with required fields."""
@@ -30,68 +53,7 @@ Tests for business logic and invariants.
    - Check default values
    - Validate initial state
 
-2. **Validation Tests**
-   ```python
-   def test_note_content_validation():
-       """Test validation rules."""
-   ```
-   - Input validation
-   - Business rules
-   - Error cases
-
-3. **Update Tests**
-   ```python
-   def test_note_update_tracking():
-       """Test state changes and tracking."""
-   ```
-   - State modifications
-   - Audit field updates
-   - Change tracking
-
-#### Relationship Tests (Common)
-1. **Collection Management**
-   ```python
-   def test_note_statement_management():
-       """Test managing child collections."""
-   ```
-   - Adding items
-   - Removing items
-   - Ordering
-   - Validation
-
-2. **Association Tests**
-   ```python
-   def test_note_tag_management():
-       """Test managing associations."""
-   ```
-   - Adding associations
-   - Removing associations
-   - Validation rules
-
-#### Temporal Tests (Complex)
-1. **Timezone Handling**
-   ```python
-   def test_note_timezone_handling():
-       """Test timezone-aware operations."""
-   ```
-   - UTC conversion
-   - Timezone preservation
-   - Different input timezones
-
-2. **Timezone Edge Cases**
-   ```python
-   def test_note_timezone_edge_cases():
-       """Test timezone edge cases."""
-   ```
-   - DST transitions
-   - Day boundaries
-   - Fractional offsets
-
-### 2. ORM Layer Tests
-Tests for persistence mapping and constraints.
-
-#### Basic Tests (Common)
-1. **Persistence Tests**
+2. **ORM Persistence**
    ```python
    def test_note_creation_with_required_fields():
        """Test basic persistence."""
@@ -100,58 +62,7 @@ Tests for persistence mapping and constraints.
    - Default values
    - Constraints
 
-2. **Constraint Tests**
-   ```python
-   def test_note_requires_contact():
-       """Test database constraints."""
-   ```
-   - Foreign key constraints
-   - Unique constraints
-   - Not null constraints
-
-#### Relationship Tests (Common)
-1. **Collection Persistence**
-   ```python
-   def test_note_statement_creation():
-       """Test persisting collections."""
-   ```
-   - Save collections
-   - Load collections
-   - Maintain order
-
-2. **Cascade Operations**
-   ```python
-   def test_note_statement_deletion():
-       """Test cascade operations."""
-   ```
-   - Cascade delete
-   - Orphan handling
-   - Relationship cleanup
-
-#### Temporal Tests (Complex)
-1. **Timezone Storage**
-   ```python
-   def test_note_timezone_handling():
-       """Test timezone persistence."""
-   ```
-   - UTC storage
-   - Timezone conversion
-   - Load/save consistency
-
-2. **Timezone Edge Cases**
-   ```python
-   def test_note_timezone_edge_cases():
-       """Test timezone storage edge cases."""
-   ```
-   - DST handling
-   - Date boundaries
-   - Offset preservation
-
-### 3. Repository Layer Tests
-Tests for data access patterns and queries.
-
-#### Basic Tests (Common)
-1. **CRUD Operations**
+3. **Repository CRUD**
    ```python
    def test_note_save_and_find():
        """Test basic CRUD."""
@@ -161,52 +72,118 @@ Tests for data access patterns and queries.
    - Update
    - Delete
 
-2. **Query Tests**
+### 2. Relationship Tests (Common, All Layers)
+1. **Collection Management**
    ```python
-   def test_note_find_by_contact():
-       """Test query operations."""
+   def test_note_statement_management():
+       """Test managing child collections."""
    ```
-   - Find by field
-   - Find by relationship
-   - Collection queries
+   - Adding/removing items
+   - Ordering
+   - Validation
 
-#### Relationship Tests (Common)
-1. **Graph Loading**
+2. **Association Management**
    ```python
-   def test_note_with_statements():
-       """Test loading object graphs."""
+   def test_note_tag_management():
+       """Test managing associations."""
    ```
-   - Load relationships
-   - Eager/lazy loading
-   - Collection handling
+   - Adding/removing associations
+   - Validation rules
+   - Relationship constraints
 
-2. **Graph Operations**
+3. **Graph Operations**
    ```python
    def test_note_with_statement_tags():
-       """Test operations on graphs."""
+       """Test operations on object graphs."""
    ```
-   - Save graphs
-   - Update graphs
-   - Delete graphs
+   - Save/load graphs
+   - Cascade operations
+   - Graph queries
 
-#### Temporal Tests (Complex)
-1. **Timezone Queries**
+### 3. State Management Tests (Moderate)
+1. **State Transitions**
    ```python
-   def test_note_timezone_query_handling():
-       """Test timezone-aware queries."""
+   def test_note_update_tracking():
+       """Test state changes and tracking."""
    ```
-   - Date range queries
-   - Timezone conversion
-   - Sorting by date
+   - State modifications
+   - Audit fields
+   - Change tracking
 
-2. **Timezone Edge Cases**
+2. **State-Dependent Behavior**
+   ```python
+   def test_contact_interaction_recording():
+       """Test state-dependent behavior."""
+   ```
+   - Cascading updates
+   - State-dependent validation
+   - Event sequencing
+
+### 4. Data Structure Tests (Complex)
+1. **Nested Objects**
+   ```python
+   def test_contact_sub_information_validation():
+       """Test nested data structure validation."""
+   ```
+   - Nested validation
+   - Schema validation
+   - Type checking
+
+2. **Complex Validation Rules**
+   ```python
+   def test_template_validation_failures():
+       """Test validation rule scenarios."""
+   ```
+   - Type-specific validation
+   - Format validation
+   - Custom rules
+
+### 5. Temporal Tests (Complex)
+1. **Basic Time Handling**
+   ```python
+   def test_note_timezone_handling():
+       """Test timezone-aware operations."""
+   ```
+   - UTC conversion
+   - Timezone preservation
+   - Basic queries
+
+2. **Time Calculations**
+   ```python
+   def test_contact_find_stale():
+       """Test frequency-based operations."""
+   ```
+   - Frequency calculations
+   - Schedule validation
+   - Period calculations
+
+3. **Timezone Edge Cases**
    ```python
    def test_note_timezone_edge_cases():
-       """Test timezone query edge cases."""
+       """Test timezone edge cases."""
    ```
-   - DST boundaries
-   - Date boundaries
+   - DST transitions
+   - Day boundaries
    - Cross-timezone queries
+
+### 6. Evolution Tests (Rare)
+1. **Schema Changes**
+   ```python
+   def test_template_evolution_add_field():
+       """Test schema evolution scenarios."""
+   ```
+   - Field changes
+   - Version management
+   - Compatibility
+
+2. **Data Migration**
+   ```python
+   def test_template_evolution_change_field_type():
+       """Test data migration scenarios."""
+   ```
+   - Data transformation
+   - Version transitions
+   - Migration validation
 
 ## Best Practices
 
@@ -252,3 +229,33 @@ Tests for data access patterns and queries.
    - Test date comparisons
    - Test range queries
    - Test edge cases
+
+4. **Data Structure Testing**
+   - Test nested structures
+   - Validate complex schemas
+   - Check default behaviors
+   - Verify type constraints
+
+5. **State Management Testing**
+   - Test state transitions
+   - Verify cascading updates
+   - Check history tracking
+   - Validate event sequences
+
+6. **Time-Based Testing**
+   - Test frequency calculations
+   - Verify schedule handling
+   - Check period boundaries
+   - Test stale detection
+
+7. **Evolution Testing**
+   - Test schema changes
+   - Verify version management
+   - Check data migration
+   - Validate compatibility
+
+8. **Validation Rule Testing**
+   - Test type-specific rules
+   - Verify format constraints
+   - Check custom validators
+   - Test error scenarios
