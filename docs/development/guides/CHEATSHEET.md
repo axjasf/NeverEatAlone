@@ -21,6 +21,60 @@
 └── scripts/            # Development scripts
 ```
 
+## Cross-Platform Development
+
+### Path Handling
+```python
+# ❌ Don't use hardcoded separators
+path = "backend\\app\\models"  # Windows-only
+path = "backend/app/models"    # Unix-style
+
+# ✅ Use platform-agnostic methods
+from pathlib import Path
+models_path = Path("backend") / "app" / "models"
+```
+
+### Environment Activation
+```powershell
+# Windows PowerShell
+.\venv\Scripts\activate
+
+# Windows Command Prompt
+.\venv\Scripts\activate.bat
+
+# Mac/Linux
+source venv/bin/activate
+```
+
+### Test Commands
+```powershell
+# Windows PowerShell (recommended)
+cd backend; .\venv\Scripts\activate; python -m pytest ..\tests\models\domain\test_tag.py -v
+
+# Windows Command Prompt
+cd backend && .\venv\Scripts\activate && python -m pytest ..\tests\models\domain\test_tag.py -v
+
+# Mac/Linux
+cd backend && source venv/bin/activate && python -m pytest ../tests/models/domain/test_tag.py -v
+```
+
+### Common Cross-Platform Issues
+1. **Path Separators**
+   - Windows uses backslash (\)
+   - Unix uses forward slash (/)
+   - Git on Windows may normalize to forward slashes
+   - Always use `os.path.join()` or `pathlib.Path` in code
+
+2. **Line Endings**
+   - Windows: CRLF (\r\n)
+   - Unix: LF (\n)
+   - Configure Git: `git config --global core.autocrlf true` on Windows
+
+3. **Shell Commands**
+   - Windows PowerShell: semicolon (;) separator
+   - Windows CMD: ampersand (&) separator
+   - Unix: ampersand (&) or semicolon (;)
+
 ## Daily Development Setup
 
 ```bash
@@ -81,10 +135,19 @@ Key principles:
 
 ```bash
 # From project root (recommended)
+# Linux/macOS:
 python -m pytest -v                              # All tests
 python -m pytest tests/api -v                    # Just API tests
 python -m pytest tests/models -v                 # Just model tests
 python -m pytest tests/api/test_contact_endpoints.py -v  # Specific test file
+
+# Windows (from project root):
+cd backend
+.\venv\Scripts\activate
+python -m pytest -v                              # All tests
+python -m pytest ..\tests\api -v                 # Just API tests
+python -m pytest ..\tests\models -v              # Just model tests
+python -m pytest ..\tests\api\test_contact_endpoints.py -v  # Specific test file
 
 # Run with print statements visible (useful for debugging)
 python -m pytest -v -s
@@ -96,10 +159,17 @@ python -m pytest --pdb
 python -m pytest -l
 
 # Run specific test function
-python -m pytest tests/api/test_contact_endpoints.py -v -k "test_create_contact"
+python -m pytest tests/api/test_contact_endpoints.py -v -k "test_create_contact"  # Linux/macOS
+python -m pytest ..\tests\api\test_contact_endpoints.py -v -k "test_create_contact"  # Windows
 
 # Run tests matching a pattern
 python -m pytest -v -k "test_create or test_update"
+
+# Windows PowerShell one-liner for running tests:
+cd backend; .\venv\Scripts\activate; python -m pytest ..\tests\models\domain\test_tag.py -v
+
+# Windows Command Prompt one-liner:
+cd backend && .\venv\Scripts\activate && python -m pytest ..\tests\models\domain\test_tag.py -v
 ```
 
 ## Test Database Setup
