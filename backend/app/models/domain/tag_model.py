@@ -45,6 +45,8 @@ class Tag(BaseModel):
         name: The tag name (must start with '#')
         frequency_days: Optional number of days between expected contacts
         last_contact: When the entity was last contacted (in UTC)
+        created_at: UTC timestamp of when the tag was created
+        updated_at: UTC timestamp of when the tag was last modified
     """
 
     def __init__(
@@ -78,6 +80,8 @@ class Tag(BaseModel):
         self.name = name.lower()
         self.frequency_days: Optional[int] = None
         self.last_contact: Optional[datetime] = None
+        self.created_at = datetime.now(UTC)
+        self.updated_at = self.created_at
 
     @classmethod
     def get_current_time(cls) -> datetime:
@@ -89,6 +93,10 @@ class Tag(BaseModel):
             datetime: Current time in UTC
         """
         return datetime.now(UTC)
+
+    def _update_timestamp(self) -> None:
+        """Update the updated_at timestamp to current UTC time."""
+        self.updated_at = datetime.now(UTC)
 
     def update_last_contact(
         self,
@@ -109,6 +117,7 @@ class Tag(BaseModel):
             self.last_contact = timestamp.astimezone(UTC)
         else:
             self.last_contact = self.get_current_time()
+        self._update_timestamp()
 
     def set_frequency(self, days: Optional[int]) -> None:
         """Set the frequency for this tag.
@@ -127,6 +136,7 @@ class Tag(BaseModel):
         else:
             # Clear last_contact when disabling frequency
             self.last_contact = None
+            self._update_timestamp()
 
         self.frequency_days = days
 

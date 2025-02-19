@@ -5,6 +5,7 @@ from datetime import datetime, UTC, timedelta, timezone, time
 from uuid import UUID
 from zoneinfo import ZoneInfo
 from backend.app.models.domain.tag_model import Tag, EntityType
+import time as time_module  # Import time module for sleep
 
 
 TEST_UUID = UUID("11111111-1111-1111-1111-111111111111")
@@ -505,3 +506,49 @@ def test_tag_timezone_query_patterns():
         assert not tag.is_stale()  # Timezone difference shouldn't affect staleness
     finally:
         Tag.get_current_time = original_now  # type: ignore
+
+
+def test_tag_audit_field_timezone_handling():
+    """Test timezone handling for audit fields.
+
+    Rules:
+    1. created_at is always in UTC
+    2. updated_at is always in UTC
+    3. updated_at changes with state modifications
+    4. Timezone info is preserved through updates
+    """
+    # Create tag and verify initial timestamps
+    tag = Tag(
+        entity_id=TEST_UUID,
+        entity_type=EntityType.CONTACT,
+        name="#test"
+    )
+
+    # Verify UTC timezone
+    assert tag.created_at.tzinfo == UTC
+    assert tag.updated_at.tzinfo == UTC
+
+    # Test frequency update changes timestamp
+    original_updated_at = tag.updated_at
+    time_module.sleep(0.001)  # Ensure timestamp difference
+    tag.set_frequency(7)
+    assert tag.updated_at > original_updated_at
+    assert tag.updated_at.tzinfo == UTC
+
+    # Test last_contact update changes timestamp
+    original_updated_at = tag.updated_at
+    time_module.sleep(0.001)
+    tag.update_last_contact()
+    assert tag.updated_at > original_updated_at
+    assert tag.updated_at.tzinfo == UTC
+
+    # Test timezone conversion
+    ny_tz = ZoneInfo("America/New_York")
+    ny_time = datetime.now(ny_tz)
+
+    original_updated_at = tag.updated_at
+    time_module.sleep(0.001)
+    tag.update_last_contact(ny_time)
+    assert tag.updated_at > original_updated_at
+    assert tag.updated_at.tzinfo == UTC
+    assert tag.last_contact == ny_time.astimezone(UTC)
