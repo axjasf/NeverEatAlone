@@ -79,6 +79,27 @@ def test_tag_frequency_and_last_contact(db_session: Session) -> None:
     test_time = now.replace(tzinfo=None)
     assert saved_time == test_time
 
+    # Test frequency_last_updated
+    saved_tag.update_frequency(14)  # Change frequency
+    db_session.commit()
+    db_session.refresh(saved_tag)
+
+    assert saved_tag.frequency_days == 14
+    assert saved_tag.frequency_last_updated is not None
+    # Compare timestamps without timezone info since SQLite might not preserve it
+    saved_time = saved_tag.frequency_last_updated.replace(tzinfo=None)
+    # The time should be close to now
+    now = datetime.now(UTC)
+    assert abs((now.replace(tzinfo=None) - saved_time).total_seconds()) < 2
+
+    # Test clearing frequency
+    saved_tag.update_frequency(None)
+    db_session.commit()
+    db_session.refresh(saved_tag)
+
+    assert saved_tag.frequency_days is None
+    assert saved_tag.frequency_last_updated is None
+
 
 def test_tag_contact_relationship(db_session: Session) -> None:
     """Test the relationship between tags and contacts."""
