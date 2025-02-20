@@ -1,5 +1,5 @@
 # Development Journal - [23.5-tag-bo-timezone]
-Version: 2025.02.19-6-feat-23.5
+Version: 2025.02.20-7-feat-23.5
 
 ## Current Focus [23.5]
 ### Tag BO Timezone Implementation
@@ -7,6 +7,7 @@ Version: 2025.02.19-6-feat-23.5
 - ✅ SQLite timezone handling patterns established
 - ✅ Frequency field implementation complete
 - ✅ Basic timestamp tracking working
+- 💡 Need to branch out to 23.6 for association table consolidation
 
 ### Active Tasks
 1. Domain Model
@@ -14,18 +15,19 @@ Version: 2025.02.19-6-feat-23.5
    - ✅ Timezone validation implemented
    - ✅ Frequency field handling complete
    - ✅ Audit field tracking verified
+   - 🔄 Relationship handling pending 23.6
 
 2. Test Implementation
    - ✅ Test structure defined
    - ✅ SQLite timezone patterns established
    - ✅ Basic timestamp tests passing
-   - [ ] Association table tests pending
-   - [ ] Relationship event tests pending
+   - 🔄 Association table tests moved to 23.6
+   - 🔄 Relationship event tests moved to 23.6
 
 3. ORM & Repository Layer
    - ✅ Basic ORM model defined
-   - ❌ Association tables need consolidation
-   - ❌ Event listeners need rework
+   - 🔄 Association tables moved to 23.6
+   - 🔄 Event listeners moved to 23.6
    - [ ] Repository integration pending
 
 ## Progress & Decisions [23.5]
@@ -62,12 +64,8 @@ Version: 2025.02.19-6-feat-23.5
 
 2. Association Table Architecture
    - ❌ Current: Duplicate definitions found
-   - ✅ Decision: Move to central definition
-   - ✅ Approach: Use relationship-level events
-   - 💡 Impact:
-     * Eliminates circular imports
-     * Simplifies maintenance
-     * Improves type safety
+   - 💡 Decision: Move to 23.6 feature branch
+   - 💡 Rationale: Separate architectural concern from timezone handling
    - 🔴 Attempted Solutions:
      * Table-level events (failed: not valid for Table objects)
      * DDL events (failed: wrong event type)
@@ -87,32 +85,30 @@ Version: 2025.02.19-6-feat-23.5
      * Verify state change tracking
 
 ## Next Steps [23.5]
-1. Association Tables
-   - [ ] Create association_tables.py
-   - [ ] Consolidate table definitions
-   - [ ] Update relationship mappings
-   - [ ] Add proper event listeners
+1. Create feature branch 23.6-consolidate-association-tables
+   - [ ] Move association table consolidation
+   - [ ] Move relationship event handling
+   - [ ] Create separate DevJournal
 
-2. Test Coverage
-   - [ ] Add association table tests
-   - [ ] Implement event tests
-   - [ ] Verify timezone handling
-   - [ ] Document patterns
-
-3. Integration
-   - [ ] Complete repository layer
-   - [ ] Verify relationship handling
-   - [ ] Test bulk operations
-   - [ ] Document approach
+2. Complete remaining 23.5 tasks
+   - [ ] Document timezone patterns
+   - [ ] Complete basic repository integration
+   - [ ] Update documentation
 
 ## Status [23.5]
-- Implementation: Blocked on association tables
+- Implementation: Partially blocked (relationships)
 - Test Coverage: 80% (core functionality)
 - Documentation: Current
-- Blockers: Association table duplication
-- Next Focus: Table consolidation
+- Blockers: Association table duplication (moved to 23.6)
+- Next Focus: Branch 23.6 creation
 
 ## History [23.5]
+### 2025.02.20-7
+- 💡 Identified need to separate concerns
+- 💡 Decision to create 23.6 for table consolidation
+- ✅ Updated focus to core timezone handling
+- 🔄 Next: Create 23.6 branch
+
 ### 2025.02.19-6
 - ✅ Consolidated findings
 - ✅ Documented patterns
