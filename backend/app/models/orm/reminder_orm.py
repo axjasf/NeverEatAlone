@@ -9,9 +9,10 @@ from sqlalchemy.types import TypeDecorator
 
 from ...database import Base
 from ..domain.reminder_model import ReminderStatus, RecurrenceUnit
+from .base_orm import GUID
 
 
-class TZDateTime(TypeDecorator):
+class TZDateTime(TypeDecorator[datetime]):
     """Timezone-aware DateTime type for SQLite."""
 
     impl = DateTime
@@ -40,7 +41,7 @@ class ReminderORM(Base):
     __tablename__ = "reminders"
 
     # Primary key and relationships
-    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    id: Mapped[UUID] = mapped_column(GUID, primary_key=True, default=uuid4)
     contact_id: Mapped[UUID] = mapped_column(ForeignKey("contacts.id"), nullable=False)
     note_id: Mapped[Optional[UUID]] = mapped_column(
         ForeignKey("notes.id"), nullable=True

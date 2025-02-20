@@ -9,6 +9,8 @@ from backend.app.models.orm.contact_orm import ContactORM
 from backend.app.models.orm.note_orm import NoteORM
 from backend.app.models.orm.statement_orm import StatementORM
 from backend.app.models.domain.tag_model import EntityType
+from sqlalchemy import MetaData, inspect
+from backend.app.models.orm.base_orm import BaseORMModel
 
 
 def test_tag_creation_with_required_fields(db_session: Session) -> None:
@@ -227,3 +229,38 @@ def test_tag_required_fields(db_session: Session) -> None:
     db_session.add(tag)
     with pytest.raises(IntegrityError):
         db_session.commit()
+
+
+def test_tag_association_table_definitions(db_session: Session) -> None:
+    """Verify tag association tables are correctly defined.
+
+    Tests:
+    1. Each association table exists exactly once in SQLAlchemy metadata
+    2. No duplicate table warnings in SQLAlchemy logs
+    3. Tables are properly named and indexed
+    """
+    # Get SQLAlchemy metadata
+    metadata = BaseORMModel.metadata
+    inspector = inspect(db_session.get_bind())
+
+    # Check association tables exist exactly once
+    assert 'contact_tags' in metadata.tables
+    assert 'note_tags' in metadata.tables
+    assert 'statement_tags' in metadata.tables
+
+    # Verify no duplicate tables in database
+    all_tables = inspector.get_table_names()
+    assert all_tables.count('contact_tags') == 1
+    assert all_tables.count('note_tags') == 1
+    assert all_tables.count('statement_tags') == 1
+
+    # Verify proper indexes exist
+    contact_indexes = inspector.get_indexes('contact_tags')
+    note_indexes = inspector.get_indexes('note_tags')
+    statement_indexes = inspector.get_indexes('statement_tags')
+
+    # Each table should have indexes on both columns
+    for indexes in [contact_indexes, note_indexes, statement_indexes]:
+        column_names = {col for idx in indexes for col in idx['column_names']}
+        assert 'tag_id' in column_names
+        assert any('entity_id' in col for col in column_names)

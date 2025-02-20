@@ -6,7 +6,7 @@ from uuid import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import String, Integer, DateTime, CheckConstraint
 from ..domain.tag_model import EntityType
-from .base_orm import BaseORMModel
+from .base_orm import BaseORMModel, GUID
 
 
 class TagORM(BaseORMModel):
@@ -14,7 +14,7 @@ class TagORM(BaseORMModel):
 
     __tablename__ = "tags"
 
-    entity_id: Mapped[UUID] = mapped_column(nullable=False)
+    entity_id: Mapped[UUID] = mapped_column(GUID, nullable=False)
     entity_type: Mapped[str] = mapped_column(String, nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
     frequency_days: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)

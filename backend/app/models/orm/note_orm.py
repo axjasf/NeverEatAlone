@@ -9,7 +9,8 @@ from ...database import Base
 from .statement_orm import StatementORM
 from .tag_orm import TagORM
 from .reminder_orm import ReminderORM
-from .base_orm import UTCDateTime
+from .base_orm import UTCDateTime, GUID
+from .association_tables_orm import note_tags
 
 if TYPE_CHECKING:
     from .contact_orm import ContactORM
@@ -20,7 +21,7 @@ class NoteORM(Base):
 
     __tablename__ = "notes"
 
-    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    id: Mapped[UUID] = mapped_column(GUID, primary_key=True, default=uuid4)
     contact_id: Mapped[UUID] = mapped_column(ForeignKey("contacts.id"), nullable=False)
     content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     is_interaction: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
@@ -50,7 +51,7 @@ class NoteORM(Base):
         order_by="StatementORM.sequence_number",
     )
     tags: Mapped[List[TagORM]] = relationship(
-        TagORM, secondary="note_tags", lazy="joined"
+        TagORM, secondary=note_tags, lazy="joined"
     )
     # Reminders referencing this note
     reminders: Mapped[List[ReminderORM]] = relationship(

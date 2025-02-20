@@ -16,7 +16,7 @@ from backend.app.models.orm.contact_orm import ContactORM
 from backend.app.models.orm.note_orm import NoteORM
 from backend.app.models.orm.statement_orm import StatementORM
 from backend.app.models.orm.tag_orm import TagORM
-from backend.app.models.orm.statement_tag_orm import statement_tags
+from backend.app.models.orm.association_tables_orm import statement_tags
 
 
 # region Basic Tests (Common)
@@ -492,7 +492,7 @@ def test_statement_tag_persistence(db_session: Session) -> None:
     # Verify statement-tag associations are removed
     remaining_associations = (
         db_session.query(statement_tags)
-        .filter(statement_tags.c.statement_id == statement.id)
+        .filter(statement_tags.c.entity_id == statement.id)
         .all()
     )
     assert len(remaining_associations) == 0
