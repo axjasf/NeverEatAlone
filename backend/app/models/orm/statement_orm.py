@@ -7,7 +7,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import Text, ForeignKey, Integer
 from ...database import Base
 from .tag_orm import TagORM
-from .base_orm import UTCDateTime
+from .base_orm import UTCDateTime, GUID
+from .association_tables_orm import statement_tags
 
 
 class StatementORM(Base):
@@ -15,7 +16,7 @@ class StatementORM(Base):
 
     __tablename__ = "statements"
 
-    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    id: Mapped[UUID] = mapped_column(GUID, primary_key=True, default=uuid4)
     note_id: Mapped[UUID] = mapped_column(ForeignKey("notes.id"), nullable=False)
     sequence_number: Mapped[int] = mapped_column(Integer, nullable=False)
     _content: Mapped[str] = mapped_column("content", Text, nullable=False)
@@ -36,7 +37,7 @@ class StatementORM(Base):
     )
     tags: Mapped[List[TagORM]] = relationship(
         TagORM,
-        secondary="statement_tags",
+        secondary=statement_tags,
         lazy="joined",
         cascade="save-update, merge",
         passive_deletes=True
