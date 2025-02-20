@@ -7,7 +7,7 @@ Version: 2025.02.20-7-feat-23.5
 - ✅ SQLite timezone handling patterns established
 - ✅ Frequency field implementation complete
 - ✅ Basic timestamp tracking working
-- 💡 Need to branch out to 23.6 for association table consolidation
+- 💡 Need to branch out to bugfix #38 for association table issues
 
 ### Active Tasks
 1. Domain Model
@@ -15,19 +15,19 @@ Version: 2025.02.20-7-feat-23.5
    - ✅ Timezone validation implemented
    - ✅ Frequency field handling complete
    - ✅ Audit field tracking verified
-   - 🔄 Relationship handling pending 23.6
+   - 🔄 Relationship handling blocked by bug #38
 
 2. Test Implementation
    - ✅ Test structure defined
    - ✅ SQLite timezone patterns established
    - ✅ Basic timestamp tests passing
-   - 🔄 Association table tests moved to 23.6
-   - 🔄 Relationship event tests moved to 23.6
+   - 🔄 Association table tests moved to #38
+   - 🔄 Relationship event tests moved to #38
 
 3. ORM & Repository Layer
    - ✅ Basic ORM model defined
-   - 🔄 Association tables moved to 23.6
-   - 🔄 Event listeners moved to 23.6
+   - 🔄 Association tables moved to #38
+   - 🔄 Event listeners moved to #38
    - [ ] Repository integration pending
 
 ## Progress & Decisions [23.5]
@@ -63,13 +63,9 @@ Version: 2025.02.20-7-feat-23.5
      * Time deltas more reliable
 
 2. Association Table Architecture
-   - ❌ Current: Duplicate definitions found
-   - 💡 Decision: Move to 23.6 feature branch
-   - 💡 Rationale: Separate architectural concern from timezone handling
-   - 🔴 Attempted Solutions:
-     * Table-level events (failed: not valid for Table objects)
-     * DDL events (failed: wrong event type)
-     * Need relationship-level approach
+   - ❌ Current: Duplicate definitions found (bug)
+   - 💡 Decision: Move to bugfix #38
+   - 💡 Rationale: Fix structural issues before timezone handling
 
 3. Timestamp Strategy
    - ✅ Store all times in UTC
@@ -85,7 +81,7 @@ Version: 2025.02.20-7-feat-23.5
      * Verify state change tracking
 
 ## Next Steps [23.5]
-1. Create feature branch 23.6-consolidate-association-tables
+1. Create feature branch for #38
    - [ ] Move association table consolidation
    - [ ] Move relationship event handling
    - [ ] Create separate DevJournal
@@ -99,15 +95,15 @@ Version: 2025.02.20-7-feat-23.5
 - Implementation: Partially blocked (relationships)
 - Test Coverage: 80% (core functionality)
 - Documentation: Current
-- Blockers: Association table duplication (moved to 23.6)
-- Next Focus: Branch 23.6 creation
+- Blockers: Association table duplication (moved to #38)
+- Next Focus: Branch #38 creation
 
 ## History [23.5]
 ### 2025.02.20-7
 - 💡 Identified need to separate concerns
-- 💡 Decision to create 23.6 for table consolidation
+- �� Decision to create bugfix #38 for table issues
 - ✅ Updated focus to core timezone handling
-- 🔄 Next: Create 23.6 branch
+- 🔄 Next: Create bugfix branch #38
 
 ### 2025.02.19-6
 - ✅ Consolidated findings
