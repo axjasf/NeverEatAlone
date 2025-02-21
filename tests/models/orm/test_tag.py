@@ -4,13 +4,18 @@ import pytest
 from datetime import datetime, UTC
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import inspect
 from backend.app.models.orm.tag_orm import TagORM
 from backend.app.models.orm.contact_orm import ContactORM
 from backend.app.models.orm.note_orm import NoteORM
 from backend.app.models.orm.statement_orm import StatementORM
 from backend.app.models.domain.tag_model import EntityType
-from sqlalchemy import MetaData, inspect
 from backend.app.models.orm.base_orm import BaseORMModel
+from queue import Queue
+from threading import Thread
+from sqlalchemy.orm import sessionmaker
+from typing import Optional, cast
+from uuid import UUID
 
 
 def test_tag_creation_with_required_fields(db_session: Session) -> None:
@@ -264,3 +269,45 @@ def test_tag_association_table_definitions(db_session: Session) -> None:
         column_names = {col for idx in indexes for col in idx['column_names']}
         assert 'tag_id' in column_names
         assert any('entity_id' in col for col in column_names)
+
+
+def test_concurrent_tag_operations(db_session: Session) -> None:
+    """Test that concurrent tag operations are handled correctly.
+
+    Since SQLite doesn't support true concurrency (connections can only be used in the same thread),
+    we simulate concurrent operations by interleaving them in a single thread.
+    """
+    # Create test contact
+    contact = ContactORM(name="Test Contact")
+    db_session.add(contact)
+    db_session.commit()
+    contact_id = str(contact.id)
+
+    # Create tags
+    expected_tags = 5
+    tag_names = [f"#tag{i}" for i in range(expected_tags)]
+
+    # Simulate concurrent operations by interleaving tag creation
+    for tag_name in tag_names:
+        tag = TagORM(
+            entity_id=contact_id,
+            entity_type=EntityType.CONTACT.value,
+            name=tag_name
+        )
+        db_session.add(tag)
+        # Commit after each tag to simulate separate transactions
+        db_session.commit()
+
+        # Verify the tag was added correctly
+        db_session.refresh(contact)
+        current_tags = db_session.query(TagORM).filter_by(entity_id=contact_id).all()
+        assert tag.id in [t.id for t in current_tags], f"Tag {tag_name} was not added correctly"
+
+    # Final verification
+    db_session.refresh(contact)
+    tags = db_session.query(TagORM).filter_by(entity_id=contact_id).all()
+    assert len(tags) == expected_tags, f"Expected {expected_tags} tags, got {len(tags)}"
+
+    # Verify no duplicate tags
+    tag_names_in_db = {tag.name for tag in tags}
+    assert len(tag_names_in_db) == expected_tags, "Duplicate tags found"
