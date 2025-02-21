@@ -11,11 +11,6 @@ from backend.app.models.orm.note_orm import NoteORM
 from backend.app.models.orm.statement_orm import StatementORM
 from backend.app.models.domain.tag_model import EntityType
 from backend.app.models.orm.base_orm import BaseORMModel
-from queue import Queue
-from threading import Thread
-from sqlalchemy.orm import sessionmaker
-from typing import Optional, cast
-from uuid import UUID
 
 
 def test_tag_creation_with_required_fields(db_session: Session) -> None:
@@ -100,12 +95,14 @@ def test_tag_frequency_and_last_contact(db_session: Session) -> None:
     assert abs((now.replace(tzinfo=None) - saved_time).total_seconds()) < 2
 
     # Test clearing frequency
+    before_clear = datetime.now()  # Use naive datetime since SQLite doesn't preserve timezone
     saved_tag.update_frequency(None)
     db_session.commit()
     db_session.refresh(saved_tag)
 
     assert saved_tag.frequency_days is None
-    assert saved_tag.frequency_last_updated is None
+    assert saved_tag.frequency_last_updated is not None
+    assert saved_tag.frequency_last_updated > before_clear
 
 
 def test_tag_contact_relationship(db_session: Session) -> None:
@@ -266,9 +263,9 @@ def test_tag_association_table_definitions(db_session: Session) -> None:
 
     # Each table should have indexes on both columns
     for indexes in [contact_indexes, note_indexes, statement_indexes]:
-        column_names = {col for idx in indexes for col in idx['column_names']}
+        column_names = {str(col) for idx in indexes for col in idx['column_names']}
         assert 'tag_id' in column_names
-        assert any('entity_id' in col for col in column_names)
+        assert any('entity_id' == str(col) for col in column_names)
 
 
 def test_concurrent_tag_operations(db_session: Session) -> None:

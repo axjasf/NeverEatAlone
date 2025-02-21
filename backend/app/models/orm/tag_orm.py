@@ -39,7 +39,5 @@ class TagORM(BaseORMModel):
             days: Number of days between expected contacts, or None to disable
         """
         self.frequency_days = days
-        if days is not None:
-            self.frequency_last_updated = datetime.now(UTC)
-        else:
-            self.frequency_last_updated = None
+        # Always update frequency_last_updated to track when frequency was changed
+        self.frequency_last_updated = datetime.now(UTC)

@@ -1,5 +1,5 @@
 # Development Journal - [23.5-tag-bo-timezone]
-Version: 2025.02.20-9-feat-23.5
+Version: 2025.02.21-10-feat-23.5
 
 ## Current Focus [23.5]
 ### Tag BO Timezone Implementation
@@ -41,7 +41,7 @@ Version: 2025.02.20-9-feat-23.5
    - ✅ Base patterns established
    - ✅ SQLite timezone handling solved
    - ✅ Basic tests passing
-   - [ ] Association tests needed
+   - ✅ Association tests completed
    - [ ] Event tests pending
 
 3. ORM & Repository (40%)
