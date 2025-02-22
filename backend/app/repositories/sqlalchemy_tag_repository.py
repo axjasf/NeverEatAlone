@@ -42,7 +42,7 @@ class SQLAlchemyTagRepository(TagRepository):
             # Update existing tag
             existing.frequency_days = tag.frequency_days
             existing.last_contact = (
-                tag.last_contact.replace(tzinfo=None)
+                tag.last_contact.astimezone(timezone.utc)
                 if tag.last_contact is not None
                 else None
             )
@@ -56,7 +56,7 @@ class SQLAlchemyTagRepository(TagRepository):
                 name=tag.name,
                 frequency_days=tag.frequency_days,
                 last_contact=(
-                    tag.last_contact.replace(tzinfo=None)
+                    tag.last_contact.astimezone(timezone.utc)
                     if tag.last_contact is not None
                     else None
                 ),
