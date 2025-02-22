@@ -1,10 +1,10 @@
 """SQLAlchemy ORM model for notes."""
 
 from datetime import datetime, timezone
-from typing import List, Optional, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import Text, ForeignKey, Boolean, CheckConstraint
+from sqlalchemy import Text, ForeignKey, Boolean, CheckConstraint, event
 from ...database import Base
 from .statement_orm import StatementORM
 from .tag_orm import TagORM
@@ -96,3 +96,16 @@ class NoteORM(Base):
                 entity_id=self.id, entity_type=EntityType.NOTE.value, name=name.lower()
             )
             self.tags.append(tag)
+
+    @classmethod
+    def __declare_last__(cls) -> None:
+        """Set up event listeners after all mappings are configured."""
+        @event.listens_for(cls.tags, 'append')
+        def receive_append(target: "NoteORM", _: Any, _2: Any) -> None:
+            """Update note timestamp when a tag is added."""
+            target.updated_at = datetime.now(timezone.utc)
+
+        @event.listens_for(cls.tags, 'remove')
+        def receive_remove(target: "NoteORM", _: Any, _2: Any) -> None:
+            """Update note timestamp when a tag is removed."""
+            target.updated_at = datetime.now(timezone.utc)

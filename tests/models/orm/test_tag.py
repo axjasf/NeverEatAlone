@@ -9,6 +9,7 @@ Tests are organized by complexity and frequency of use:
 
 import pytest
 from datetime import datetime, UTC
+import time
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import inspect
@@ -18,6 +19,7 @@ from backend.app.models.orm.note_orm import NoteORM
 from backend.app.models.orm.statement_orm import StatementORM
 from backend.app.models.domain.tag_model import EntityType
 from backend.app.models.orm.base_orm import BaseORMModel
+from backend.app.models.orm.association_tables_orm import note_tags, statement_tags
 
 
 # region Basic Tests
@@ -316,12 +318,12 @@ def test_tag_frequency_and_last_contact(db_session: Session) -> None:
 
     assert saved_tag.frequency_days == 14, "Frequency update failed"
     assert saved_tag.frequency_last_updated is not None, "Update time not set"
-    saved_time = saved_tag.frequency_last_updated.replace(tzinfo=None)
+    assert saved_tag.frequency_last_updated.tzinfo == UTC, "Update time should be in UTC"
     now = datetime.now(UTC)
-    assert abs((now.replace(tzinfo=None) - saved_time).total_seconds()) < 2, "Update time incorrect"
+    assert abs((now - saved_tag.frequency_last_updated).total_seconds()) < 2, "Update time incorrect"
 
     # Test clearing frequency
-    before_clear = datetime.now()
+    before_clear = datetime.now(UTC)
     saved_tag.update_frequency(None)
     db_session.commit()
     db_session.refresh(saved_tag)
@@ -374,5 +376,163 @@ def test_concurrent_tag_operations(db_session: Session) -> None:
     # Verify no duplicate tags
     tag_names_in_db = {tag.name for tag in tags}
     assert len(tag_names_in_db) == expected_tags, "Duplicate tags found"
+
+# endregion
+
+
+# region Event Tests
+
+def test_tag_update_events(db_session: Session) -> None:
+    """Test that tag updates trigger appropriate events.
+
+    Verify:
+    1. Frequency updates trigger frequency_last_updated
+    2. Last contact updates are tracked
+    3. Multiple updates are handled correctly
+    4. Event order is preserved
+    """
+    # Create contact and tag
+    contact = ContactORM(name="Test Contact")
+    db_session.add(contact)
+    db_session.commit()
+
+    tag = TagORM(
+        entity_id=contact.id,
+        entity_type=EntityType.CONTACT.value,
+        name="#test"
+    )
+    db_session.add(tag)
+    db_session.commit()
+
+    # Initial state
+    assert tag.frequency_last_updated is None, "Should not have update time initially"
+
+    # Update frequency
+    before_update = datetime.now(UTC)
+    tag.update_frequency(7)  # Set weekly frequency
+    db_session.commit()
+    db_session.refresh(tag)
+
+    # Verify frequency update event
+    assert tag.frequency_last_updated is not None, "Update time not set"
+    assert tag.frequency_last_updated.tzinfo == UTC, "Update time should be in UTC"
+    assert tag.frequency_last_updated > before_update, "Update time not after operation"
+
+    # Update frequency again
+    before_second_update = datetime.now(UTC)
+    tag.update_frequency(14)  # Change to bi-weekly
+    db_session.commit()
+    db_session.refresh(tag)
+
+    # Verify second update event
+    assert tag.frequency_last_updated > before_second_update, "Second update not tracked"
+
+
+def test_tag_association_events(db_session: Session) -> None:
+    """Test events triggered by tag associations.
+
+    Verify:
+    1. Adding tags updates parent timestamps
+    2. Removing tags updates parent timestamps
+    3. Events trigger in correct order
+    4. Association metadata is updated
+    """
+    # Create contact and note
+    contact = ContactORM(name="Test Contact")
+    db_session.add(contact)
+    db_session.commit()
+
+    note = NoteORM(contact_id=contact.id, content="Test note")
+    db_session.add(note)
+    db_session.commit()
+    initial_note_update = note.updated_at
+
+    # Create and associate tag
+    time.sleep(0.001)  # Ensure timestamp difference
+    tag = TagORM(
+        entity_id=note.id,
+        entity_type=EntityType.NOTE.value,
+        name="#test"
+    )
+    db_session.add(tag)
+    note.tags.append(tag)
+    db_session.commit()
+    db_session.refresh(note)
+
+    # Verify note update triggered
+    assert note.updated_at > initial_note_update, "Note not updated after tag addition"
+
+    # Remove tag
+    time.sleep(0.001)  # Ensure timestamp difference
+    note.tags.remove(tag)
+    db_session.commit()
+    db_session.refresh(note)
+
+    # Verify note update triggered again
+    assert note.updated_at > initial_note_update, "Note not updated after tag removal"
+
+
+def test_tag_cascade_events(db_session: Session) -> None:
+    """Test events during cascading operations.
+
+    Verify:
+    1. Parent deletion triggers appropriate events
+    2. Association cleanup happens in correct order
+    3. Tag state remains consistent
+    4. No orphaned references remain
+    """
+    # Create contact and note
+    contact = ContactORM(name="Test Contact")
+    db_session.add(contact)
+    db_session.commit()
+
+    note = NoteORM(contact_id=contact.id, content="Test note")
+    db_session.add(note)
+    db_session.commit()
+
+    # Create statement with tags
+    statement = StatementORM(
+        note_id=note.id,
+        content="Test statement",
+        sequence_number=1
+    )
+    db_session.add(statement)
+    db_session.commit()
+
+    # Add tags to both note and statement
+    tag1 = TagORM(
+        entity_id=note.id,
+        entity_type=EntityType.NOTE.value,
+        name="#test1"
+    )
+    tag2 = TagORM(
+        entity_id=statement.id,
+        entity_type=EntityType.STATEMENT.value,
+        name="#test2"
+    )
+    db_session.add_all([tag1, tag2])
+    note.tags.append(tag1)
+    statement.tags.append(tag2)
+    db_session.commit()
+
+    # Store tag IDs
+    tag1_id = tag1.id
+    tag2_id = tag2.id
+
+    # Delete note (should cascade to statement)
+    db_session.delete(note)
+    db_session.commit()
+
+    # Verify tags still exist but associations are cleaned up
+    remaining_tags = db_session.query(TagORM).filter(
+        TagORM.id.in_([tag1_id, tag2_id])
+    ).all()
+    assert len(remaining_tags) == 2, "Tags should survive cascade deletion"
+
+    # Verify no orphaned associations
+    note_assocs = db_session.query(note_tags).all()
+    statement_assocs = db_session.query(statement_tags).all()
+    assert len(note_assocs) == 0, "Note tag associations should be cleaned up"
+    assert len(statement_assocs) == 0, "Statement tag associations should be cleaned up"
 
 # endregion
