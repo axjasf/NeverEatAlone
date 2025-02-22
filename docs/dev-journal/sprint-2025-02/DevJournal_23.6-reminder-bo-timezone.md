@@ -1,5 +1,5 @@
 # Development Journal - [23.6-reminder-bo-timezone]
-Version: 2025.02.22-1-feat-23.6
+Version: 2025.02.22-2-feat-23.6
 
 ## Current Focus [23.6]
 ### Reminder BO Timezone Implementation
@@ -37,6 +37,12 @@ Version: 2025.02.22-1-feat-23.6
    - ✅ Follow TEST_PATTERNS.md temporal section
    - 💡 Focus on schedule-specific edge cases
    - 💡 Verify recurrence across DST boundaries
+
+3. Existing Implementation
+   - ✅ Domain tests: Basic validation, recurrence, status flows (`test_reminder.py`)
+   - ✅ ORM tests: Persistence, relationships, constraints (`test_reminder_orm.py`)
+   - ✅ Repository tests: CRUD, queries, recurring handling (`test_reminder_repository.py`)
+   - 🔍 Current gaps: DST handling, cross-timezone operations, timezone preservation
 
 ## Next Steps [23.6]
 - [ ] TZDateTime Type
