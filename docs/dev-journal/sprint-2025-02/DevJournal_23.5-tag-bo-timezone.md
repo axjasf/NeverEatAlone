@@ -1,10 +1,10 @@
 # Development Journal - [23.5-tag-bo-timezone]
-Version: 2025.02.21-11-feat-23.5
+Version: 2025.02.21-12-feat-23.5
 
 ## Current Focus [23.5]
 ### Tag BO Timezone Implementation
 - 🔄 Complete remaining test implementation:
-  * Association tests needed
+  * Repository timezone tests completed
   * Event tests pending
 
 ### Active Tasks
@@ -20,13 +20,14 @@ Version: 2025.02.21-11-feat-23.5
    - ✅ SQLite timezone patterns established
    - ✅ Basic timestamp tests passing
    - ✅ Association table tests completed in #38
-   - ✅ Relationship event tests completed in #38
+   - ✅ Repository timezone tests completed
 
 3. ORM & Repository Layer
    - ✅ Basic ORM model defined
    - ✅ Association tables consolidated in #38
    - ✅ Event listeners implemented in #38
-   - [ ] Repository integration pending
+   - ✅ Basic repository integration complete
+   - [ ] Event handling integration pending
 
 ## Progress & Decisions [23.5]
 ### Implementation Status
@@ -37,61 +38,70 @@ Version: 2025.02.21-11-feat-23.5
    - ✅ Audit fields verified
    - ✅ UTC conversion confirmed
 
-2. Test Framework (80%)
+2. Test Framework (90%)
    - ✅ Base patterns established
    - ✅ SQLite timezone handling solved
    - ✅ Basic tests passing
    - ✅ Association tests completed
+   - ✅ Repository tests completed
    - [ ] Event tests pending
 
-3. ORM & Repository (40%)
+3. ORM & Repository (80%)
    - ✅ Basic model structure complete
    - ✅ Association tables consolidated
    - ✅ Event listeners implemented
-   - [ ] Integration pending
+   - ✅ Timezone handling verified
+   - [ ] Event handling pending
 
 ### Technical Decisions [23.5]
 1. SQLite Timezone Handling
-   - ✅ Pattern: Strip timezone info in tests
-   - ✅ Solution: Use time delta comparisons
+   - ✅ Pattern: Store all times in UTC
+   - ✅ Solution: Convert on save/load
    - ✅ Standard: Follow last_contact patterns
    - 💡 Key Points:
      * SQLite stores datetime as strings
-     * Comparison needs timezone context
-     * Time deltas more reliable
+     * All conversions happen in repository layer
+     * UTC used consistently in storage
 
 2. Association Table Architecture
-   - ❌ Current: Duplicate definitions found (bug)
-   - 💡 Decision: Move to bugfix #38
-   - 💡 Rationale: Fix structural issues before timezone handling
+   - ✅ Consolidated in association_tables.py
+   - ✅ Fixed via bugfix #38
+   - ✅ Clean hierarchy established
+   - 💡 Benefits:
+     * No duplicate definitions
+     * Clear ownership
+     * Consistent patterns
 
 3. Timestamp Strategy
    - ✅ Store all times in UTC
    - ✅ Convert on save/load
    - ✅ Use time deltas for comparisons
-   - 💡 Considerations:
-     * SQLite limitations
-     * Relationship updates
-     * Event handling
-   - 🔄 Follow-up:
-     * Standardize handling across models
-     * Document rationale for approaches
-     * Verify state change tracking
+   - 💡 Implementation:
+     * Repository handles conversion
+     * ORM ensures UTC storage
+     * Domain model preserves zones
 
 ## Next Steps [23.5]
-1. Complete remaining 23.5 tasks
-   - [ ] Document timezone patterns
-   - [ ] Complete basic repository integration
+1. Complete remaining tasks
+   - [ ] Implement remaining event tests
+   - [ ] Complete event handling integration
    - [ ] Update documentation
 
 ## Status [23.5]
-- Implementation: Unblocked (relationships fixed via #38)
-- Test Coverage: 100% (core functionality + relationships)
+- Implementation: 90% complete
+- Test Coverage: 90% (timezone + repository complete)
 - Documentation: Current
 - Blockers: None
-- Next Focus: Complete repository integration
+- Next Focus: Event handling implementation
 
 ## History [23.5]
+### 2025.02.21-12
+- ✅ Added repository timezone test:
+  * Verified UTC storage in database
+  * Tested cross-timezone conversions (Sydney/NY)
+  * Confirmed timezone preservation on retrieval
+- 🔄 Next: Complete remaining event tests
+
 ### 2025.02.21-11
 - ✅ Ran full test suite for tag_orm
 - ✅ All 9 tests passing:

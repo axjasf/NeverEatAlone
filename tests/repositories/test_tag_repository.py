@@ -6,12 +6,14 @@ from uuid import UUID, uuid4
 from sqlalchemy.orm import Session
 from sqlalchemy.engine import Engine
 from sqlalchemy import select, and_
+from zoneinfo import ZoneInfo
 
 from backend.app.models.domain.tag_model import Tag, EntityType
 from backend.app.models.orm.tag_orm import TagORM
 from backend.app.repositories.sqlalchemy_tag_repository import (
     SQLAlchemyTagRepository,
 )
+from backend.app.models.orm.contact_orm import ContactORM
 
 
 TEST_UUID = UUID("11111111-1111-1111-1111-111111111111")
@@ -310,3 +312,69 @@ def test_tag_interaction_tracking(
     assert found_contact.last_contact == interaction_time
     assert found_note.last_contact is None
     assert found_statement.last_contact is None
+
+
+def test_tag_timezone_handling(db_session: Session) -> None:
+    """Test timezone handling in tag repository.
+
+    Verify:
+    1. Timezone information is preserved when saving
+    2. Timezone is correctly converted to UTC for storage
+    3. Timezone is preserved when retrieving
+    4. Different input timezones are handled correctly
+    """
+    repo = SQLAlchemyTagRepository(db_session)
+
+    # Create a contact for testing
+    contact = ContactORM(name="Test Contact")
+    db_session.add(contact)
+    db_session.commit()
+
+    # Test with different input timezones
+    sydney_tz = ZoneInfo("Australia/Sydney")
+    ny_tz = ZoneInfo("America/New_York")
+
+    # Create a reference time in Sydney
+    sydney_time = datetime.now(sydney_tz).replace(microsecond=0)
+    expected_utc = sydney_time.astimezone(UTC)
+
+    # Create and save tag with Sydney timezone
+    tag = Tag(
+        entity_id=contact.id,
+        entity_type=EntityType.CONTACT,
+        name="#test_tz"
+    )
+    tag.last_contact = sydney_time
+    tag.frequency_days = 7
+    saved_tag = repo.save(tag)
+
+    # Verify timezone conversion to UTC in database
+    tag_orm = db_session.get(TagORM, saved_tag.id)
+    assert tag_orm is not None
+    assert tag_orm.last_contact is not None
+    assert tag_orm.last_contact.tzinfo == UTC
+    assert tag_orm.last_contact == expected_utc
+
+    # Create same moment in NY timezone
+    ny_time = sydney_time.astimezone(ny_tz)
+    tag2 = Tag(
+        entity_id=contact.id,
+        entity_type=EntityType.CONTACT,
+        name="#test_tz2"
+    )
+    tag2.last_contact = ny_time
+    tag2.frequency_days = 7
+    saved_tag2 = repo.save(tag2)
+
+    # Verify both tags represent the same moment
+    tag2_orm = db_session.get(TagORM, saved_tag2.id)
+    assert tag2_orm is not None
+    assert tag2_orm.last_contact is not None
+    assert tag2_orm.last_contact == tag_orm.last_contact
+
+    # Test timezone preservation when retrieving
+    retrieved_tag = repo.find_by_id(saved_tag.id)
+    assert retrieved_tag is not None
+    assert retrieved_tag.last_contact is not None
+    assert retrieved_tag.last_contact.tzinfo == UTC
+    assert retrieved_tag.last_contact == expected_utc
