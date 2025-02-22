@@ -40,7 +40,7 @@ class SQLAlchemyTagRepository(TagRepository):
 
         if existing:
             # Update existing tag
-            existing.frequency_days = tag.frequency_days
+            existing.update_frequency(tag.frequency_days)
             existing.last_contact = (
                 tag.last_contact.astimezone(timezone.utc)
                 if tag.last_contact is not None
@@ -54,13 +54,14 @@ class SQLAlchemyTagRepository(TagRepository):
                 entity_id=tag.entity_id,
                 entity_type=tag.entity_type,
                 name=tag.name,
-                frequency_days=tag.frequency_days,
                 last_contact=(
                     tag.last_contact.astimezone(timezone.utc)
                     if tag.last_contact is not None
                     else None
                 ),
             )
+            # Set frequency after creation to ensure proper event handling
+            tag_orm.update_frequency(tag.frequency_days)
             self.session.add(tag_orm)
 
         self.session.commit()

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.engine import Engine
 from sqlalchemy import select, and_
 from zoneinfo import ZoneInfo
+import time
 
 from backend.app.models.domain.tag_model import Tag, EntityType
 from backend.app.models.orm.tag_orm import TagORM
@@ -378,3 +379,73 @@ def test_tag_timezone_handling(db_session: Session) -> None:
     assert retrieved_tag.last_contact is not None
     assert retrieved_tag.last_contact.tzinfo == UTC
     assert retrieved_tag.last_contact == expected_utc
+
+
+def test_tag_repository_event_handling(db_session: Session) -> None:
+    """Test event handling at repository level.
+
+    Verify:
+    1. Frequency updates trigger appropriate events
+    2. Last contact updates are tracked
+    3. Event timestamps are in UTC
+    4. Events are persisted correctly
+    """
+    repo = SQLAlchemyTagRepository(db_session)
+
+    # Create a contact for testing
+    contact = ContactORM(name="Test Contact")
+    db_session.add(contact)
+    db_session.commit()
+
+    # Create initial tag
+    tag = Tag(
+        entity_id=contact.id,
+        entity_type=EntityType.CONTACT,
+        name="#test_events"
+    )
+    tag.set_frequency(7)  # Weekly
+    saved_tag = repo.save(tag)
+    db_session.commit()
+
+    # Verify initial frequency update event
+    tag_orm = db_session.get(TagORM, saved_tag.id)
+    assert tag_orm is not None
+    assert tag_orm.frequency_last_updated is not None
+    assert tag_orm.frequency_last_updated.tzinfo == UTC
+    initial_update = tag_orm.frequency_last_updated
+
+    # Update frequency
+    time.sleep(0.001)  # Ensure timestamp difference
+    saved_tag.set_frequency(14)  # Bi-weekly
+    repo.save(saved_tag)
+    db_session.commit()
+
+    # Verify frequency update event
+    db_session.refresh(tag_orm)
+    assert tag_orm.frequency_last_updated > initial_update
+    assert tag_orm.frequency_last_updated.tzinfo == UTC
+
+    # Update last contact
+    time.sleep(0.001)  # Ensure timestamp difference
+    contact_time = datetime.now(UTC)
+    saved_tag.update_last_contact(contact_time)
+    repo.save(saved_tag)
+    db_session.commit()
+
+    # Verify last contact update
+    db_session.refresh(tag_orm)
+    assert tag_orm.last_contact == contact_time
+    assert tag_orm.last_contact.tzinfo == UTC
+
+    # Disable frequency tracking
+    time.sleep(0.001)  # Ensure timestamp difference
+    saved_tag.set_frequency(None)
+    repo.save(saved_tag)
+    db_session.commit()
+
+    # Verify final state
+    db_session.refresh(tag_orm)
+    assert tag_orm.frequency_days is None
+    assert tag_orm.frequency_last_updated is not None
+    assert tag_orm.frequency_last_updated.tzinfo == UTC
+    assert tag_orm.last_contact is None  # Should be cleared when frequency is disabled
