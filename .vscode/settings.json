@@ -147,6 +147,10 @@
     {
       "filePath": "docs/development/architecture/model_layer_design.md",
       "group": "Default"
+    },
+    {
+      "filePath": "docs",
+      "group": "Default"
     }
   ],
   "python.testing.pytestArgs": [

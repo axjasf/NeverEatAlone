@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Constants for directory structure
-CR_BASE_DIR="docs/implementation/changes"
+CR_BASE_DIR="docs/features"
 CR_BACKLOG_DIR="$CR_BASE_DIR/1-backlog"
 CR_SPRINT_DIR="$CR_BASE_DIR/2-sprint-backlog"
 CR_PROGRESS_DIR="$CR_BASE_DIR/3-in-progress"
@@ -59,10 +59,22 @@ create_cr() {
     echo "Creating branch..."
     git checkout -b "feature/$issue_number-${title// /-}"
 
-    # Create CR document
-    echo "Creating CR document..."
-    cr_number="CR-$today-$issue_number"
-    cp "$CR_TEMPLATE" "$CR_BACKLOG_DIR/$cr_number.md"
+    # Get feature number from user
+    read -p "Enter feature number (e.g., 1 for data-model): " feature_num
+    feature_dir=$(find "$CR_BASE_DIR" -type d -name "${feature_num}-*" | head -n 1)
+
+    if [ -z "$feature_dir" ]; then
+        echo "❌ Feature directory not found for number $feature_num"
+        exit 1
+    fi
+
+    # Create CR in feature directory
+    mkdir -p "$feature_dir/crs"
+    cr_path="$feature_dir/crs/CR-$today-$issue_number.md"
+    cp docs/development/guides/cr/CHANGE_REQUEST_TEMPLATE.md "$cr_path"
+
+    # Update feature OVERVIEW.md
+    echo "- [ ] CR-$today-$issue_number: $title" >> "$feature_dir/OVERVIEW.md"
 
     # Update Implementation Plan
     echo "Updating Implementation Plan..."
@@ -73,17 +85,17 @@ create_cr() {
     sed -i '' "s/^Version: .*/Version: $today-1/" docs/implementation/WORKING_NOTES.md
 
     # Stage changes
-    git add "$CR_BACKLOG_DIR/$cr_number.md"
+    git add "$feature_dir/crs/CR-$today-$issue_number.md"
     git add docs/implementation/IMPLEMENTATION_PLAN.md
     git add docs/implementation/WORKING_NOTES.md
 
     # Create initial commit
-    git commit -m "docs(cr): create $cr_number for $title (#$issue_number)"
+    git commit -m "docs(cr): create CR-$today-$issue_number for $title (#$issue_number)"
 
     echo "✅ Created:"
     echo "- Issue #$issue_number"
     echo "- Branch feature/$issue_number-${title// /-}"
-    echo "- CR Document $cr_number in backlog"
+    echo "- CR Document CR-$today-$issue_number in feature $feature_num"
     echo "- Updated Implementation Plan and Working Notes"
 }
 
