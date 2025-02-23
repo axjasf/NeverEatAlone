@@ -130,7 +130,7 @@ frontend/
 
 ## References
 
-1. [BRD - Contact Management](../../brd/modules/contact_management/README.md)
-2. [Technical Architecture](../../brd/modules/contact_management/technical/architecture.md)
-3. [API Interfaces](../../brd/modules/contact_management/technical/interfaces.md)
-4. [Cross-Cutting Concerns](../../brd/cross_cutting/ux.md)
+1. [BRD - Contact Management](../../../brd/modules/contact_management/README.md)
+2. [Technical Architecture](../../../brd/modules/contact_management/technical/architecture.md)
+3. [API Interfaces](../../../brd/modules/contact_management/technical/interfaces.md)
+4. [Cross-Cutting Concerns](../../../brd/cross_cutting/ux.md)

@@ -1,8 +1,25 @@
 # Change Request Process
 
 ## Overview
+Change Requests (CRs) are organized under features in the `docs/features/` directory.
 
-This document outlines the standard process for managing changes in the NeverEatAlone project. It provides guidelines for creating, reviewing, implementing, and documenting changes while maintaining system quality and documentation consistency.
+## Directory Structure
+```
+docs/features/
+├── 1-data-model/              # Feature group
+│   ├── OVERVIEW.md           # Feature summary
+│   ├── design/               # Design decisions
+│   └── crs/                  # Feature CRs
+│       └── CR-YYYY.MM-N.md   # Individual CR
+└── 2-service-layer/
+    └── ...
+```
+
+## CR Creation Process
+1. Create new branch: `feature/CR-YYYY.MM.DD-N-brief-description`
+2. Create CR in appropriate feature directory: `docs/features/N-feature-name/crs/CR-YYYY.MM.DD-N.md`
+3. Update feature OVERVIEW.md to include the new CR
+4. Create design documents if needed
 
 ## 1. Change Request Types
 

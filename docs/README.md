@@ -8,36 +8,29 @@ docs/
 │   │   └── contact_management/    # Contact Management Module
 │   │       ├── README.md         # Module overview
 │   │       ├── requirements/     # Business Requirements
-│   │       │   ├── functional.md    # Functional requirements
-│   │       │   ├── non_functional.md # Non-functional requirements
-│   │       │   └── user_stories.md   # User stories and scenarios
 │   │       └── technical/       # Technical Specifications
-│   │           ├── architecture.md   # System architecture
-│   │           ├── data_model.md     # Data models and relationships
-│   │           └── interfaces.md     # API and interface definitions
 │   └── README.md                  # BRD overview and guidelines
 │
-├── development/
-│   └── guides/                    # Development Guidelines
-│       ├── CHEATSHEET.md         # Quick reference guide
-│       ├── DEVELOPMENT.md        # Development standards
-│       ├── PROJECT_MANAGEMENT.md # Project management procedures
-│       └── TESTING.md           # Testing guidelines
+├── guides/                        # Development Guidelines
+│   ├── quick-start/              # Daily essentials
+│   │   ├── SETUP.md             # First-time setup
+│   │   ├── COMMANDS.md          # Common commands
+│   │   └── WORKFLOW.md          # Daily workflow
+│   └── detailed/                # In-depth documentation
+│       ├── DEVELOPMENT.md       # Technical details
+│       ├── PROJECT.md           # Project management
+│       ├── TESTING.md          # Testing strategy
+│       └── cr/                 # Change Request process
 │
-├── implementation/
-│   ├── backend/                  # Backend Implementation
-│   │   ├── patterns/            # Backend Implementation Patterns
-│   │   │   └── TEST_PATTERNS.md # Test implementation patterns
-│   │   └── MODEL_LAYER.md       # ORM and model patterns
-│   ├── frontend/                # Frontend Implementation
-│   ├── changes/                 # Change Request (CR) documentation
-│   ├── DEVELOPMENT_JOURNAL.md   # Current sprint progress
-│   ├── IMPLEMENTATION_PLAN.md   # Technical implementation details
-│   └── PHASES.md               # Project phases overview
+├── features/                     # Feature documentation
+│   ├── 1-data-model/           # First milestone
+│   └── 2-service-layer/        # Second milestone
 │
-├── environment/                  # Environment Configuration
+├── dev-journal/                 # Development journals
+│   ├── sprint-YYYY-MM/         # Sprint journals
+│   └── future-YYYY-QN/         # Future planning
 │
-└── templates/                    # Document Templates
+└── environment/                 # Environment Configuration
 
 ```
 
@@ -49,7 +42,7 @@ docs/
 graph TD
     A[BRD Module Requirements] --> B[Technical Specs]
     B --> C[Development Guides]
-    C --> D[Implementation Details]
+    C --> D[Feature Implementation]
     D --> E[Change Requests]
     E --> F[Development Journal]
     F --> C
@@ -67,12 +60,12 @@ graph TD
    - Interface definitions
    - Technical constraints
 
-3. **Development Guidelines** (`development/guides/`)
+3. **Development Guidelines** (`guides/`)
    - How we build things
    - Coding standards
    - Process templates
 
-4. **Implementation Details** (`implementation/{backend|frontend}/`)
+4. **Feature Implementation** (`features/`)
    - Concrete technical solutions
    - Code patterns and examples
    - Technical decisions
@@ -82,7 +75,7 @@ graph TD
    - Configuration details
    - Maintenance procedures
 
-6. **Current Progress** (`implementation/DEVELOPMENT_JOURNAL.md`)
+6. **Current Progress** (`dev-journal/`)
    - Track current sprint focus and progress
    - Document key technical decisions and rationale
    - Record pattern discoveries and improvements
@@ -177,10 +170,10 @@ graph TD
 
 ### 1. Choosing Location
 - Business requirements → `brd/modules/`
-- Process documentation → `development/guides/`
-- Technical patterns → `implementation/{backend|frontend}/`
-- Change history → `implementation/changes/`
-- Current progress → `implementation/DEVELOPMENT_JOURNAL.md`
+- Process documentation → `guides/`
+- Feature documentation → `features/`
+- Progress tracking → `dev-journal/`
+- Environment setup → `environment/`
 
 ### 2. Using Templates
 - Start with template from `templates/`
@@ -206,16 +199,12 @@ The following elements are planned but not yet implemented:
 ### Planned Directories
 ```
 docs/
-├── development/
+├── features/
 │   └── patterns/         # [PLANNED] Reusable development patterns
 │
-├── implementation/
-│   └── frontend/
-│       └── patterns/     # [PLANNED] Frontend design patterns
-│
-└── environment/
-    ├── setup/            # [PLANNED] Environment setup guides
-    └── maintenance/      # [PLANNED] Maintenance procedures
+├── environment/
+│   ├── setup/           # [PLANNED] Environment setup guides
+│   └── maintenance/     # [PLANNED] Maintenance procedures
 ```
 
 ### Planned Documentation

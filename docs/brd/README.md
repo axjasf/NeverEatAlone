@@ -93,7 +93,7 @@ Each module defines clear extension points in its architecture.md file, allowing
 
 ## Implementation Guidelines
 
-See [Implementation Guide](../implementation/README.md) for detailed technical specifications and development guidelines.
+See `docs/guides/detailed/DEVELOPMENT.md` for technical details and development guidelines.
 
 ## Change Management
 
