@@ -1,21 +1,32 @@
-"""Tests for the Contact repository."""
+"""Tests for the Contact repository.
+
+Tests are organized by complexity and frequency of use:
+1. Basic Tests - CRUD operations
+2. Query Tests - Search and filtering
+3. State Management Tests - Updates and tracking
+4. Temporal Tests - Timezone handling
+"""
 
 from datetime import datetime, UTC, timedelta
-from uuid import uuid4
 from sqlalchemy.orm import Session
 from backend.app.models.domain.contact_model import Contact
 from backend.app.repositories.sqlalchemy_contact_repository import (
     SQLAlchemyContactRepository,
 )
+from zoneinfo import ZoneInfo
 
+
+# region Basic Tests (Common)
 
 def test_contact_save_and_find(db_session: Session) -> None:
-    """Test saving and finding a contact."""
+    """Test basic CRUD operations."""
     repo = SQLAlchemyContactRepository(db_session)
 
     # Create and save a contact
     contact = Contact(
-        name="John Doe", first_name="John", briefing_text="Important business contact"
+        name="John Doe",
+        first_name="John",
+        briefing_text="Important contact"
     )
     repo.save(contact)
 
@@ -24,11 +35,86 @@ def test_contact_save_and_find(db_session: Session) -> None:
     assert found is not None
     assert found.name == "John Doe"
     assert found.first_name == "John"
-    assert found.briefing_text == "Important business contact"
+    assert found.briefing_text == "Important contact"
 
+
+def test_contact_update(db_session: Session) -> None:
+    """Test entity updates."""
+    repo = SQLAlchemyContactRepository(db_session)
+
+    # Create initial contact
+    contact = Contact(name="John Doe")
+    repo.save(contact)
+
+    # Update contact
+    contact.first_name = "Johnny"
+    contact.briefing_text = "Updated briefing"
+    contact.sub_information = {"status": "updated"}
+    repo.save(contact)
+
+    # Verify updates
+    found = repo.find_by_id(contact.id)
+    assert found is not None
+    assert found.first_name == "Johnny"
+    assert found.briefing_text == "Updated briefing"
+    assert found.sub_information == {"status": "updated"}
+
+
+def test_contact_delete(db_session: Session) -> None:
+    """Test entity deletion."""
+    repo = SQLAlchemyContactRepository(db_session)
+
+    # Create contact
+    contact = Contact(name="John Doe")
+    contact.add_tag("#test")
+    contact.add_note("Test note")
+    repo.save(contact)
+
+    # Verify contact exists
+    found = repo.find_by_id(contact.id)
+    assert found is not None
+
+    # Delete contact
+    repo.delete(contact)
+
+    # Verify contact is gone
+    found = repo.find_by_id(contact.id)
+    assert found is None
+
+
+def test_contact_find_all(db_session: Session) -> None:
+    """Test basic query operations."""
+    repo = SQLAlchemyContactRepository(db_session)
+
+    # Create multiple contacts
+    contacts = [
+        Contact(name="John Doe"),
+        Contact(name="Jane Doe"),
+        Contact(name="Bob Smith"),
+    ]
+    for contact in contacts:
+        repo.save(contact)
+
+    # Find all contacts
+    all_contacts = repo.find_all()
+    assert len(all_contacts) == 3
+    assert {c.name for c in all_contacts} == {"John Doe", "Jane Doe", "Bob Smith"}
+
+
+# endregion
+
+
+# region Query Tests (Common)
 
 def test_contact_find_by_tag(db_session: Session) -> None:
-    """Test finding contacts by tag."""
+    """Test tag-based queries.
+
+    Rules:
+    1. Single tag queries
+    2. Multiple matches
+    3. No match cases
+    4. Result order
+    """
     repo = SQLAlchemyContactRepository(db_session)
 
     # Create contacts with tags
@@ -60,7 +146,14 @@ def test_contact_find_by_tag(db_session: Session) -> None:
 
 
 def test_contact_find_stale(db_session: Session) -> None:
-    """Test finding contacts with stale tags."""
+    """Test frequency-based queries.
+
+    Rules:
+    1. Frequency checks
+    2. Stale detection
+    3. Tag handling
+    4. Time thresholds
+    """
     repo = SQLAlchemyContactRepository(db_session)
 
     # Create contacts with frequency tags
@@ -84,64 +177,85 @@ def test_contact_find_stale(db_session: Session) -> None:
     assert stale_contacts[0].name == "John Doe"
 
 
-def test_contact_update(db_session: Session) -> None:
-    """Test updating a contact."""
+# endregion
+
+
+# region Temporal Tests (Complex)
+
+def test_contact_timezone_handling(db_session: Session) -> None:
+    """Test timezone handling.
+
+    Rules:
+    1. Timezone info
+    2. UTC conversion
+    3. Cross-timezone ops
+    4. State consistency
+    """
     repo = SQLAlchemyContactRepository(db_session)
 
-    # Create initial contact
-    contact = Contact(name="John Doe")
+    # Create contact with Tokyo timezone
+    tokyo_time = datetime.now(ZoneInfo("Asia/Tokyo"))
+    contact = Contact(name="Test Contact")
+    contact.add_interaction(interaction_date=tokyo_time)
     repo.save(contact)
 
-    # Update contact
-    contact.first_name = "Johnny"
-    contact.briefing_text = "Updated briefing"
-    contact.sub_information = {"status": "updated"}
-    repo.save(contact)
-
-    # Verify updates
+    # Verify timezone handling on retrieval
     found = repo.find_by_id(contact.id)
     assert found is not None
-    assert found.first_name == "Johnny"
-    assert found.briefing_text == "Updated briefing"
-    assert found.sub_information == {"status": "updated"}
+    assert found.last_contact is not None
+    assert found.last_contact.tzinfo == UTC
+    assert found.last_contact == tokyo_time.astimezone(UTC)
+
+    # Update with New York timezone
+    ny_time = datetime.now(ZoneInfo("America/New_York"))
+    found.add_interaction(interaction_date=ny_time)
+    repo.save(found)
+
+    # Verify timezone consistency
+    updated = repo.find_by_id(contact.id)
+    assert updated is not None
+    assert updated.last_contact is not None
+    assert updated.last_contact.tzinfo == UTC
+    assert updated.last_contact == ny_time.astimezone(UTC)
 
 
-def test_contact_delete(db_session: Session) -> None:
-    """Test deleting a contact."""
+def test_contact_timezone_search(db_session: Session) -> None:
+    """Test timezone-aware queries.
+
+    Rules:
+    1. Timezone criteria
+    2. UTC conversion
+    3. Cross-tz matching
+    4. Time thresholds
+    """
     repo = SQLAlchemyContactRepository(db_session)
 
-    # Create contact
-    contact = Contact(name="John Doe")
-    contact.add_tag("#test")
-    contact.add_note("Test note")
-    repo.save(contact)
+    # Create contacts with different timezones
+    base_time = datetime.now(UTC)
 
-    # Verify contact exists
-    found = repo.find_by_id(contact.id)
-    assert found is not None
+    # Contact 1: Tokyo timezone
+    contact1 = Contact(name="Tokyo Contact")
+    tokyo_time = base_time.astimezone(ZoneInfo("Asia/Tokyo"))
+    contact1.add_interaction(interaction_date=tokyo_time)
+    repo.save(contact1)
 
-    # Delete contact
-    repo.delete(contact)
+    # Contact 2: New York timezone
+    contact2 = Contact(name="NY Contact")
+    ny_time = base_time.astimezone(ZoneInfo("America/New_York"))
+    contact2.add_interaction(interaction_date=ny_time)
+    repo.save(contact2)
 
-    # Verify contact is gone
-    found = repo.find_by_id(contact.id)
-    assert found is None
+    # Search using different timezone criteria but same moment
+    london_time = base_time.astimezone(ZoneInfo("Europe/London"))
+
+    # All contacts should be found as they're at the same moment
+    found = repo.find_by_last_contact_before(london_time + timedelta(hours=1))
+    assert len(found) == 2
+    assert {c.name for c in found} == {"Tokyo Contact", "NY Contact"}
+
+    # No contacts should be found before the interaction time
+    found = repo.find_by_last_contact_before(london_time - timedelta(hours=1))
+    assert len(found) == 0
 
 
-def test_contact_find_all(db_session: Session) -> None:
-    """Test finding all contacts."""
-    repo = SQLAlchemyContactRepository(db_session)
-
-    # Create multiple contacts
-    contacts = [
-        Contact(name="John Doe"),
-        Contact(name="Jane Doe"),
-        Contact(name="Bob Smith"),
-    ]
-    for contact in contacts:
-        repo.save(contact)
-
-    # Find all contacts
-    all_contacts = repo.find_all()
-    assert len(all_contacts) == 3
-    assert {c.name for c in all_contacts} == {"John Doe", "Jane Doe", "Bob Smith"}
+# endregion

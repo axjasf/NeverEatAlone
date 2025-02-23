@@ -1,4 +1,11 @@
-"""Test cases for the template domain model."""
+"""Test cases for the template domain model.
+
+Tests are organized by complexity and frequency of use:
+1. Basic Tests - Creation and simple validation
+2. Data Structure Tests - Complex object validation
+3. Temporal Tests - Timezone handling
+4. Evolution Tests - Schema changes and migrations
+"""
 
 import pytest
 from datetime import datetime, UTC
@@ -10,6 +17,7 @@ from backend.app.models.domain.template_model import (
 )
 from zoneinfo import ZoneInfo
 
+# region Basic Tests (Common)
 
 def test_field_definition_creation():
     """Test creating a field definition with all properties."""
@@ -91,9 +99,12 @@ def test_template_creation():
     assert len(template.categories) == 1
     assert isinstance(template.categories["contact_info"], CategoryDefinition)
 
+# endregion
+
+# region Data Structure Tests (Complex)
 
 def test_template_validation_success():
-    """Test successful validation of sub_information against template."""
+    """Test validation of complex nested data."""
     now = datetime.now(UTC)
     template = Template(
         id=uuid4(),
@@ -135,7 +146,7 @@ def test_template_validation_success():
 
 
 def test_template_validation_failures():
-    """Test various validation failures."""
+    """Test validation failures for complex data."""
     now = datetime.now(UTC)
     template = Template(
         id=uuid4(),
@@ -181,7 +192,7 @@ def test_template_validation_failures():
 
 
 def test_template_get_filled_fields():
-    """Test getting only filled fields from sub_information."""
+    """Test filtering and processing of nested data."""
     now = datetime.now(UTC)
     template = Template(
         id=uuid4(),
@@ -216,9 +227,145 @@ def test_template_get_filled_fields():
     assert "notes" in filled_fields["contact_info"]
     assert "email" not in filled_fields["contact_info"]
 
+# endregion
+
+# region Temporal Tests (Complex)
+
+def test_template_timezone_handling():
+    """Test timezone handling in Template model.
+
+    Verifies:
+    1. Timezone-aware datetime requirements
+    2. Timezone preservation during evolution
+    3. UTC conversion for storage
+    """
+    template_id = uuid4()
+
+    # Test with different input timezones
+    tokyo_time = datetime.now(ZoneInfo("Asia/Tokyo"))
+    ny_time = tokyo_time.astimezone(ZoneInfo("America/New_York"))  # Same moment, different zone
+
+    # Test creation with timezone-aware datetime
+    template = Template(
+        id=template_id,
+        categories={
+            "test": CategoryDefinition(
+                name="test",
+                description="Test category",
+                fields={
+                    "field": FieldDefinition(
+                        name="field",
+                        type="string",
+                        description="Test field"
+                    )
+                }
+            )
+        },
+        version=1,
+        created_at=tokyo_time,
+        updated_at=ny_time
+    )
+
+    # Verify datetimes are stored in UTC and represent the same moment
+    assert template.created_at.tzinfo == UTC
+    assert template.updated_at.tzinfo == UTC
+    assert template.created_at == tokyo_time.astimezone(UTC)
+    assert template.updated_at == ny_time.astimezone(UTC)
+
+    # Test rejection of naive datetime
+    naive_time = datetime.now()
+    with pytest.raises(ValueError, match="must be timezone-aware"):
+        Template(
+            id=template_id,
+            categories={},
+            version=1,
+            created_at=naive_time,
+            updated_at=naive_time
+        )
+
+    # Test timezone handling during evolution
+    evolved = template.evolve(
+        new_fields={
+            "test": {
+                "new_field": FieldDefinition(
+                    name="new_field",
+                    type="string",
+                    description="New test field"
+                )
+            }
+        }
+    )
+
+    # Verify evolved template preserves timezone awareness
+    assert evolved.created_at.tzinfo == UTC
+    assert evolved.updated_at.tzinfo == UTC
+    assert evolved.version == template.version + 1
+
+    # Test DST transition
+    ny_tz = ZoneInfo("America/New_York")
+    winter_time = datetime(2024, 1, 1, 12, 0, tzinfo=ny_tz)  # During EST
+    summer_time = datetime(2024, 7, 1, 12, 0, tzinfo=ny_tz)  # During EDT
+
+    winter_template = Template(
+        id=uuid4(),
+        categories={},
+        version=1,
+        created_at=winter_time,
+        updated_at=winter_time
+    )
+    summer_template = Template(
+        id=uuid4(),
+        categories={},
+        version=1,
+        created_at=summer_time,
+        updated_at=summer_time
+    )
+
+    # Verify DST handling
+    assert winter_template.created_at == winter_time.astimezone(UTC)
+    assert summer_template.created_at == summer_time.astimezone(UTC)
+
+    # Test fractional offset (India UTC+5:30)
+    india_tz = ZoneInfo("Asia/Kolkata")
+    india_time = datetime(2024, 1, 1, 1, 0, tzinfo=india_tz)
+    india_template = Template(
+        id=uuid4(),
+        categories={},
+        version=1,
+        created_at=india_time,
+        updated_at=india_time
+    )
+    assert india_template.created_at == india_time.astimezone(UTC)
+
+    # Test day boundary transition
+    tokyo_tz = ZoneInfo("Asia/Tokyo")
+    ny_midnight = datetime(2024, 1, 1, 0, 0, tzinfo=ny_tz)
+    tokyo_time = ny_midnight.astimezone(tokyo_tz)
+
+    ny_template = Template(
+        id=uuid4(),
+        categories={},
+        version=1,
+        created_at=ny_midnight,
+        updated_at=ny_midnight
+    )
+    tokyo_template = Template(
+        id=uuid4(),
+        categories={},
+        version=1,
+        created_at=tokyo_time,
+        updated_at=tokyo_time
+    )
+
+    # Verify both represent the same moment in UTC
+    assert ny_template.created_at == tokyo_template.created_at
+
+# endregion
+
+# region Evolution Tests (Rare)
 
 def test_template_evolution_add_field():
-    """Test adding a new field to an existing template."""
+    """Test schema evolution: adding fields."""
     now = datetime.now(UTC)
     old_template = Template(
         id=uuid4(),
@@ -264,7 +411,7 @@ def test_template_evolution_add_field():
 
 
 def test_template_evolution_remove_field():
-    """Test removing a field while preserving historical data."""
+    """Test schema evolution: removing fields."""
     now = datetime.now(UTC)
     old_template = Template(
         id=uuid4(),
@@ -310,7 +457,7 @@ def test_template_evolution_remove_field():
 
 
 def test_template_evolution_change_field_type():
-    """Test changing a field type with validation of old data."""
+    """Test schema evolution: changing field types."""
     now = datetime.now(UTC)
     old_template = Template(
         id=uuid4(),
@@ -361,70 +508,4 @@ def test_template_evolution_change_field_type():
             {"contact_info": {"birthday": "Jan 1, 1990"}}  # Invalid format
         )
 
-
-def test_template_timezone_handling():
-    """Test timezone handling in Template model.
-
-    Template should:
-    1. Require timezone-aware datetimes for created_at and updated_at
-    2. Preserve timezone information during template evolution
-    3. Convert all datetimes to UTC internally
-    """
-    template_id = uuid4()
-    ny_time = datetime.now(ZoneInfo("America/New_York"))
-
-    # Test creation with timezone-aware datetime
-    template = Template(
-        id=template_id,
-        categories={
-            "test": CategoryDefinition(
-                name="test",
-                description="Test category",
-                fields={
-                    "field": FieldDefinition(
-                        name="field",
-                        type="string",
-                        description="Test field"
-                    )
-                }
-            )
-        },
-        version=1,
-        created_at=ny_time,
-        updated_at=ny_time
-    )
-
-    # Verify datetimes are stored in UTC
-    assert template.created_at.tzinfo == UTC
-    assert template.updated_at.tzinfo == UTC
-    assert template.created_at == ny_time.astimezone(UTC)
-    assert template.updated_at == ny_time.astimezone(UTC)
-
-    # Test rejection of naive datetime
-    naive_time = datetime.now()
-    with pytest.raises(ValueError, match="must be timezone-aware"):
-        Template(
-            id=template_id,
-            categories={},
-            version=1,
-            created_at=naive_time,
-            updated_at=naive_time
-        )
-
-    # Test timezone handling during evolution
-    evolved = template.evolve(
-        new_fields={
-            "test": {
-                "new_field": FieldDefinition(
-                    name="new_field",
-                    type="string",
-                    description="New test field"
-                )
-            }
-        }
-    )
-
-    # Verify evolved template preserves timezone awareness
-    assert evolved.created_at.tzinfo == UTC
-    assert evolved.updated_at.tzinfo == UTC
-    assert evolved.version == template.version + 1
+# endregion

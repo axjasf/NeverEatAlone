@@ -1,12 +1,23 @@
-"""Tests for the Note domain model."""
+"""Tests for the Note domain model.
+
+Tests are organized by complexity and frequency of use:
+1. Basic Tests - Creation and validation
+2. Relationship Tests - Statement and tag management
+3. State Management Tests - Update tracking and interactions
+4. Temporal Tests - Timezone handling
+"""
 
 import pytest
-from datetime import datetime, UTC, timedelta
+import time
+from datetime import datetime, UTC, timedelta, timezone
+from zoneinfo import ZoneInfo
 from uuid import UUID
 from backend.app.models.domain.note_model import Note
 
 TEST_UUID = UUID("11111111-1111-1111-1111-111111111111")
 
+
+# region Basic Tests (Common)
 
 def test_note_creation():
     """Test creating a note with required fields.
@@ -45,6 +56,25 @@ def test_note_content_validation():
     note = Note(contact_id=TEST_UUID, content="  Test content  ")
     assert note.content == "Test content"
 
+
+def test_note_interaction_defaults():
+    """Test default values for notes.
+
+    Default rules:
+    1. is_interaction defaults to False
+    2. interaction_date defaults to None
+    3. Content notes work as before
+    """
+    # Test regular content note
+    note = Note(contact_id=TEST_UUID, content="Test note")
+    assert not note.is_interaction
+    assert note.interaction_date is None
+    assert note.content == "Test note"
+
+# endregion
+
+
+# region Relationship Tests (Common)
 
 def test_note_statement_management():
     """Test adding and managing statements.
@@ -117,6 +147,10 @@ def test_note_tag_management():
     assert len(note.tags) == 1
     assert "#test" not in [t.name for t in note.tags]
 
+# endregion
+
+
+# region State Management Tests (Moderate)
 
 def test_note_update_tracking():
     """Test that updates are tracked properly.
@@ -131,8 +165,6 @@ def test_note_update_tracking():
     original_updated_at = note.updated_at
 
     # Wait a moment to ensure timestamp difference
-    import time
-
     time.sleep(0.001)
 
     # Test content update
@@ -224,17 +256,223 @@ def test_note_interaction_validation():
             interaction_date=future_time
         )
 
+# endregion
 
-def test_note_interaction_defaults():
-    """Test default values for notes.
 
-    Default rules:
-    1. is_interaction defaults to False
-    2. interaction_date defaults to None
-    3. Content notes work as before
+# region Temporal Tests (Complex)
+
+def test_note_timezone_handling():
+    """Test timezone handling in notes.
+
+    Timezone rules:
+    1. Interaction dates must be timezone-aware
+    2. Different input timezones are converted to UTC
+    3. Timezone information is preserved
+    4. Naive datetimes are rejected
     """
-    # Test regular content note
+    # Test with UTC time
+    utc_time = datetime.now(UTC)
+    note = Note(
+        contact_id=TEST_UUID,
+        is_interaction=True,
+        interaction_date=utc_time
+    )
+    assert note.interaction_date is not None
+    assert note.interaction_date == utc_time
+    assert note.interaction_date.tzinfo == UTC
+
+    # Test with different timezone (Tokyo)
+    tokyo_time = datetime.now(ZoneInfo("Asia/Tokyo"))
+    note = Note(
+        contact_id=TEST_UUID,
+        is_interaction=True,
+        interaction_date=tokyo_time
+    )
+    assert note.interaction_date is not None
+    assert (
+        note.interaction_date ==
+        tokyo_time.astimezone(UTC)
+    )
+    assert note.interaction_date.tzinfo == UTC
+
+    # Test with custom timezone offset
+    custom_tz = timezone(
+        timedelta(hours=5, minutes=30)  # UTC+5:30
+    )
+    custom_time = datetime.now(custom_tz)
+    note = Note(
+        contact_id=TEST_UUID,
+        is_interaction=True,
+        interaction_date=custom_time
+    )
+    assert note.interaction_date is not None
+    assert (
+        note.interaction_date ==
+        custom_time.astimezone(UTC)
+    )
+    assert note.interaction_date.tzinfo == UTC
+
+    # Test rejection of naive datetime
+    naive_time = datetime.now()
+    with pytest.raises(
+        ValueError,
+        match="Interaction date must be timezone-aware"
+    ):
+        Note(
+            contact_id=TEST_UUID,
+            is_interaction=True,
+            interaction_date=naive_time
+        )
+
+
+def test_note_timezone_edge_cases():
+    """Test timezone edge cases.
+
+    Edge cases:
+    1. DST transitions
+    2. Day boundaries
+    3. Timezone conversions
+    4. Extreme offsets
+    """
+    # Test DST transition
+    ny_tz = ZoneInfo("America/New_York")
+    winter_time = datetime(
+        2024, 1, 1, 12, 0, tzinfo=ny_tz  # During EST
+    )
+    summer_time = datetime(
+        2024, 7, 1, 12, 0, tzinfo=ny_tz  # During EDT
+    )
+
+    # Winter note (EST)
+    winter_note = Note(
+        contact_id=TEST_UUID,
+        is_interaction=True,
+        interaction_date=winter_time
+    )
+    assert (
+        winter_note.interaction_date ==
+        winter_time.astimezone(UTC)
+    )
+
+    # Summer note (EDT)
+    summer_note = Note(
+        contact_id=TEST_UUID,
+        is_interaction=True,
+        interaction_date=summer_time
+    )
+    assert (
+        summer_note.interaction_date ==
+        summer_time.astimezone(UTC)
+    )
+
+    # Test day boundary
+    tokyo_tz = ZoneInfo("Asia/Tokyo")
+    ny_time = datetime(2024, 1, 1, 0, 0, tzinfo=ny_tz)
+    tokyo_time = ny_time.astimezone(tokyo_tz)
+
+    ny_note = Note(
+        contact_id=TEST_UUID,
+        is_interaction=True,
+        interaction_date=ny_time
+    )
+    tokyo_note = Note(
+        contact_id=TEST_UUID,
+        is_interaction=True,
+        interaction_date=tokyo_time
+    )
+
+    assert ny_note.interaction_date == tokyo_note.interaction_date
+
+# endregion
+
+
+# region Statement-Specific Tests (New)
+
+def test_statement_timestamp_handling():
+    """Test Statement timestamp handling.
+
+    Timestamp rules:
+    1. created_at is in UTC
+    2. updated_at is in UTC
+    3. updated_at changes when tags are modified
+    """
     note = Note(contact_id=TEST_UUID, content="Test note")
-    assert not note.is_interaction
-    assert note.interaction_date is None
-    assert note.content == "Test note"
+    statement = note.add_statement("Test statement")
+
+    # Verify UTC timezone
+    assert statement.created_at.tzinfo == UTC
+    assert statement.updated_at.tzinfo == UTC
+
+    # Test tag modification updates timestamp
+    original_updated_at = statement.updated_at
+    time.sleep(0.001)
+    statement.add_tag("#test")
+    assert statement.updated_at > original_updated_at
+
+    # Test tag removal updates timestamp
+    original_updated_at = statement.updated_at
+    time.sleep(0.001)
+    test_tag = next(t for t in statement.tags if t.name == "#test")
+    statement.remove_tag(test_tag)
+    assert statement.updated_at > original_updated_at
+
+
+def test_statement_sequence_preservation():
+    """Test Statement sequence preservation within Note.
+
+    Sequence rules:
+    1. Statements maintain insertion order
+    2. Order preserved after removals
+    3. Order preserved after note content update
+    """
+    note = Note(contact_id=TEST_UUID, content="Test note")
+
+    # Add statements in sequence
+    first = note.add_statement("First")
+    second = note.add_statement("Second")
+    third = note.add_statement("Third")
+
+    assert note.statements == [first, second, third]
+
+    # Test order after middle removal
+    note.remove_statement(second)
+    assert note.statements == [first, third]
+
+    # Test order preserved after note update
+    note.update_content("Updated content")
+    assert note.statements == [first, third]
+
+
+def test_statement_content_validation_edge_cases():
+    """Test Statement content validation edge cases.
+
+    Validation rules:
+    1. Content cannot be empty
+    2. Content cannot be only whitespace
+    3. Content is properly trimmed
+    4. Unicode characters are preserved
+    5. Special characters are allowed
+    """
+    note = Note(contact_id=TEST_UUID, content="Test note")
+
+    # Test various whitespace patterns
+    with pytest.raises(ValueError):
+        note.add_statement("\n\n")
+    with pytest.raises(ValueError):
+        note.add_statement("\t  \t")
+
+    # Test content trimming
+    statement = note.add_statement("  Padded content  ")
+    assert statement.content == "Padded content"
+
+    # Test Unicode content
+    unicode_content = "Test 🚀 emoji and üñîçødé"
+    statement = note.add_statement(unicode_content)
+    assert statement.content == unicode_content
+
+    # Test special characters
+    special_chars = "!@#$%^&*()_+-=[]{}|;:'\",.<>/?"
+    statement = note.add_statement(special_chars)
+    assert statement.content == special_chars
+
+# endregion

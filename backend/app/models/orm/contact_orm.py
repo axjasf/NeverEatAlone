@@ -3,16 +3,20 @@
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, JSON, DateTime
-from .base_orm import BaseORMModel
+from sqlalchemy import String, JSON
+from .base_orm import BaseORMModel, UTCDateTime
 from .tag_orm import TagORM
 from .note_orm import NoteORM
 from .reminder_orm import ReminderORM
-from .contact_tag_orm import contact_tags
+from .association_tables_orm import contact_tags
 
 
 class ContactORM(BaseORMModel):
-    """ORM model for storing contact information in the database."""
+    """ORM model for storing contact information in the database.
+
+    All datetime fields are stored in UTC timezone.
+    Timezone-aware datetimes are required for input and output.
+    """
 
     __tablename__ = "contacts"
 
@@ -22,8 +26,15 @@ class ContactORM(BaseORMModel):
     sub_information: Mapped[Dict[str, Any]] = mapped_column(
         JSON, nullable=True, default=dict
     )
-    last_contact: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    contact_briefing_text: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    # All datetime fields use UTCDateTime to enforce timezone awareness
+    last_contact: Mapped[Optional[datetime]] = mapped_column(
+        UTCDateTime,
+        nullable=True,
+        comment="Stored in UTC timezone"
+    )
+    contact_briefing_text: Mapped[Optional[str]] = mapped_column(
+        String, nullable=True
+    )
 
     # Relationships
     notes: Mapped[List[NoteORM]] = relationship(
