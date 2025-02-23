@@ -15,6 +15,8 @@ from zoneinfo import ZoneInfo
 from backend.app.models.orm.contact_orm import ContactORM
 from backend.app.models.orm.note_orm import NoteORM
 from backend.app.models.orm.statement_orm import StatementORM
+from backend.app.models.orm.tag_orm import TagORM
+from backend.app.models.orm.association_tables_orm import statement_tags
 
 
 # region Basic Tests (Common)
@@ -363,5 +365,205 @@ def test_note_created_at_timezone(db_session: Session) -> None:
     assert note.created_at is not None
     assert note.created_at.tzinfo == UTC
     assert before <= note.created_at <= after
+
+# endregion
+
+
+# region Statement-Specific Tests (New)
+
+def test_statement_sequence_persistence(db_session: Session) -> None:
+    """Test Statement sequence number persistence.
+
+    Verify:
+    1. Sequence numbers are stored correctly
+    2. Order is maintained after reloading
+    3. Gaps in sequence are handled
+    4. Reordering is possible
+    """
+    # Create contact and note
+    contact = ContactORM(name="John Doe")
+    db_session.add(contact)
+    db_session.commit()
+
+    note = NoteORM(
+        contact_id=contact.id,
+        content="Main note"
+    )
+    db_session.add(note)
+    db_session.commit()
+
+    # Create statements with sequence
+    statements = [
+        StatementORM(
+            note_id=note.id,
+            content=f"Statement {i}",
+            sequence_number=i
+        )
+        for i in range(1, 4)
+    ]
+    for stmt in statements:
+        db_session.add(stmt)
+    db_session.commit()
+    db_session.refresh(note)
+
+    # Verify sequence
+    assert len(note.statements) == 3
+    assert [s.sequence_number for s in note.statements] == [1, 2, 3]
+    assert [s.content for s in note.statements] == [
+        "Statement 1",
+        "Statement 2",
+        "Statement 3"
+    ]
+
+    # Test handling sequence gaps (remove middle statement)
+    db_session.delete(statements[1])
+    db_session.commit()
+    db_session.refresh(note)
+
+    assert len(note.statements) == 2
+    assert [s.sequence_number for s in note.statements] == [1, 3]
+    assert [s.content for s in note.statements] == [
+        "Statement 1",
+        "Statement 3"
+    ]
+
+    # Test reordering (update last statement's sequence)
+    remaining_statement = note.statements[1]
+    remaining_statement.sequence_number = 2
+    db_session.commit()
+    db_session.refresh(note)
+
+    assert [s.sequence_number for s in note.statements] == [1, 2]
+
+
+def test_statement_tag_persistence(db_session: Session) -> None:
+    """Test Statement tag persistence.
+
+    Verify:
+    1. Tags are stored correctly
+    2. Tag updates persist
+    3. Statement-tag associations are removed on statement deletion
+    4. Case normalization
+    """
+    # Create contact and note with statement
+    contact = ContactORM(name="John Doe")
+    db_session.add(contact)
+    db_session.commit()
+
+    note = NoteORM(
+        contact_id=contact.id,
+        content="Main note"
+    )
+    db_session.add(note)
+    db_session.commit()
+
+    statement = StatementORM(
+        note_id=note.id,
+        content="Test statement",
+        sequence_number=1
+    )
+    db_session.add(statement)
+    db_session.commit()
+
+    # Add tags with mixed case
+    statement.set_tags(["#TEST", "#Project"])
+    db_session.commit()
+    db_session.refresh(statement)
+
+    # Verify tag persistence and case normalization
+    assert len(statement.tags) == 2
+    assert sorted(t.name for t in statement.tags) == ["#project", "#test"]
+
+    # Update tags
+    statement.set_tags(["#test", "#updated"])
+    db_session.commit()
+    db_session.refresh(statement)
+
+    assert len(statement.tags) == 2
+    assert sorted(t.name for t in statement.tags) == ["#test", "#updated"]
+
+    # Store tag IDs for later verification
+    tag_ids = [tag.id for tag in statement.tags]
+
+    # Delete statement and verify tag cleanup
+    db_session.delete(statement)
+    db_session.commit()
+
+    # Verify statement-tag associations are removed
+    remaining_associations = (
+        db_session.query(statement_tags)
+        .filter(statement_tags.c.entity_id == statement.id)
+        .all()
+    )
+    assert len(remaining_associations) == 0
+
+    # Verify tags still exist
+    remaining_tags = (
+        db_session.query(TagORM)
+        .filter(TagORM.id.in_(tag_ids))
+        .all()
+    )
+    assert len(remaining_tags) == 2  # Tags should still exist
+
+
+def test_statement_update_tracking(db_session: Session) -> None:
+    """Test Statement update tracking.
+
+    Verify:
+    1. created_at is set on creation
+    2. updated_at changes with content updates
+    3. updated_at changes with tag updates
+    4. Timezone awareness
+    """
+    # Create contact and note
+    contact = ContactORM(name="John Doe")
+    db_session.add(contact)
+    db_session.commit()
+
+    note = NoteORM(
+        contact_id=contact.id,
+        content="Main note"
+    )
+    db_session.add(note)
+    db_session.commit()
+
+    # Create statement and capture timestamps
+    statement = StatementORM(
+        note_id=note.id,
+        content="Original content",
+        sequence_number=1
+    )
+    db_session.add(statement)
+    db_session.commit()
+    db_session.refresh(statement)
+
+    original_created_at = statement.created_at
+    original_updated_at = statement.updated_at
+
+    # Verify timezone awareness
+    assert statement.created_at.tzinfo == UTC
+    assert statement.updated_at.tzinfo == UTC
+
+    # Wait a moment to ensure timestamp difference
+    import time
+    time.sleep(0.001)
+
+    # Update content
+    statement.content = "Updated content"
+    db_session.commit()
+    db_session.refresh(statement)
+
+    # Verify timestamps
+    assert statement.created_at == original_created_at
+    assert statement.updated_at > original_updated_at
+
+    # Update tags
+    original_updated_at = statement.updated_at
+    time.sleep(0.001)
+    statement.set_tags(["#test"])
+    db_session.commit()
+    db_session.refresh(statement)
+
+    assert statement.updated_at > original_updated_at
 
 # endregion

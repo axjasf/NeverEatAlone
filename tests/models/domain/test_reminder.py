@@ -3,11 +3,11 @@
 from datetime import datetime, timezone, timedelta
 from uuid import UUID
 import pytest
+from zoneinfo import ZoneInfo
 from backend.app.models.domain.reminder_model import (
     Reminder,
     RecurrencePattern,
     ReminderStatus,
-    RecurrenceUnit,
 )
 
 # Test data
@@ -316,7 +316,12 @@ def test_recurrence_next_occurrence() -> None:
     )
     next_date = pattern.get_next_date(TEST_DATETIME)
     assert next_date == TEST_DATETIME + timedelta(days=1)
-    assert pattern.get_next_date(next_date) is None  # No more occurrences
+
+    # Test after end date (should return None)
+    final_date = next_date
+    assert final_date is not None  # Type assertion
+    next_after_end = pattern.get_next_date(final_date)
+    assert next_after_end is None  # No more occurrences
 
 
 def test_recurring_reminder_completion() -> None:
@@ -382,3 +387,79 @@ def test_invalid_reminder_dates() -> None:
             start_date=datetime(2024, 3, 1, tzinfo=timezone.utc),
             end_date=datetime(2024, 2, 28, tzinfo=timezone.utc),
         )
+
+
+def test_reminder_timezone_handling():
+    """Test reminder handling with different timezones.
+
+    Timezone rules:
+    1. Due dates must preserve original timezone
+    2. Different input timezones are normalized correctly
+    3. DST changes don't affect time comparisons
+    4. Completion dates follow the same timezone rules
+    """
+    # Test with different timezones
+    ny_tz = ZoneInfo("America/New_York")
+    tokyo_tz = ZoneInfo("Asia/Tokyo")
+    ist = timezone(timedelta(hours=5, minutes=30))  # India
+
+    base_time = datetime(2024, 3, 1, 12, 0, tzinfo=timezone.utc)
+    ny_time = base_time.astimezone(ny_tz)
+    tokyo_time = base_time.astimezone(tokyo_tz)
+    ist_time = base_time.astimezone(ist)
+
+    # Create reminders with different timezone inputs
+    for due_date in [ny_time, tokyo_time, ist_time]:
+        reminder = Reminder(
+            contact_id=TEST_UUID,
+            title="Test reminder",
+            due_date=due_date
+        )
+
+        # Verify timezone preservation
+        assert reminder.due_date == due_date
+        assert reminder.due_date.tzinfo == due_date.tzinfo
+
+        # Test completion in original timezone
+        completion = due_date + timedelta(hours=1)
+        reminder.complete(completion)
+        assert reminder.completion_date is not None  # Type assertion
+        assert reminder.completion_date == completion
+        assert reminder.completion_date.tzinfo == completion.tzinfo
+
+    # Test DST handling
+    # March 10, 2024: DST starts at 2 AM ET
+    # At this time, clocks jump from 1:59 AM to 3:00 AM
+    dst_start = datetime(2024, 3, 10, 1, 59, tzinfo=ny_tz)  # Just before DST
+    reminder_before_dst = Reminder(
+        contact_id=TEST_UUID,
+        title="DST Test",
+        due_date=dst_start
+    )
+
+    print(f"\nDST Test Debug:")
+    print(f"Due date (NY): {dst_start}")
+    print(f"Due date (UTC): {dst_start.astimezone(timezone.utc)}")
+
+    # One hour later wall clock time (but 1 minute later UTC due to DST)
+    # When DST starts, 1:59 AM ET -> 6:59 UTC
+    # After DST, 3:00 AM ET -> 7:00 UTC
+    # So while it's 1 hour wall clock difference, it's 1 minute UTC difference
+    dst_completion = datetime(2024, 3, 10, 3, 0, tzinfo=ny_tz)
+    reminder_before_dst.complete(dst_completion)
+
+    print(f"Completion date (NY): {dst_completion}")
+    print(f"Completion date (UTC): {dst_completion.astimezone(timezone.utc)}")
+
+    # Verify DST handling
+    assert reminder_before_dst.completion_date is not None  # Type assertion
+    assert reminder_before_dst.completion_date == dst_completion
+    assert reminder_before_dst.completion_date.tzinfo == ny_tz
+
+    # Calculate the difference in UTC timestamps
+    completion_ts = reminder_before_dst.completion_date.astimezone(timezone.utc).timestamp()
+    due_ts = reminder_before_dst.due_date.astimezone(timezone.utc).timestamp()
+    utc_diff = timedelta(seconds=int(completion_ts - due_ts))
+
+    print(f"UTC difference (using timestamps): {utc_diff}")
+    assert utc_diff == timedelta(minutes=1)  # 1 minute difference in UTC time

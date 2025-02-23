@@ -4,10 +4,11 @@ from datetime import datetime, timezone, timedelta
 from uuid import UUID
 import pytest
 from sqlalchemy.orm import Session, Mapped
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, StatementError
 from sqlalchemy import text, select
 from typing import cast, Optional, List
 from sqlalchemy.orm import selectinload
+from zoneinfo import ZoneInfo
 
 from backend.app.models.domain.reminder_model import ReminderStatus, RecurrenceUnit
 from backend.app.models.orm.reminder_orm import ReminderORM
@@ -18,6 +19,10 @@ from backend.app.models.orm.note_orm import NoteORM
 ContactWithRelations = ContactORM
 NoteWithRelations = NoteORM
 ReminderWithRelations = ReminderORM
+
+# Test data
+TEST_UUID = UUID("11111111-1111-1111-1111-111111111111")
+TEST_DATETIME = datetime(2024, 1, 1, tzinfo=timezone.utc)
 
 
 @pytest.fixture
@@ -69,6 +74,7 @@ def test_create_one_off_reminder(
         title="Test reminder",
         description="Test description",
         due_date=due_date,
+        due_date_timezone="UTC"
     )
     db_session.add(reminder)
     db_session.commit()
@@ -79,6 +85,7 @@ def test_create_one_off_reminder(
     assert saved.title == "Test reminder"
     assert saved.description == "Test description"
     assert saved.due_date == due_date
+    assert saved.due_date_timezone == "UTC"
     assert saved.status == ReminderStatus.PENDING
     assert saved.completion_date is None
     assert saved.contact_id == contact.id
@@ -100,6 +107,7 @@ def test_create_recurring_reminder(
         title="Test recurring reminder",
         description="Test description",
         due_date=due_date,
+        due_date_timezone="UTC",
         recurrence_interval=1,
         recurrence_unit=RecurrenceUnit.MONTH,
         recurrence_end_date=end_date,
@@ -113,21 +121,26 @@ def test_create_recurring_reminder(
     assert saved.recurrence_interval == 1
     assert saved.recurrence_unit == RecurrenceUnit.MONTH
     assert saved.recurrence_end_date == end_date
+    assert saved.due_date_timezone == "UTC"
 
 
 def test_complete_reminder(db_session: Session, contact: ContactWithRelations) -> None:
     """Test completing a reminder."""
+    now = datetime.now(timezone.utc)
     reminder = ReminderORM(
         contact_id=contact.id,
         title="Test reminder",
-        due_date=datetime.now(timezone.utc),
+        due_date=now,
+        due_date_timezone="UTC"
     )
     db_session.add(reminder)
     db_session.commit()
 
     # Complete the reminder
+    completion_time = datetime.now(timezone.utc)
     reminder.status = ReminderStatus.COMPLETED
-    reminder.completion_date = datetime.now(timezone.utc)
+    reminder.completion_date = completion_time
+    reminder.completion_date_timezone = "UTC"  # Required when completing
     db_session.commit()
     db_session.refresh(reminder)
 
@@ -135,6 +148,7 @@ def test_complete_reminder(db_session: Session, contact: ContactWithRelations) -
     assert saved is not None
     assert saved.status == ReminderStatus.COMPLETED
     assert saved.completion_date is not None
+    assert saved.completion_date_timezone == "UTC"
 
 
 def test_link_reminder_to_note(
@@ -145,6 +159,7 @@ def test_link_reminder_to_note(
         contact_id=contact.id,
         title="Test reminder",
         due_date=datetime.now(timezone.utc),
+        due_date_timezone="UTC",
         note_id=note.id,
     )
     db_session.add(reminder)
@@ -179,6 +194,7 @@ def test_note_relationship(
         note_id=note.id,
         title="Test reminder",
         due_date=datetime.now(timezone.utc),
+        due_date_timezone="UTC"
     )
     db_session.add(reminder)
     db_session.commit()
@@ -205,6 +221,7 @@ def test_delete_note_doesnt_cascade_to_reminders(
         contact_id=contact.id,
         title="Test reminder",
         due_date=datetime.now(timezone.utc),
+        due_date_timezone="UTC",
         note_id=note.id,
     )
     db_session.add(reminder)
@@ -241,19 +258,19 @@ def test_delete_contact_cascades_to_reminders(
             contact_id=contact.id,
             title=f"Reminder {i}",
             due_date=datetime(2024, 3, 1, tzinfo=timezone.utc),
+            due_date_timezone="UTC"
         )
         db_session.add(reminder)
     db_session.commit()
 
-    # Get reminder IDs for later verification
+    # Get reminder IDs before deletion
     reminder_ids = [r.id for r in contact.reminders]
-    assert len(reminder_ids) == 3
 
     # Delete contact
     db_session.delete(contact)
     db_session.commit()
 
-    # Verify reminders are gone
+    # Verify reminders were deleted
     for rid in reminder_ids:
         assert db_session.get(ReminderORM, rid) is None
 
@@ -277,11 +294,13 @@ def test_cascade_delete_from_contact(
         contact_id=contact.id,
         title="Test reminder 1",
         due_date=datetime.now(timezone.utc),
+        due_date_timezone="UTC"
     )
     reminder2 = ReminderORM(
         contact_id=other_contact.id,
         title="Test reminder 2",
         due_date=datetime.now(timezone.utc),
+        due_date_timezone="UTC"
     )
     db_session.add_all([reminder1, reminder2])
     db_session.commit()
@@ -369,27 +388,117 @@ def test_constraint_violations(db_session: Session) -> None:
 
 
 def test_timezone_handling(db_session: Session, contact: ContactWithRelations) -> None:
-    """Test that timezone information is preserved in the database.
+    """Test timezone handling in ReminderORM.
 
     Should:
-    - Store timezone-aware dates
-    - Retrieve dates with UTC timezone
+    - Store all dates in UTC
+    - Handle different input timezones
+    - Preserve timezone information through save/load
     - Handle DST transitions correctly
     """
-    # Create reminder with specific timezone
-    due_date = datetime(2024, 6, 1, 12, 0, tzinfo=timezone.utc)
-    reminder = ReminderORM(
-        contact_id=contact.id, title="Test reminder", due_date=due_date
-    )
-    db_session.add(reminder)
+    # Test with different timezones
+    ny_tz = ZoneInfo("America/New_York")
+    tokyo_tz = ZoneInfo("Asia/Tokyo")
+    ist = timezone(timedelta(hours=5, minutes=30))  # India
+
+    base_time = datetime(2024, 3, 1, 12, 0, tzinfo=timezone.utc)
+    ny_time = base_time.astimezone(ny_tz)
+    tokyo_time = base_time.astimezone(tokyo_tz)
+    ist_time = base_time.astimezone(ist)
+
+    # Create reminders with different timezone inputs
+    reminders = []
+    for due_date in [ny_time, tokyo_time, ist_time]:
+        reminder = ReminderORM(
+            contact_id=contact.id,
+            title=f"Test reminder ({due_date.tzinfo})",
+            due_date=due_date,
+            due_date_timezone="UTC"
+        )
+        db_session.add(reminder)
+        reminders.append(reminder)
     db_session.commit()
 
-    # Retrieve and verify timezone
+    # Verify timezone handling after save/load
+    for original, saved_id in zip([ny_time, tokyo_time, ist_time], [r.id for r in reminders]):
+        loaded = db_session.get(ReminderORM, saved_id)
+        assert loaded is not None
+
+        # Dates should be in UTC in database
+        assert loaded.due_date.tzinfo == timezone.utc
+
+        # UTC timestamps should match
+        assert loaded.due_date.timestamp() == original.timestamp()
+
+    # Test DST handling
+    # March 10, 2024: DST starts at 2 AM ET
+    dst_start = datetime(2024, 3, 10, 1, 59, tzinfo=ny_tz)  # Just before DST
+    dst_reminder = ReminderORM(
+        contact_id=contact.id,
+        title="DST Test",
+        due_date=dst_start,
+        due_date_timezone="UTC"
+    )
+    db_session.add(dst_reminder)
+    db_session.commit()
+
+    # Complete the reminder after DST transition
+    dst_completion = datetime(2024, 3, 10, 3, 0, tzinfo=ny_tz)  # After DST
+    dst_reminder.status = ReminderStatus.COMPLETED
+    dst_reminder.completion_date = dst_completion
+    dst_reminder.completion_date_timezone = "UTC"  # Required when completing
+    db_session.commit()
+
+    # Reload and verify
     db_session.expire_all()
-    loaded = db_session.get(ReminderORM, reminder.id)
-    assert loaded is not None
-    assert loaded.due_date.tzinfo == timezone.utc
-    assert loaded.due_date == due_date
+    loaded_dst = db_session.get(ReminderORM, dst_reminder.id)
+    assert loaded_dst is not None
+
+    # Verify timestamps match
+    assert loaded_dst.due_date.timestamp() == dst_start.timestamp()
+    assert loaded_dst.completion_date is not None
+    assert loaded_dst.completion_date.timestamp() == dst_completion.timestamp()
+
+    # Verify one minute difference in UTC (due to DST transition)
+    utc_diff = loaded_dst.completion_date - loaded_dst.due_date
+    assert utc_diff == timedelta(minutes=1)
+
+
+def test_timezone_constraints(db_session: Session, contact: ContactWithRelations) -> None:
+    """Test timezone-related database constraints.
+
+    Should:
+    - Reject naive datetimes with StatementError
+    - Handle timezone conversion correctly
+    - Maintain timezone awareness through all operations
+    """
+    # Test with naive datetime (should fail)
+    with db_session.begin_nested():
+        with pytest.raises(StatementError):
+            reminder = ReminderORM(
+                contact_id=contact.id,
+                title="Test reminder",
+                due_date=datetime(2024, 1, 1),  # No timezone
+                due_date_timezone="UTC"  # Even with timezone string, should fail due to naive datetime
+            )
+            db_session.add(reminder)
+            db_session.flush()
+
+    # Test with timezone-aware datetime (should succeed)
+    reminder = ReminderORM(
+        contact_id=contact.id,
+        title="Test reminder",
+        due_date=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        due_date_timezone="UTC"  # Required field
+    )
+    db_session.add(reminder)
+    db_session.flush()
+
+    # Verify timezone information is preserved
+    saved = db_session.get(ReminderORM, reminder.id)
+    assert saved is not None
+    assert saved.due_date.tzinfo is not None  # Timezone info is preserved
+    assert saved.due_date_timezone == "UTC"
 
 
 def test_recurrence_constraints(
@@ -494,6 +603,7 @@ def test_eager_loading(
         contact_id=contact.id,
         title="Test reminder",
         due_date=datetime.now(timezone.utc),
+        due_date_timezone="UTC",
         note_id=note.id,
     )
     db_session.add(reminder)

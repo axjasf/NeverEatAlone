@@ -8,7 +8,7 @@ from .base_orm import BaseORMModel, UTCDateTime
 from .tag_orm import TagORM
 from .note_orm import NoteORM
 from .reminder_orm import ReminderORM
-from .contact_tag_orm import contact_tags
+from .association_tables_orm import contact_tags
 
 
 class ContactORM(BaseORMModel):

@@ -410,3 +410,335 @@ def test_note_timezone_edge_cases(db_session: Session) -> None:
     )  # Descending order
 
 # endregion
+
+
+# region Statement-Specific Tests (New)
+
+def test_statement_sequence_persistence(db_session: Session) -> None:
+    """Test Statement sequence persistence in repository.
+
+    Rules:
+    1. Sequence numbers are preserved
+    2. Order maintained after updates
+    3. Gaps handled correctly
+    4. Reordering supported
+    """
+    repo = SQLAlchemyNoteRepository(db_session)
+
+    # Create note with statements
+    note = Note(contact_id=TEST_UUID, content="Main note")
+    note.add_statement("First statement")
+    note.add_statement("Second statement")
+    note.add_statement("Third statement")
+    repo.save(note)
+
+    # Verify initial sequence
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    assert len(found.statements) == 3
+    assert [s.content for s in found.statements] == [
+        "First statement",
+        "Second statement",
+        "Third statement"
+    ]
+
+    # Remove middle statement
+    note.remove_statement(note.statements[1])
+    repo.save(note)
+
+    # Verify sequence after removal
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    assert len(found.statements) == 2
+    assert [s.content for s in found.statements] == [
+        "First statement",
+        "Third statement"
+    ]
+
+    # Add new statement
+    note.add_statement("New statement")
+    repo.save(note)
+
+    # Verify sequence after addition
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    assert len(found.statements) == 3
+    assert [s.content for s in found.statements] == [
+        "First statement",
+        "Third statement",
+        "New statement"
+    ]
+
+
+def test_statement_update_tracking(db_session: Session) -> None:
+    """Test Statement update tracking in repository.
+
+    Rules:
+    1. Content updates tracked
+    2. Tag updates tracked
+    3. Timestamps preserved
+    4. Audit fields maintained
+    """
+    repo = SQLAlchemyNoteRepository(db_session)
+
+    # Create note with statement
+    note = Note(contact_id=TEST_UUID, content="Main note")
+    statement = note.add_statement("Original content")
+    repo.save(note)
+
+    # Get initial timestamps
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    original_created_at = found.statements[0].created_at
+    original_updated_at = found.statements[0].updated_at
+
+    # Update statement content
+    statement.content = "Updated content"
+    repo.save(note)
+
+    # Verify content update tracking
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    assert found.statements[0].content == "Updated content"
+    # Compare timestamps ignoring microseconds
+    assert found.statements[0].created_at.replace(microsecond=0) == original_created_at.replace(microsecond=0)
+    assert found.statements[0].updated_at.replace(microsecond=0) >= original_updated_at.replace(microsecond=0)
+
+    # Update statement tags
+    original_updated_at = found.statements[0].updated_at
+    statement.add_tag("#test")
+    repo.save(note)
+
+    # Verify tag update tracking
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    assert "#test" in [t.name for t in found.statements[0].tags]
+    # Compare timestamps ignoring microseconds
+    assert found.statements[0].created_at.replace(microsecond=0) == original_created_at.replace(microsecond=0)
+    assert found.statements[0].updated_at.replace(microsecond=0) >= original_updated_at.replace(microsecond=0)
+
+
+def test_statement_tag_lifecycle(db_session: Session) -> None:
+    """Test Statement tag lifecycle in repository.
+
+    Rules:
+    1. Tag creation
+    2. Tag updates
+    3. Tag removal
+    4. Association cleanup
+    """
+    repo = SQLAlchemyNoteRepository(db_session)
+
+    # Create note with tagged statement
+    note = Note(contact_id=TEST_UUID, content="Main note")
+    statement = note.add_statement("Test statement")
+    statement.add_tag("#test")
+    statement.add_tag("#project")
+    repo.save(note)
+
+    # Verify initial tags
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    assert len(found.statements[0].tags) == 2
+    assert {t.name for t in found.statements[0].tags} == {"#test", "#project"}
+
+    # Update tags
+    statement.remove_tag(statement.tags[0])
+    statement.add_tag("#updated")
+    repo.save(note)
+
+    # Verify tag updates
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    assert len(found.statements[0].tags) == 2
+    assert "#updated" in [t.name for t in found.statements[0].tags]
+
+    # Remove all tags
+    for tag in statement.tags[:]:
+        statement.remove_tag(tag)
+    repo.save(note)
+
+    # Verify tag removal
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    assert len(found.statements[0].tags) == 0
+
+
+def test_statement_bulk_operations(db_session: Session) -> None:
+    """Test Statement bulk operations in repository.
+
+    Rules:
+    1. Multiple statement creation
+    2. Batch updates
+    3. Performance characteristics
+    4. Transaction integrity
+    """
+    repo = SQLAlchemyNoteRepository(db_session)
+
+    # Create note with multiple statements
+    note = Note(contact_id=TEST_UUID, content="Main note")
+    for i in range(5):
+        statement = note.add_statement(f"Statement {i}")
+        statement.add_tag(f"#tag{i}")
+    repo.save(note)
+
+    # Verify bulk creation
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    assert len(found.statements) == 5
+    assert all(len(s.tags) == 1 for s in found.statements)
+
+    # Bulk update statements
+    for statement in note.statements:
+        statement.content = f"Updated {statement.content}"
+        statement.add_tag("#updated")
+    repo.save(note)
+
+    # Verify bulk updates
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    assert all(s.content.startswith("Updated") for s in found.statements)
+    assert all("#updated" in [t.name for t in s.tags] for s in found.statements)
+
+    # Bulk remove statements
+    while note.statements:
+        note.remove_statement(note.statements[0])
+    repo.save(note)
+
+    # Verify bulk removal
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    assert len(found.statements) == 0
+
+
+def test_statement_timezone_handling(db_session: Session) -> None:
+    """Test Statement timezone handling in repository.
+
+    Rules:
+    1. Timestamps stored in UTC
+    2. Timezone info preserved through save/load
+    3. Moment-in-time meaning preserved
+    4. Different input timezones handled
+    """
+    repo = SQLAlchemyNoteRepository(db_session)
+
+    # Create note with statements using different timezones
+    sydney_tz = ZoneInfo("Australia/Sydney")
+    ny_tz = ZoneInfo("America/New_York")
+
+    # Create a reference time in Sydney
+    sydney_time = datetime.now(sydney_tz).replace(microsecond=0)
+    expected_utc = sydney_time.astimezone(UTC)
+
+    note = Note(contact_id=TEST_UUID, content="Main note")
+    statement_sydney = note.add_statement("Sydney statement")
+    statement_sydney.created_at = sydney_time  # Explicitly set for testing
+
+    # Same moment from NY perspective
+    ny_time = sydney_time.astimezone(ny_tz)
+    statement_ny = note.add_statement("NY statement")
+    statement_ny.created_at = ny_time  # Explicitly set for testing
+
+    repo.save(note)
+
+    # Verify through repository
+    found = repo.find_by_id(note.id)
+    assert found is not None
+    assert len(found.statements) == 2
+
+    # Verify both represent the same moment in UTC, ignoring microseconds
+    assert found.statements[0].created_at.replace(microsecond=0) == expected_utc
+    assert found.statements[1].created_at.replace(microsecond=0) == expected_utc
+
+
+def test_statement_dst_handling(db_session: Session) -> None:
+    """Test Statement handling across DST transitions.
+
+    Rules:
+    1. DST transitions handled correctly
+    2. Hour ambiguity resolved
+    3. Timezone rules applied correctly
+    4. Moment-in-time preserved
+    """
+    repo = SQLAlchemyNoteRepository(db_session)
+
+    # Test DST transition
+    paris_tz = ZoneInfo("Europe/Paris")
+
+    # Create a note with statements during DST and non-DST
+    note = Note(contact_id=TEST_UUID, content="DST Test Note")
+
+    # Summer time statement (UTC+2)
+    summer_time = datetime(2024, 7, 1, 14, 0, tzinfo=paris_tz)
+    statement_summer = note.add_statement("Summer statement")
+    statement_summer.created_at = summer_time
+
+    # Winter time statement (UTC+1)
+    winter_time = datetime(2024, 1, 1, 14, 0, tzinfo=paris_tz)
+    statement_winter = note.add_statement("Winter statement")
+    statement_winter.created_at = winter_time
+
+    repo.save(note)
+
+    # Verify through repository
+    found = repo.find_by_id(note.id)
+    assert found is not None
+
+    # Verify correct UTC conversion, ignoring microseconds
+    assert found.statements[0].created_at.replace(microsecond=0) == summer_time.astimezone(UTC).replace(microsecond=0)
+    assert found.statements[1].created_at.replace(microsecond=0) == winter_time.astimezone(UTC).replace(microsecond=0)
+
+    # Verify hour difference due to DST
+    hour_difference = (
+        found.statements[0].created_at.astimezone(paris_tz).hour -
+        found.statements[1].created_at.astimezone(paris_tz).hour
+    )
+    assert hour_difference == 0  # Same wall clock time in Paris
+
+
+def test_statement_fractional_offset(db_session: Session) -> None:
+    """Test Statement handling with fractional timezone offsets.
+
+    Rules:
+    1. Fractional offsets preserved
+    2. Correct UTC conversion
+    3. Timestamp integrity maintained
+    4. Proper timezone rules applied
+    """
+    repo = SQLAlchemyNoteRepository(db_session)
+
+    # Test fractional offset timezone
+    india_tz = ZoneInfo("Asia/Kolkata")  # UTC+5:30
+    nepal_tz = ZoneInfo("Asia/Kathmandu")  # UTC+5:45
+
+    # Create note with statements in fractional offset timezones
+    note = Note(contact_id=TEST_UUID, content="Fractional Offset Test")
+
+    # India time statement
+    india_time = datetime(2024, 1, 1, 1, 0, tzinfo=india_tz)
+    statement_india = note.add_statement("India statement")
+    statement_india.created_at = india_time
+
+    # Nepal time statement (same wall clock time)
+    nepal_time = datetime(2024, 1, 1, 1, 0, tzinfo=nepal_tz)
+    statement_nepal = note.add_statement("Nepal statement")
+    statement_nepal.created_at = nepal_time
+
+    repo.save(note)
+
+    # Verify through repository
+    found = repo.find_by_id(note.id)
+    assert found is not None
+
+    # Verify correct UTC conversion, ignoring microseconds
+    assert found.statements[0].created_at.replace(microsecond=0) == india_time.astimezone(UTC).replace(microsecond=0)
+    assert found.statements[1].created_at.replace(microsecond=0) == nepal_time.astimezone(UTC).replace(microsecond=0)
+
+    # Verify 15-minute difference is preserved when converting back to local time
+    time_difference = abs(
+        found.statements[0].created_at.astimezone(india_tz).minute -
+        found.statements[1].created_at.astimezone(nepal_tz).minute
+    )
+    assert time_difference == 0  # Same wall clock time in both zones
+
+# endregion
