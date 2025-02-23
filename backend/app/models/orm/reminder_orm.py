@@ -36,6 +36,10 @@ class ReminderORM(BaseORMModel):
         UTCDateTime, nullable=True
     )
 
+    # Timezone information
+    due_date_timezone: Mapped[str] = mapped_column(String, nullable=False)
+    completion_date_timezone: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+
     # Recurrence fields
     recurrence_interval: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     recurrence_unit: Mapped[Optional[str]] = mapped_column(
@@ -67,9 +71,9 @@ class ReminderORM(BaseORMModel):
         # Ensure completion_date is only set for completed reminders
         CheckConstraint(
             """
-            (status != 'COMPLETED' AND completion_date IS NULL)
+            (status != 'COMPLETED' AND completion_date IS NULL AND completion_date_timezone IS NULL)
             OR
-            (status = 'COMPLETED' AND completion_date IS NOT NULL)
+            (status = 'COMPLETED' AND completion_date IS NOT NULL AND completion_date_timezone IS NOT NULL)
             """,
             name="valid_completion",
         ),

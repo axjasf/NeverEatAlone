@@ -4,6 +4,8 @@ import pytest
 from datetime import datetime, timezone, timedelta
 from uuid import UUID
 from sqlalchemy.orm import Session
+from zoneinfo import ZoneInfo
+from typing import List, Tuple
 
 from backend.app.models.domain.reminder_model import (
     Reminder,
@@ -403,3 +405,123 @@ def test_complete_recurring_reminder(
     next_found = next(r for r in all_reminders if r.status == ReminderStatus.PENDING)
     assert next_found.due_date == TEST_DATETIME + timedelta(weeks=1)
     assert next_found.recurrence_pattern == pattern
+
+
+def test_save_preserves_timezone(reminder_repository: SQLAlchemyReminderRepository, contact: ContactORM) -> None:
+    """Test that saving a reminder preserves timezone information.
+
+    Should:
+    - Store dates in UTC internally
+    - Preserve original timezone when retrieving
+    - Handle different input timezones correctly
+    """
+    # Test with different timezones
+    ny_tz = ZoneInfo("America/New_York")
+    tokyo_tz = ZoneInfo("Asia/Tokyo")
+    kolkata_tz = ZoneInfo("Asia/Kolkata")
+
+    base_time = datetime(2024, 3, 1, 12, 0, tzinfo=timezone.utc)
+    ny_time = base_time.astimezone(ny_tz)
+    tokyo_time = base_time.astimezone(tokyo_tz)
+    kolkata_time = base_time.astimezone(kolkata_tz)
+
+    # Create and save reminders with different timezone inputs
+    reminders: List[Tuple[Reminder, Reminder]] = []
+    for due_date in [ny_time, tokyo_time, kolkata_time]:
+        reminder = Reminder(
+            contact_id=contact.id,
+            title=f"Test reminder ({due_date.tzinfo})",
+            due_date=due_date
+        )
+        saved = reminder_repository.save(reminder)
+        reminders.append((reminder, saved))
+
+    # Verify timezone preservation
+    for original, saved in reminders:
+        # Load from database
+        loaded = reminder_repository.find_by_id(saved.id)
+        assert loaded is not None
+
+        # Verify timezone and timestamp preservation
+        assert loaded.due_date.tzinfo == original.due_date.tzinfo
+        assert loaded.due_date.timestamp() == original.due_date.timestamp()
+
+
+def test_save_handles_dst_transition(reminder_repository: SQLAlchemyReminderRepository, contact: ContactORM) -> None:
+    """Test that saving a reminder handles DST transitions correctly.
+
+    Should:
+    - Handle DST start transition
+    - Handle DST end transition
+    - Preserve correct wall clock time
+    - Maintain correct time differences
+    """
+    ny_tz = ZoneInfo("America/New_York")
+
+    # March 10, 2024: DST starts at 2 AM ET
+    # At this time, clocks jump from 1:59 AM to 3:00 AM
+    dst_start = datetime(2024, 3, 10, 1, 59, tzinfo=ny_tz)
+    print("\nDST Test - Initial Setup:")
+    print(f"Due date (NY): {dst_start}")
+    print(f"Due date (UTC): {dst_start.astimezone(timezone.utc)}")
+    print(f"Due date timestamp: {dst_start.timestamp()}")
+
+    reminder = Reminder(
+        contact_id=contact.id,
+        title="DST Test",
+        due_date=dst_start
+    )
+
+    print("\nAfter Reminder Creation:")
+    print(f"Reminder due_date (NY): {reminder.due_date}")
+    print(f"Reminder due_date (UTC): {reminder.due_date.astimezone(timezone.utc)}")
+    print(f"Reminder due_date timestamp: {reminder.due_date.timestamp()}")
+
+    # Save and load to verify DST handling
+    saved = reminder_repository.save(reminder)
+    print("\nAfter Save:")
+    print(f"Saved due_date (NY): {saved.due_date}")
+    print(f"Saved due_date (UTC): {saved.due_date.astimezone(timezone.utc)}")
+    print(f"Saved due_date timestamp: {saved.due_date.timestamp()}")
+
+    loaded = reminder_repository.find_by_id(saved.id)
+    assert loaded is not None
+    print("\nAfter Load:")
+    print(f"Loaded due_date (NY): {loaded.due_date}")
+    print(f"Loaded due_date (UTC): {loaded.due_date.astimezone(timezone.utc)}")
+    print(f"Loaded due_date timestamp: {loaded.due_date.timestamp()}")
+
+    # Complete the reminder after DST transition
+    dst_completion = datetime(2024, 3, 10, 3, 0, tzinfo=ny_tz)
+    print("\nCompletion Setup:")
+    print(f"Completion date (NY): {dst_completion}")
+    print(f"Completion date (UTC): {dst_completion.astimezone(timezone.utc)}")
+    print(f"Completion timestamp: {dst_completion.timestamp()}")
+
+    loaded.complete(dst_completion)
+    print("\nAfter Complete:")
+    print(f"Reminder completion_date (NY): {loaded.completion_date}")
+    print(f"Reminder completion_date (UTC): {loaded.completion_date.astimezone(timezone.utc) if loaded.completion_date else None}")
+    print(f"Reminder completion timestamp: {loaded.completion_date.timestamp() if loaded.completion_date else None}")
+
+    reminder_repository.save(loaded)
+
+    # Reload and verify
+    reloaded = reminder_repository.find_by_id(loaded.id)
+    assert reloaded is not None
+    assert reloaded.completion_date is not None
+    print("\nAfter Final Load:")
+    print(f"Reloaded due_date (NY): {reloaded.due_date}")
+    print(f"Reloaded due_date (UTC): {reloaded.due_date.astimezone(timezone.utc)}")
+    print(f"Reloaded due_date timestamp: {reloaded.due_date.timestamp()}")
+    print(f"Reloaded completion_date (NY): {reloaded.completion_date}")
+    print(f"Reloaded completion_date (UTC): {reloaded.completion_date.astimezone(timezone.utc)}")
+    print(f"Reloaded completion timestamp: {reloaded.completion_date.timestamp()}")
+
+    # Calculate and print the differences
+    timestamp_diff = reloaded.completion_date.timestamp() - reloaded.due_date.timestamp()
+    print(f"\nTime Differences:")
+    print(f"Timestamp difference: {timestamp_diff}")
+
+    # Verify one minute difference in UTC (due to DST transition)
+    assert int(timestamp_diff) == 60  # 60 seconds = 1 minute
