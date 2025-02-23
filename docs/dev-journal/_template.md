@@ -26,8 +26,8 @@ KEY GUIDELINES:
    [ ] = Planned/in-progress item
    💡 = Technical learning/insight
    🔄 = Future consideration/evolution point
-   ➡️ = Branch creation (sprint journals)
-   ⬅️ = Branch merge (sprint journals)
+   🔵 = Branch creation (sprint journals)
+   🔹 = Branch merge (sprint journals)
 
 3. Keep entries:
    - Focused on what matters
@@ -43,11 +43,11 @@ KEY GUIDELINES:
 
    Sprint Journal:
    ### 2024.02.13-2-sprint-02
-   - ➡️ CR-23 (Timezone Implementation) branched
+   - 🔵 CR-23 (Timezone Implementation) branched
    - ✅ Base timezone validation defined
    - 💡 UTC standardization reduced complexity
    ### 2024.02.22-6-sprint-02
-   - ⬅️ CR-23 merged back into sprint
+   - 🔹 CR-23 merged back into sprint
    - ✅ All timezone components verified
    - 💡 Cross-feature pattern emerged for validation
 -->
@@ -98,4 +98,4 @@ KEY GUIDELINES:
 - ✅ Key completions
 - 💡 Technical learnings
 - 🔄 Future considerations
-- ➡️/⬅️ Branch points (sprint journals)
+- 🔵/🔹 Branch points (sprint journals)
