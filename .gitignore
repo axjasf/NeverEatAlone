@@ -199,3 +199,11 @@ cython_debug/
 .pypirc
 backend/test-results.xml
 .DS_Store
+
+# Test artifacts
+pytest-report.xml
+coverage.xml
+.coverage
+.dmypy.json
+.pytest_cache/
+.mypy_cache/
