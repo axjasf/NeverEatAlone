@@ -2,98 +2,100 @@
 Version: YYYY.MM.DD-N-branch-id
 
 <!--
-GUIDELINES:
-1. Document Structure:
-   - Headline structure is fixed - do not add new headline levels
-   - Only use # for document title
-   - Only use ## for main sections
-   - No additional levels of headlines
-   - Sections are: Current Focus, Progress & Decisions, Next Steps, Status, History
+KEY GUIDELINES:
+1. Fixed Sections (in order):
+   Feature Journal Structure:
+   - Status Summary: Phase, progress, quality, risks, dependencies
+   - Current Focus: Active work, challenges, dependencies
+   - Next Steps: Immediate tasks, upcoming work
+   - Technical Progress: Implementation status, test status
+   - Technical Decisions: Key architectural and technical choices
+   - History: Newest entries first, with concrete technical details
 
-2. Symbols & Their Usage:
-   ✅ = Completed items (always at start of line)
-   [ ] = Only for concrete planned/in-progress items
-   🔄 = Future integration points/architectural evolution ideas
-   💡 = Specific technical insights/learnings (not general observations)
+   Sprint Journal Structure:
+   - Status Summary: Overall sprint health
+   - Current Focus: Status per feature, with active challenges
+   - Next Steps: Sprint-level priorities
+   - Technical Progress: Cross-feature implementation, patterns
+   - Technical Decisions: Architecture evolution, shared patterns
+   - Sprint Learnings: Cross-feature insights
+   - History: Oldest first, tracking feature flow
 
-3. Structure Rules:
-   - Keep sections focused and concise
-   - Use consistent symbol placement
-   - Don't mix symbols in section headers
-   - Group related items logically
-   - Leave items without symbols if they're just descriptive
+2. Symbols:
+   ✅ = Completed item
+   [ ] = Planned/in-progress item
+   💡 = Technical learning/insight
+   🔄 = Future consideration/evolution point
+   ➡️ = Branch creation (sprint journals)
+   ⬅️ = Branch merge (sprint journals)
 
-4. History Entries:
-   - Newest entries first
-   - Each entry should capture:
-     * One key completed milestone (✅)
-     * Specific technical learnings (💡)
-     * Notable evolution points (🔄) if discovered
-   - Focus on what actually mattered, not routine progress
-   - Keep it high-level but technically meaningful
+3. Keep entries:
+   - Focused on what matters
+   - Technical and concrete
+   - Free of routine progress
+
+4. History Examples:
+   Feature Journal:
+   ### 2024.02.23-2-feature-30
+   - ✅ Implemented timezone validation in repository layer
+   - 💡 Repository pattern simplified timezone conversion
+   - 🔄 Consider caching timezone data for performance
+
+   Sprint Journal:
+   ### 2024.02.13-2-sprint-02
+   - ➡️ CR-23 (Timezone Implementation) branched
+   - ✅ Base timezone validation defined
+   - 💡 UTC standardization reduced complexity
+   ### 2024.02.22-6-sprint-02
+   - ⬅️ CR-23 merged back into sprint
+   - ✅ All timezone components verified
+   - 💡 Cross-feature pattern emerged for validation
 -->
 
-## Current Focus [branch-id]
-### Parent Feature [parent-branch]
-#### Completed Components
-- ✅ Component A: Complete
-- [ ] Component B: In Progress
-- Component C: Not Started
+## Status Summary
+- Phase: [Implementation/Testing/Review]
+- Progress: [On track/Delayed/Blocked]
+- Quality: [Green/Yellow/Red]
+- Risks: [None/Listed]
+- Dependencies: [Met/Pending]
 
-#### Active Development
-- ✅ Core implementation complete
-- ✅ Test patterns verified
-- ✅ Primary integration verified
-- 🔄 Future Integration Points:
-  - Specific integration concern
-  - Concrete architectural consideration
+## Current Focus
+- Active work and priorities
+- Key challenges or blockers
+- Critical dependencies
 
-## Progress & Decisions [branch-id]
+## Next Steps
+- [ ] Immediate tasks
+- [ ] Upcoming work
+- 🔄 Future considerations
+
+## Technical Progress
 ### Implementation Status
-1. Core Implementation
-   - ✅ Initial setup complete
-   - ✅ Base structure defined
-   - [ ] Current focus
-   - Next planned item
+- ✅ Completed items
+- [ ] In-progress items
+- 💡 Technical learnings
+- 🔄 Future considerations
 
-2. Test Framework
-   - ✅ Pattern documentation complete
-   - ✅ Base patterns implemented
-   - [ ] Current focus
-   - 🔄 Evolution Considerations:
-     * Specific testing challenge
-     * Concrete pattern improvement
+### Test Status
+- ✅ Completed test items
+- [ ] Planned test items
+- 💡 Test insights
+- 🔄 Test evolution points
 
-### Technical Decisions [branch-id]
-1. Architecture
-   - ✅ Base patterns implemented
-   - ✅ Core decisions made
-   - [ ] Active considerations
-   - 🔄 Evolution Points:
-     * Specific technical debt concern
-     * Concrete architectural challenge
+## Technical Decisions
+- ✅ Decisions made
+- 💡 Implementation insights
+- 🔄 Evolution points
 
-## Next Steps [branch-id]
-- [ ] Immediate Next Task
-  - ✅ Completed prerequisite
-  - [ ] Current focus
-  - Next item
+## Sprint Learnings
+[Sprint journals only]
+- 💡 Cross-feature patterns
+- 💡 Technical insights
+- 🔄 Evolution considerations
 
-## Status [branch-id]
-- Implementation: In Progress/Complete
-- Test Coverage: Adequate/Needs Work
-- Documentation: Current/Needs Update
-- Blockers: None/Specific Issue
-- Next Focus: Concrete Next Step
-
-## History [branch-id]
+## History
 ### YYYY.MM.DD-N-branch-id
-- ✅ Major milestone achieved
-- 💡 Specific technical insight about pattern X
-- 💡 Concrete learning about approach Y
-- 🔄 Next: Specific evolution consideration
-
-### YYYY.MM.DD-N-branch-id
-- ✅ Initial implementation complete
-- 💡 Key technical discovery
-- ✅ Critical pattern established
+- ✅ Key completions
+- 💡 Technical learnings
+- 🔄 Future considerations
+- ➡️/⬅️ Branch points (sprint journals)
