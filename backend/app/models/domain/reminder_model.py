@@ -1,6 +1,6 @@
 """Reminder domain model."""
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, UTC, tzinfo
 from enum import Enum
 from typing import Optional, Dict, Callable
 from uuid import UUID
@@ -82,9 +82,9 @@ class RecurrencePattern:
             raise DateValidationError("End date must be timezone-aware")
 
         if start_date and end_date <= start_date:
-            raise DateValidationError("End date must be after start date")
+            raise ValueError("End date must be after start date")
 
-        return end_date
+        return end_date.astimezone(UTC)
 
     def __eq__(self, other: object) -> bool:
         """Compare two recurrence patterns for equality."""
@@ -123,7 +123,10 @@ class RecurrencePattern:
 
     def _is_past_end_date(self, date: datetime) -> bool:
         """Check if a date is past the end date."""
-        return bool(self.end_date and date > self.end_date)
+        if not self.end_date:
+            return False
+        # Compare in UTC to ensure consistent results
+        return date.astimezone(UTC) > self.end_date
 
     def _calculate_next_date(self, from_date: datetime) -> datetime:
         """Calculate the next occurrence date based on the unit.
@@ -132,12 +135,15 @@ class RecurrencePattern:
             from_date: Base date for calculation
 
         Returns:
-            Next occurrence date
+            Next occurrence date in the same timezone as from_date
         """
-        # Normalize to midnight UTC for consistent calculations
-        date = datetime.combine(
-            from_date.date(), datetime.min.time(), tzinfo=timezone.utc
-        )
+        # Store original timezone and time components
+        original_tz = from_date.tzinfo
+        original_time = from_date.timetz()
+
+        # Convert to UTC for date calculations
+        utc_date = from_date.astimezone(UTC)
+        base_date = datetime.combine(utc_date.date(), original_time, tzinfo=original_tz)
 
         calculation_methods: Dict[RecurrenceUnit, Callable[[datetime], datetime]] = {
             RecurrenceUnit.DAY: self._add_days,
@@ -146,7 +152,8 @@ class RecurrencePattern:
             RecurrenceUnit.YEAR: self._add_years,
         }
 
-        return calculation_methods[self.unit](date)
+        # Calculate next date preserving original timezone
+        return calculation_methods[self.unit](base_date)
 
     def _add_days(self, date: datetime) -> datetime:
         """Add days to a date."""
@@ -173,7 +180,12 @@ class RecurrencePattern:
         max_day = self._get_days_in_month(year, month)
         day = min(date.day, max_day)
 
-        return datetime(year, month, day, tzinfo=timezone.utc)
+        # Preserve time components
+        return datetime(
+            year, month, day,
+            date.hour, date.minute, date.second, date.microsecond,
+            tzinfo=date.tzinfo
+        )
 
     def _add_years(self, date: datetime) -> datetime:
         """Add years to a date."""
@@ -197,6 +209,10 @@ class Reminder(BaseModel):
     """A reminder for a contact.
 
     Can be one-off or recurring, and can be linked to a specific note.
+
+    All datetime fields are stored in UTC internally. Any datetime values
+    provided must be timezone-aware (have tzinfo set). Naive datetimes will
+    be rejected.
     """
 
     def __init__(
@@ -213,7 +229,7 @@ class Reminder(BaseModel):
         Args:
             contact_id: ID of the contact this reminder is for
             title: Title of the reminder
-            due_date: When the reminder is due
+            due_date: When the reminder is due (must be timezone-aware)
             description: Optional description
             recurrence_pattern: Optional pattern for recurring reminders
             note_id: Optional ID of a linked note
@@ -228,9 +244,12 @@ class Reminder(BaseModel):
         self.contact_id = contact_id
         self.title = title.strip()
         self.description = description.strip() if description else None
-        self.due_date = due_date
+        assert due_date.tzinfo is not None  # Already validated in _validate_due_date
+        self._original_tz: tzinfo = due_date.tzinfo  # Store original timezone
+        self._due_date = due_date.astimezone(UTC)  # Store in UTC
         self.status = ReminderStatus.PENDING
-        self.completion_date: Optional[datetime] = None
+        self._completion_date: Optional[datetime] = None
+        self._completion_tz: Optional[tzinfo] = None  # Store completion timezone
         self.recurrence_pattern = recurrence_pattern
         self.note_id = note_id
 
@@ -248,11 +267,24 @@ class Reminder(BaseModel):
         if not due_date.tzinfo:
             raise ValueError("Due date must be timezone-aware")
 
+    @property
+    def due_date(self) -> datetime:
+        """Get the due date in its original timezone."""
+        return self._due_date.astimezone(self._original_tz)
+
+    @property
+    def completion_date(self) -> Optional[datetime]:
+        """Get the completion date in its original timezone."""
+        if self._completion_date is None:
+            return None
+        tz = self._completion_tz if self._completion_tz is not None else self._original_tz
+        return self._completion_date.astimezone(tz)
+
     def complete(self, completion_date: datetime) -> Optional["Reminder"]:
         """Mark the reminder as completed.
 
         Args:
-            completion_date: When the reminder was completed
+            completion_date: When the reminder was completed (must be timezone-aware)
 
         Returns:
             New reminder instance if this was recurring, None otherwise
@@ -264,7 +296,8 @@ class Reminder(BaseModel):
         self._validate_completion(completion_date)
 
         self.status = ReminderStatus.COMPLETED
-        self.completion_date = completion_date
+        self._completion_tz = completion_date.tzinfo  # Store completion timezone
+        self._completion_date = completion_date.astimezone(UTC)  # Store in UTC
         self._update_timestamp()
 
         return self._create_next_occurrence() if self.recurrence_pattern else None
@@ -279,7 +312,9 @@ class Reminder(BaseModel):
         if not completion_date.tzinfo:
             raise ValueError("Completion date must be timezone-aware")
 
-        if completion_date < self.due_date:
+        # Compare dates in UTC for consistency
+        completion_utc = completion_date.astimezone(UTC)
+        if completion_utc < self._due_date:
             raise ValueError("Completion date cannot be before due date")
 
     def _create_next_occurrence(self) -> Optional["Reminder"]:
@@ -295,7 +330,7 @@ class Reminder(BaseModel):
             contact_id=self.contact_id,
             title=self.title,
             description=self.description,
-            due_date=next_date,
+            due_date=next_date,  # Will preserve timezone from get_next_occurrence
             recurrence_pattern=self.recurrence_pattern,
             note_id=self.note_id,
         )
@@ -321,5 +356,5 @@ class Reminder(BaseModel):
         if not self.recurrence_pattern:
             return None
 
-        from_date = self.completion_date or self.due_date
-        return self.recurrence_pattern.get_next_date(from_date)
+        # Always calculate next occurrence from due_date to maintain consistent timing
+        return self.recurrence_pattern.get_next_date(self.due_date)
