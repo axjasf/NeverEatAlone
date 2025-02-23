@@ -4,10 +4,11 @@ from datetime import datetime, timezone, timedelta
 from uuid import UUID
 import pytest
 from sqlalchemy.orm import Session, Mapped
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, StatementError
 from sqlalchemy import text, select
 from typing import cast, Optional, List
 from sqlalchemy.orm import selectinload
+from zoneinfo import ZoneInfo
 
 from backend.app.models.domain.reminder_model import ReminderStatus, RecurrenceUnit
 from backend.app.models.orm.reminder_orm import ReminderORM
@@ -18,6 +19,10 @@ from backend.app.models.orm.note_orm import NoteORM
 ContactWithRelations = ContactORM
 NoteWithRelations = NoteORM
 ReminderWithRelations = ReminderORM
+
+# Test data
+TEST_UUID = UUID("11111111-1111-1111-1111-111111111111")
+TEST_DATETIME = datetime(2024, 1, 1, tzinfo=timezone.utc)
 
 
 @pytest.fixture
@@ -369,27 +374,128 @@ def test_constraint_violations(db_session: Session) -> None:
 
 
 def test_timezone_handling(db_session: Session, contact: ContactWithRelations) -> None:
-    """Test that timezone information is preserved in the database.
+    """Test timezone handling in ReminderORM.
 
     Should:
-    - Store timezone-aware dates
-    - Retrieve dates with UTC timezone
+    - Store all dates in UTC
+    - Handle different input timezones
+    - Preserve timezone information through save/load
     - Handle DST transitions correctly
     """
-    # Create reminder with specific timezone
-    due_date = datetime(2024, 6, 1, 12, 0, tzinfo=timezone.utc)
-    reminder = ReminderORM(
-        contact_id=contact.id, title="Test reminder", due_date=due_date
-    )
-    db_session.add(reminder)
+    # Test with different timezones
+    ny_tz = ZoneInfo("America/New_York")
+    tokyo_tz = ZoneInfo("Asia/Tokyo")
+    ist = timezone(timedelta(hours=5, minutes=30))  # India
+
+    base_time = datetime(2024, 3, 1, 12, 0, tzinfo=timezone.utc)
+    ny_time = base_time.astimezone(ny_tz)
+    tokyo_time = base_time.astimezone(tokyo_tz)
+    ist_time = base_time.astimezone(ist)
+
+    # Create reminders with different timezone inputs
+    reminders = []
+    for due_date in [ny_time, tokyo_time, ist_time]:
+        reminder = ReminderORM(
+            contact_id=contact.id,
+            title=f"Test reminder ({due_date.tzinfo})",
+            due_date=due_date
+        )
+        db_session.add(reminder)
+        reminders.append(reminder)
     db_session.commit()
 
-    # Retrieve and verify timezone
+    # Verify timezone handling after save/load
+    for original, saved_id in zip([ny_time, tokyo_time, ist_time], [r.id for r in reminders]):
+        loaded = db_session.get(ReminderORM, saved_id)
+        assert loaded is not None
+
+        # Dates should be in UTC in database
+        assert loaded.due_date.tzinfo == timezone.utc
+
+        # UTC timestamps should match
+        assert loaded.due_date.timestamp() == original.timestamp()
+
+    # Test DST handling
+    # March 10, 2024: DST starts at 2 AM ET
+    dst_start = datetime(2024, 3, 10, 1, 59, tzinfo=ny_tz)  # Just before DST
+    dst_reminder = ReminderORM(
+        contact_id=contact.id,
+        title="DST Test",
+        due_date=dst_start
+    )
+    db_session.add(dst_reminder)
+    db_session.commit()
+
+    # Complete the reminder after DST transition
+    dst_completion = datetime(2024, 3, 10, 3, 0, tzinfo=ny_tz)  # After DST
+    dst_reminder.status = ReminderStatus.COMPLETED
+    dst_reminder.completion_date = dst_completion
+    db_session.commit()
+
+    # Reload and verify
+    db_session.expire_all()
+    loaded_dst = db_session.get(ReminderORM, dst_reminder.id)
+    assert loaded_dst is not None
+
+    # Verify timestamps match
+    assert loaded_dst.due_date.timestamp() == dst_start.timestamp()
+    assert loaded_dst.completion_date is not None
+    assert loaded_dst.completion_date.timestamp() == dst_completion.timestamp()
+
+    # Verify one minute difference in UTC (due to DST transition)
+    utc_diff = loaded_dst.completion_date - loaded_dst.due_date
+    assert utc_diff == timedelta(minutes=1)
+
+
+def test_timezone_constraints(db_session: Session, contact: ContactWithRelations) -> None:
+    """Test timezone-related database constraints.
+
+    Should:
+    - Reject naive datetimes with StatementError
+    - Handle timezone conversion correctly
+    - Maintain timezone awareness through all operations
+    """
+    # Test with naive datetime (should fail)
+    with db_session.begin_nested():
+        with pytest.raises(StatementError):
+            reminder = ReminderORM(
+                contact_id=contact.id,
+                title="Test reminder",
+                due_date=datetime(2024, 1, 1)  # No timezone
+            )
+            db_session.add(reminder)
+            db_session.flush()
+
+    # Test with timezone-aware datetime (should succeed)
+    reminder = ReminderORM(
+        contact_id=contact.id,
+        title="Test reminder",
+        due_date=datetime(2024, 1, 1, tzinfo=timezone.utc)
+    )
+    db_session.add(reminder)
+    db_session.flush()
+
+    # Test completion with naive datetime (should fail)
+    with db_session.begin_nested():
+        with pytest.raises(StatementError):
+            reminder.status = ReminderStatus.COMPLETED
+            reminder.completion_date = datetime(2024, 1, 2)  # No timezone
+            db_session.flush()
+
+    # Test completion with timezone-aware datetime (should succeed)
+    reminder.completion_date = datetime(2024, 1, 2, tzinfo=timezone.utc)
+    reminder.status = ReminderStatus.COMPLETED
+    db_session.flush()
+
+    # Verify all dates are timezone-aware after load
     db_session.expire_all()
     loaded = db_session.get(ReminderORM, reminder.id)
     assert loaded is not None
-    assert loaded.due_date.tzinfo == timezone.utc
-    assert loaded.due_date == due_date
+    assert loaded.due_date.tzinfo is not None
+    assert loaded.completion_date is not None
+    assert loaded.completion_date.tzinfo is not None
+    assert loaded.created_at.tzinfo is not None
+    assert loaded.updated_at.tzinfo is not None
 
 
 def test_recurrence_constraints(

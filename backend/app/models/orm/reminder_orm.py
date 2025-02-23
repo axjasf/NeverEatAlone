@@ -1,38 +1,14 @@
 """SQLAlchemy ORM model for reminders."""
 
 from datetime import datetime, timezone
-from typing import Optional, Any
+from typing import Optional
 from uuid import UUID, uuid4
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, ForeignKey, DateTime, Integer, Enum, CheckConstraint
-from sqlalchemy.types import TypeDecorator
+from sqlalchemy import String, ForeignKey, Integer, Enum, CheckConstraint
 
 from ...database import Base
 from ..domain.reminder_model import ReminderStatus, RecurrenceUnit
-from .base_orm import GUID
-
-
-class TZDateTime(TypeDecorator[datetime]):
-    """Timezone-aware DateTime type for SQLite."""
-
-    impl = DateTime
-    cache_ok = True
-
-    def process_bind_param(
-        self, value: Optional[datetime], dialect: Any
-    ) -> Optional[datetime]:
-        """Convert datetime to UTC for storage."""
-        if value is not None and value.tzinfo is not None:
-            return value.astimezone(timezone.utc)
-        return value
-
-    def process_result_value(
-        self, value: Optional[datetime], dialect: Any
-    ) -> Optional[datetime]:
-        """Ensure retrieved datetime has UTC timezone."""
-        if value is not None and value.tzinfo is None:
-            return value.replace(tzinfo=timezone.utc)
-        return value
+from .base_orm import GUID, UTCDateTime
 
 
 class ReminderORM(Base):
@@ -50,12 +26,12 @@ class ReminderORM(Base):
     # Basic fields
     title: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    due_date: Mapped[datetime] = mapped_column(TZDateTime, nullable=False)
+    due_date: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
     status: Mapped[str] = mapped_column(
         Enum(ReminderStatus), nullable=False, default=ReminderStatus.PENDING
     )
     completion_date: Mapped[Optional[datetime]] = mapped_column(
-        TZDateTime, nullable=True
+        UTCDateTime, nullable=True
     )
 
     # Recurrence fields
@@ -64,15 +40,15 @@ class ReminderORM(Base):
         Enum(RecurrenceUnit), nullable=True
     )
     recurrence_end_date: Mapped[Optional[datetime]] = mapped_column(
-        TZDateTime, nullable=True
+        UTCDateTime, nullable=True
     )
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
-        TZDateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
+        UTCDateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
     )
     updated_at: Mapped[datetime] = mapped_column(
-        TZDateTime,
+        UTCDateTime,
         nullable=False,
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
