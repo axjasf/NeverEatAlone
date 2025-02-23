@@ -1,23 +1,25 @@
 """SQLAlchemy ORM model for reminders."""
 
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String, ForeignKey, Integer, Enum, CheckConstraint
 
-from ...database import Base
 from ..domain.reminder_model import ReminderStatus, RecurrenceUnit
-from .base_orm import GUID, UTCDateTime
+from .base_orm import BaseORMModel, UTCDateTime
 
 
-class ReminderORM(Base):
-    """ORM model for storing reminders in the database."""
+class ReminderORM(BaseORMModel):
+    """ORM model for storing reminders in the database.
+
+    All datetime fields are stored in UTC timezone.
+    Timezone-aware datetimes are required for input and output.
+    """
 
     __tablename__ = "reminders"
 
     # Primary key and relationships
-    id: Mapped[UUID] = mapped_column(GUID, primary_key=True, default=uuid4)
     contact_id: Mapped[UUID] = mapped_column(ForeignKey("contacts.id"), nullable=False)
     note_id: Mapped[Optional[UUID]] = mapped_column(
         ForeignKey("notes.id"), nullable=True
@@ -41,17 +43,6 @@ class ReminderORM(Base):
     )
     recurrence_end_date: Mapped[Optional[datetime]] = mapped_column(
         UTCDateTime, nullable=True
-    )
-
-    # Timestamps
-    created_at: Mapped[datetime] = mapped_column(
-        UTCDateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        UTCDateTime,
-        nullable=False,
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
     )
 
     # Relationships
