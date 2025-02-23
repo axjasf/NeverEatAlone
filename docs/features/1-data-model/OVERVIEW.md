@@ -28,6 +28,8 @@ Core data model implementation including timezone handling and interaction track
 - ✅ CR-30: Interaction Tracking
 
 ## Documentation
+- See `design/erd.drawio` for detailed entity relationship diagram
+- See `design/ERD.md` for quick reference Mermaid diagram
 - See `design/` for architectural decisions
 - See `crs/` for implementation details
 - See sprint journals for progress history
