@@ -25,4 +25,4 @@ touch N-feature-name/design/ARCHITECTURE.md
    - Initial milestones
    - Label setup
 
-See `documentation/OVERVIEW_GUIDE.md` for templates and examples.
+See `../documentation/OVERVIEW_GUIDE.md` for templates and examples.
