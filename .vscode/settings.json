@@ -151,6 +151,26 @@
     {
       "filePath": "docs",
       "group": "Default"
+    },
+    {
+      "filePath": "docs/dev-journal/sprint-2025-02/2 - Service and API Layer/DevJournal_44-service-layer-foundation.md",
+      "group": "Default"
+    },
+    {
+      "filePath": "docs/features/2-service-layer",
+      "group": "Default"
+    },
+    {
+      "filePath": "docs/guides/quick-start/WORKFLOW.md",
+      "group": "Default"
+    },
+    {
+      "filePath": "docs/guides/detailed/processes/README.md",
+      "group": "Default"
+    },
+    {
+      "filePath": "docs/guides",
+      "group": "Default"
     }
   ],
   "python.testing.pytestArgs": [
@@ -161,5 +181,6 @@
   "sonarlint.connectedMode.project": {
     "connectionId": "axjasf",
     "projectKey": "axjasf_NeverEatAlone"
-  }
+  },
+  "favorites.sortOrder": "DESC"
 }
