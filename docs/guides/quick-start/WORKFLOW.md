@@ -1,80 +1,70 @@
-# Daily Development Workflow
+# Quick Start Workflow Guide
 
-## 1. Start Your Day
-```bash
-# Update your code
-git pull origin main
+## When to Do What
 
-# Activate environment
-cd backend
-source venv/bin/activate  # or .\venv\Scripts\activate on Windows
+### Feature Lifecycle
+1. **Starting Feature**
+   - Create feature structure & docs
+   - Define scope & architecture
+   → See: `../detailed/processes/features/lifecycle/PLANNING.md`
 
-# Verify setup
-python -m pytest -v
-```
+2. **Making Changes**
+   - Create CR & branch
+   - Start tracking in DevJournal
+   → See: `../detailed/processes/features/changes/CR_QUICK.md`
 
-## 2. Start New Feature
-1. Create CR and branch:
-   ```bash
-   ./scripts/cr.sh create "Feature title" "Description" "feature"
-   ```
-   This creates:
-   - GitHub issue
-   - Feature branch
-   - CR document
+3. **Development Tracking**
+   Time-based:
+   - Morning: Plan in DevJournal
+   - Evening: Document progress
 
-2. Update documentation:
-   - Add to feature's OVERVIEW.md
-   - Create design docs if needed
-   - Start feature journal
+   Change-based:
+   - Pre-commit: Record decisions (💡)
+   - Post-commit: Update progress
+   → See: `../detailed/processes/development/journals/PROCESS.md`
 
-## 3. Development Cycle
-1. Write tests first (TDD)
-2. Implement feature
-3. Update documentation
-4. Commit changes:
-   ```bash
-   git commit -m "type(scope): message (#issue)"
-   ```
+4. **Completing Work**
+   - Update all documentation
+   - Create pull request
+   → See: `../detailed/processes/features/lifecycle/COMPLETION.md`
 
-## 4. Complete Feature
-1. Final testing:
-   ```bash
-   # Backend
-   python -m pytest -v
+5. **Sprint Management**
+   - Create sprint documentation
+   - Update feature statuses
+   → See: `../detailed/processes/development/sprints/PLANNING.md`
 
-   # Frontend
-   npm test
-   ```
+## When to Update What
 
-2. Code quality:
-   ```bash
-   # Backend
-   flake8 .
-   black .
-   mypy .
+### Core Documents
+1. **Feature OVERVIEW.md**
+   - On creating feature folder
+   - On feature scope change
+   - On feature completion
 
-   # Frontend
-   npm run lint
-   npm run format
-   ```
+2. **CR Documents**
+   - On change proposal
+   - On major progress
+   - On completion
 
-3. Update CR status:
-   ```bash
-   ./scripts/cr.sh update <issue-number> "in-review" "Ready for review"
-   ```
+3. **DevJournal**
+   - Daily planning
+   - Key decisions (💡)
+   - Progress updates
 
-4. Create PR:
-   - Title: Feature description (#issue)
-   - Description: Implementation details
-   - Link CR document
+4. **Design Docs**
+   - Before implementation
+   - On pattern discovery
+   - On architecture change
 
-## 5. After Review
-1. Address feedback
-2. Update tests if needed
-3. Finalize CR:
-   ```bash
-   ./scripts/cr.sh finalize <issue-number> "CR-YYYY.MM-N"
-   ```
+### Key Locations
+1. **Features** (`docs/features/N-feature-name/`)
+   - `OVERVIEW.md`
+   - `design/ARCHITECTURE.md`
+   - `crs/CR-YYYY.MM-NN.md`
 
-See `detailed/` directory for comprehensive documentation.
+2. **Progress** (`docs/dev-journal/`)
+   - `sprint-YYYY-MM/DevJournal_*.md`
+   - GitHub Issues & Board
+
+For detailed instructions, see `guides/detailed/processes/`
+For commands, see `COMMANDS.md`
