@@ -55,6 +55,7 @@
    - Before implementation
    - On pattern discovery
    - On architecture change
+   → See: `../detailed/processes/features/documentation/DESIGN_DOCS.md`
 
 ### Key Locations
 1. **Features** (`docs/features/N-feature-name/`)

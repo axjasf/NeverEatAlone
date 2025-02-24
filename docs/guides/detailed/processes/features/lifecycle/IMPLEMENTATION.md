@@ -16,4 +16,9 @@
    - Technical decisions
    - Test coverage
 
+3. Design Documentation
+   - Document emerging patterns
+   - Update architecture decisions
+   → See `../documentation/DESIGN_DOCS.md` for templates
+
 See `../changes/CR_PROCESS.md` for change management details.

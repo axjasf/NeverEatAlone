@@ -14,15 +14,15 @@ touch N-feature-name/design/ARCHITECTURE.md
    - Component list
    - Documentation links
    - Status tracking
+   → See `../documentation/OVERVIEW_GUIDE.md` for template
 
 2. `design/ARCHITECTURE.md`
    - Key design decisions
    - Component relationships
    - Technical constraints
+   → See `../documentation/DESIGN_DOCS.md` for templates
 
 3. GitHub Setup
    - Project board item
    - Initial milestones
    - Label setup
-
-See `../documentation/OVERVIEW_GUIDE.md` for templates and examples.
