@@ -1,6 +1,7 @@
 """Base service layer implementation."""
 
 import logging
+from datetime import datetime, timezone
 from contextlib import contextmanager
 from typing import Generator, TypeVar, Any
 from sqlalchemy.orm import Session
@@ -20,7 +21,8 @@ class ServiceError(Exception):
         """
         self.operation = operation
         self.original_error = original_error
-        message = f"Service operation '{operation}' failed"
+        self.timestamp = datetime.now(timezone.utc)
+        message = f"Service operation '{operation}' failed at {self.timestamp.isoformat()}"
         if original_error:
             message += f": {str(original_error)}"
         super().__init__(message)
@@ -67,17 +69,23 @@ class BaseService:
                 session.commit()
             except Exception as e:
                 self.logger.error("Failed to commit transaction", exc_info=True)
-                session.rollback()
+                try:
+                    session.rollback()
+                except Exception as rollback_error:
+                    self.logger.error("Failed to rollback transaction", exc_info=True)
+                    raise TransactionError("rollback", rollback_error) from e
                 raise TransactionError("commit", e)
         except Exception as e:
-            self.logger.error("Transaction failed, rolling back", exc_info=True)
-            try:
-                session.rollback()
-            except Exception as rollback_error:
-                self.logger.error("Failed to rollback transaction", exc_info=True)
-                raise TransactionError("rollback", rollback_error) from e
-            if isinstance(e, ServiceError):
-                raise
-            raise ServiceError("transaction", e)
+            if not isinstance(e, TransactionError):
+                self.logger.error("Transaction failed, rolling back", exc_info=True)
+                try:
+                    session.rollback()
+                except Exception as rollback_error:
+                    self.logger.error("Failed to rollback transaction", exc_info=True)
+                    raise TransactionError("rollback", rollback_error) from e
+                if isinstance(e, ServiceError):
+                    raise
+                raise ServiceError("transaction", e)
+            raise
         finally:
             session.close()
