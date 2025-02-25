@@ -40,6 +40,8 @@
    - On creating feature folder
    - On feature scope change
    - On feature completion
+   - On major component completion
+   - On implementation status changes
 
 2. **CR Documents**
    - On change proposal
@@ -52,9 +54,14 @@
    - Progress updates
 
 4. **Design Docs**
-   - Before implementation
-   - On pattern discovery
-   - On architecture change
+   - Before implementation starts
+   - When patterns are discovered
+   - When architecture evolves
+   - After component completion
+   Examples:
+   - SERVICE_ARCHITECTURE.md: Update when layer relationships change
+   - SERVICE_BASE.md: Update when base patterns are implemented
+   - {COMPONENT}_SERVICE.md: Create/update when implementing
    → See: `../detailed/processes/features/documentation/DESIGN_DOCS.md`
 
 ### Key Locations
