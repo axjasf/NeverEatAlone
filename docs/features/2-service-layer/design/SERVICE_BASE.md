@@ -3,6 +3,27 @@
 ## Purpose
 Provides foundational patterns for all business services, handling transaction management, error handling, and common service operations in a single-user context.
 
+## Core Features
+✅ Implemented:
+- Transaction context management
+- Basic error handling with UTC timestamps
+- Session lifecycle management
+- Error type identification
+- Nested error causation chain
+- Stack trace preservation
+
+⏸️ Parked (Issue #45):
+- Structured logging
+- Operation timing
+- Complex error tracking
+- Operation metadata
+- Nested transactions
+
+🔄 Future Considerations (Issue #45):
+- Error retry patterns
+- Complex error scenarios
+- Error context enrichment
+
 ## Interface
 
 ### BaseService
@@ -23,18 +44,24 @@ class BaseService:
                 session.commit()
             except Exception as e:
                 self.logger.error("Failed to commit transaction", exc_info=True)
-                session.rollback()
+                try:
+                    session.rollback()
+                except Exception as rollback_error:
+                    self.logger.error("Failed to rollback transaction", exc_info=True)
+                    raise TransactionError("rollback", rollback_error) from e
                 raise TransactionError("commit", e)
         except Exception as e:
-            self.logger.error("Transaction failed, rolling back", exc_info=True)
-            try:
-                session.rollback()
-            except Exception as rollback_error:
-                self.logger.error("Failed to rollback transaction", exc_info=True)
-                raise TransactionError("rollback", rollback_error) from e
-            if isinstance(e, ServiceError):
-                raise
-            raise ServiceError("transaction", e)
+            if not isinstance(e, TransactionError):
+                self.logger.error("Transaction failed, rolling back", exc_info=True)
+                try:
+                    session.rollback()
+                except Exception as rollback_error:
+                    self.logger.error("Failed to rollback transaction", exc_info=True)
+                    raise TransactionError("rollback", rollback_error) from e
+                if isinstance(e, ServiceError):
+                    raise
+                raise ServiceError("transaction", e)
+            raise
         finally:
             session.close()
 
@@ -57,9 +84,20 @@ class ServiceError(Exception):
     def __init__(self, operation: str, original_error: Exception | None = None) -> None:
         self.operation = operation
         self.original_error = original_error
-        message = f"Service operation '{operation}' failed"
+        self.timestamp = datetime.now(timezone.utc)
+
+        # Build error message
+        error_type = self.__class__.__name__
+        formatted_time = self.timestamp.strftime("%Y-%m-%d %H:%M:%S UTC")
+        message = f"{error_type} in operation '{operation}' at {formatted_time}"
+
         if original_error:
-            message += f": {str(original_error)}"
+            # Add context for nested errors
+            if isinstance(original_error, ServiceError):
+                message += f"\nCaused by: {str(original_error)}"
+            else:
+                message += f"\nError: {str(original_error)}"
+
         super().__init__(message)
 
 class TransactionError(ServiceError):
@@ -78,15 +116,18 @@ class NotFoundError(ServiceError):
 ## Transaction Boundaries
 
 ### Operation Level
+✅ Implemented:
 - Each business operation gets its own transaction
 - Automatic rollback on errors
 - Proper resource cleanup
 - Detailed error context
 
+⏸️ Parked (Issue #45):
+- Nested transactions
+- Complex transaction patterns
+
 ### Multi-Entity Operations
-- Single transaction spans multiple repositories
-- All-or-nothing semantics
-- Example:
+Example (pending implementation):
 ```python
 def create_contact_with_tags(self, data: dict, tags: list[str]) -> Contact:
     with self.in_transaction() as session:
@@ -101,25 +142,46 @@ def create_contact_with_tags(self, data: dict, tags: list[str]) -> Contact:
 ## Error Handling
 
 ### Core Principles
-1. **Clear Context**
-   - Operation name always included
-   - Original error preserved
-   - Stack trace maintained
+1. **Clear Context** ✅
+   - Error type always included
+   - Operation name for quick identification
+   - UTC timestamp for error tracking
+   - Original error preserved in chain
 
-2. **Error Categories**
+2. **Error Categories** ✅
    - ServiceError: Base class for all service errors
    - TransactionError: Commit/rollback failures
    - ValidationError: Input validation failures
    - NotFoundError: Entity lookup failures
 
-3. **Logging Strategy**
+3. **Error Message Format** ✅
+   ```
+   {ErrorType} in operation '{operation}' at {YYYY-MM-DD HH:MM:SS UTC}
+   [Caused by: {nested_service_error} | Error: {original_error}]
+   ```
+
+4. **Nested Error Handling** ✅
+   ```
+   ServiceError in operation 'outer_op' at 2025-02-24 14:30:00 UTC
+   Caused by: ServiceError in operation 'inner_op' at 2025-02-24 14:29:59 UTC
+   Error: Inner problem
+   ```
+
+5. **Logging Strategy**
+✅ Implemented:
    - Error details logged automatically
    - Stack traces preserved
    - Operation context included
+   - UTC timestamps for consistency
+
+⏸️ Parked (Issue #45):
+   - Structured logging
+   - Operation timing
+   - Detailed error tracking
 
 ## Testing Approach
 
-### Unit Tests
+### Transaction Tests ✅
 ```python
 def test_transaction_context_commits_on_success() -> None:
     """Test that successful operations in transaction context are committed."""
@@ -137,33 +199,44 @@ def test_transaction_context_commits_on_success() -> None:
     session.rollback.assert_not_called()
 ```
 
-### Error Handling Tests
+### Error Handling Tests ✅
 ```python
-def test_transaction_context_rolls_back_on_error() -> None:
-    """Test that failed operations in transaction context are rolled back."""
+def test_nested_service_error_formatting() -> None:
+    """Test that nested service errors are properly formatted."""
     # Arrange
-    session = MagicMock(spec=Session)
-    session_factory = MagicMock(return_value=session)
-    service = BaseService(session_factory)
+    inner_error = ServiceError("inner_op", ValueError("Inner problem"))
+    outer_error = ServiceError("outer_op", inner_error)
 
-    # Act & Assert
+    # Assert
+    error_str = str(outer_error)
+    assert "ServiceError in operation 'outer_op'" in error_str
+    assert "Caused by: ServiceError in operation 'inner_op'" in error_str
+    assert "Error: Inner problem" in error_str
+```
+
+### Timestamp Tests ✅
+```python
+def test_error_includes_timestamp() -> None:
+    """Test that service errors include UTC timestamp."""
+    # Arrange
+    service = BaseService(MagicMock())
+    before_error = datetime.now(timezone.utc)
+
+    # Act
     with pytest.raises(ServiceError) as exc_info:
         with service.in_transaction():
-            raise ValueError("Something went wrong")
+            raise ValueError("Test error")
 
-    # Verify error wrapping
-    assert isinstance(exc_info.value, ServiceError)
-    assert "transaction" in str(exc_info.value)
-    assert "Something went wrong" in str(exc_info.value)
-
-    # Verify transaction handling
-    session.commit.assert_not_called()
-    session.rollback.assert_called_once()
+    # Assert
+    error = exc_info.value
+    assert hasattr(error, 'timestamp')
+    assert error.timestamp.tzinfo == timezone.utc
+    assert before_error <= error.timestamp <= datetime.now(timezone.utc)
 ```
 
 ## Usage Examples
 
-### Basic Service
+### Basic Service (Pending Implementation)
 ```python
 class ContactService(BaseService):
     def create_contact(self, data: dict) -> Contact:
@@ -176,7 +249,7 @@ class ContactService(BaseService):
                 raise ServiceError("create_contact", e)
 ```
 
-### Complex Operation
+### Complex Operation (Pending Implementation)
 ```python
 class NoteService(BaseService):
     def create_note_with_statements(
