@@ -7,11 +7,12 @@ Provides business operations for managing contacts and their associated data (ta
 
 ### Contact Management
 ✅ Planned:
-- Create contact with tags
-- Update contact details
+- Create contact with tags [FR1.1.1, FR1.1.2]
+- Update contact details [FR1.1.3]
 - Delete contact (with associated data)
 - Get contact by ID
 - Search contacts by criteria
+- Validate sub-information against template [FR1.2.1, FR1.2.2]
 
 ⏸️ Future Considerations:
 - Bulk operations
@@ -20,10 +21,11 @@ Provides business operations for managing contacts and their associated data (ta
 
 ### Tag Operations
 ✅ Planned:
-- Add tags to contact
-- Remove tags from contact
-- Update tag frequencies
+- Add tags to contact [FR2.1.1, FR2.1.4]
+- Remove tags from contact [FR2.1.3]
+- Update tag frequencies [FR2.2.1, FR2.2.4]
 - Get contacts by tag
+- Manage tag frequencies [FR2.2.1, FR2.2.2, FR2.2.3]
 
 ⏸️ Future Considerations:
 - Tag statistics
@@ -32,9 +34,10 @@ Provides business operations for managing contacts and their associated data (ta
 
 ### Interaction Tracking
 ✅ Planned:
-- Record interaction with note
-- Update last contact timestamp
-- Get interaction history
+- Record interaction with note [FR1.1.4]
+- Update last contact timestamp [FR1.1.5]
+- Get interaction history [FR2.2.2]
+- Track per-tag interactions [FR2.2.5, FR2.2.6]
 
 ⏸️ Future Considerations:
 - Interaction analytics
@@ -51,14 +54,20 @@ class ContactService(BaseService):
         contact_data: Dict[str, Any],
         tags: List[str]
     ) -> Contact:
-        """Create a new contact with associated tags."""
+        """Create a new contact with associated tags.
+
+        Requirements: [FR1.1.1, FR1.1.2, FR2.1.1, FR2.1.4]
+        """
 
     def update(
         self,
         contact_id: UUID,
         data: Dict[str, Any]
     ) -> Contact:
-        """Update contact details."""
+        """Update contact details.
+
+        Requirements: [FR1.1.3]
+        """
 
     def delete(self, contact_id: UUID) -> None:
         """Delete a contact and associated data."""
@@ -71,22 +80,53 @@ class ContactService(BaseService):
         contact_id: UUID,
         tags: List[str]
     ) -> Contact:
-        """Add tags to a contact."""
+        """Add tags to a contact.
+
+        Requirements: [FR2.1.1, FR2.1.3, FR2.1.4]
+        """
 
     def remove_tags(
         self,
         contact_id: UUID,
         tags: List[str]
     ) -> Contact:
-        """Remove tags from a contact."""
+        """Remove tags from a contact.
+
+        Requirements: [FR2.1.3]
+        """
 
     def record_interaction(
         self,
         contact_id: UUID,
         date: datetime,
-        note: Optional[str] = None
+        note: Optional[str] = None,
+        tags: Optional[List[str]] = None
     ) -> Contact:
-        """Record an interaction with a contact."""
+        """Record an interaction with a contact.
+
+        Requirements: [FR1.1.4, FR1.1.5, FR2.2.2, FR2.2.5, FR2.2.6]
+        """
+
+    def update_tag_frequency(
+        self,
+        contact_id: UUID,
+        tag_name: str,
+        frequency_days: Optional[int]
+    ) -> Contact:
+        """Update contact-tag frequency settings.
+
+        Requirements: [FR2.2.1, FR2.2.4]
+        """
+
+    def validate_sub_information(
+        self,
+        contact_id: UUID,
+        sub_information: Dict[str, Any]
+    ) -> bool:
+        """Validate sub_information against current template.
+
+        Requirements: [FR1.2.1, FR1.2.2]
+        """
 ```
 
 ## Transaction Boundaries
