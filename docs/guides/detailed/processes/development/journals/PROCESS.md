@@ -40,7 +40,7 @@ Example: 2025.02.23-3-base-service
    - Blockers encountered
    - Next steps
 
-See `TEMPLATE.md` for journal structure.
+See `_template.md` for journal structure and `_examples.md` for concrete examples.
 
 ## Structure Requirements
 1. **Status Summary**

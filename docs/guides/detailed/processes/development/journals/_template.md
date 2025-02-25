@@ -2,6 +2,25 @@
 Version: YYYY.MM.DD-N-branch-id
 
 <!--
+See _examples.md for concrete examples and best practices of development journals.
+See PROCESS.md for detailed process guidelines.
+
+JOURNAL TYPES:
+1. Sprint Journals (sprint-YYYY-MM/DevJournal_Sprint-YYYY-MM.md)
+   - Track sprint-level progress
+   - Roll up information from feature journals
+   Example: sprint-2025-02/DevJournal_Sprint-2025-02.md
+
+2. Feature Journals (sprint-YYYY-MM/DevJournal_XX-name.md)
+   - Track feature implementation
+   - Follow feature branches
+   Example: sprint-2025-02/DevJournal_23-timezone.md
+
+3. Sub-feature Journals (sprint-YYYY-MM/DevJournal_XX.Y-name.md)
+   - Track component implementation
+   - Follow feature sub-branches
+   Example: sprint-2025-02/DevJournal_23.4-statement.md
+
 KEY GUIDELINES:
 1. Fixed Sections (in order):
    Feature Journal Structure:
@@ -21,48 +40,25 @@ KEY GUIDELINES:
    - Sprint Learnings: Cross-feature insights
    - History: Oldest first, tracking feature flow
 
-2. Symbols:
-   ✅ = Completed item
-   [ ] = Planned/in-progress item
-   💡 = Technical learning/insight
-   🔄 = Future consideration (uncovered but not yet explored)
-   ⏸️ = Parked item (planned but later deemed optional)
+2. Symbols and Usage:
+   ✅ = Completed item (always at start of line)
+   [ ] = Planned/in-progress item (only for concrete items)
+   💡 = Technical learning/insight (used in History)
+   🔄 = Future consideration/evolution point
    🔵 = Branch creation (sprint journals)
    🔹 = Branch merge (sprint journals)
 
-3. Symbol Usage Examples:
-   🔄 Future consideration:
-   - "Need to consider error retry behavior" (discovered during implementation)
-   - "Caching might be needed here" (noticed potential bottleneck)
-   - "Consider adding validation" (uncovered edge case)
+   Rules:
+   - Symbols always go at the start of lines
+   - Don't mix symbols in section headers
+   - Leave items without symbols if they're just descriptive
+   - History entries focus on completed work (✅), learnings (💡), and evolution points (🔄)
 
-   ⏸️ Parked item:
-   - "Structured logging" (planned but simple logging sufficient)
-   - "Correlation IDs" (planned but not needed for single user)
-   - "Complex error tracking" (planned but basic errors work fine)
-
-4. Keep entries:
-   - Focused on what matters
-   - Technical and concrete
+3. Keep entries:
+   - Focused on what matters technically
+   - Concrete and specific
    - Free of routine progress
-
-5. History Examples:
-   Feature Journal:
-   ### 2024.02.23-2-feature-30
-   - ✅ Implemented timezone validation
-   - 💡 Repository pattern works well here
-   - 🔄 Might need caching (noticed in testing)
-   - ⏸️ Complex validation rules (planned but basic rules sufficient)
-
-   Sprint Journal:
-   ### 2024.02.13-2-sprint-02
-   - 🔵 CR-23 (Timezone Implementation) branched
-   - ✅ Base timezone validation defined
-   - 💡 UTC standardization reduced complexity
-   ### 2024.02.22-6-sprint-02
-   - 🔹 CR-23 merged back into sprint
-   - ✅ All timezone components verified
-   - 💡 Cross-feature pattern emerged for validation
+   - Updated with significant decisions
 -->
 
 ## Status Summary
@@ -73,15 +69,24 @@ KEY GUIDELINES:
 - Dependencies: [Met/Pending]
 
 ## Current Focus
-- Active work and priorities
-- Key challenges or blockers
-- Critical dependencies
+### Active Components
+- ✅ Completed components
+- [ ] In-progress components
+- Planned components
+
+### Challenges
+- Active blockers
+- Technical challenges
+- Dependencies
 
 ## Next Steps
-- [ ] Immediate tasks
+### Immediate Tasks
+- [ ] Next concrete actions
+- [ ] Dependencies to resolve
+
+### Planning
 - [ ] Upcoming work
 - 🔄 Future considerations
-- ⏸️ Parked for later
 
 ## Technical Progress
 ### Implementation Status
@@ -89,7 +94,6 @@ KEY GUIDELINES:
 - [ ] In-progress items
 - 💡 Technical learnings
 - 🔄 Future considerations
-- ⏸️ Parked features
 
 ### Test Status
 - ✅ Completed test items
@@ -101,19 +105,16 @@ KEY GUIDELINES:
 - ✅ Decisions made
 - 💡 Implementation insights
 - 🔄 Evolution points
-- ⏸️ Deferred decisions
 
 ## Sprint Learnings
 [Sprint journals only]
 - 💡 Cross-feature patterns
 - 💡 Technical insights
 - 🔄 Evolution considerations
-- ⏸️ Parked learnings
 
 ## History
 ### YYYY.MM.DD-N-branch-id
 - ✅ Key completions
 - 💡 Technical learnings
 - 🔄 Future considerations
-- ⏸️ Parked items
 - 🔵/🔹 Branch points (sprint journals)
