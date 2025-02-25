@@ -22,9 +22,19 @@ class ServiceError(Exception):
         self.operation = operation
         self.original_error = original_error
         self.timestamp = datetime.now(timezone.utc)
-        message = f"Service operation '{operation}' failed at {self.timestamp.isoformat()}"
+
+        # Build error message
+        error_type = self.__class__.__name__
+        formatted_time = self.timestamp.strftime("%Y-%m-%d %H:%M:%S UTC")
+        message = f"{error_type} in operation '{operation}' at {formatted_time}"
+
         if original_error:
-            message += f": {str(original_error)}"
+            # Add context for nested errors
+            if isinstance(original_error, ServiceError):
+                message += f"\nCaused by: {str(original_error)}"
+            else:
+                message += f"\nError: {str(original_error)}"
+
         super().__init__(message)
 
 class TransactionError(ServiceError):

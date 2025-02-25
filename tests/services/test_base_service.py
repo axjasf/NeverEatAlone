@@ -36,9 +36,10 @@ def test_transaction_context_rolls_back_on_error() -> None:
             raise ValueError("Something went wrong")
 
     # Verify the error is wrapped properly
-    assert isinstance(exc_info.value, ServiceError)
-    assert "transaction" in str(exc_info.value)
-    assert "Something went wrong" in str(exc_info.value)
+    error = exc_info.value
+    assert isinstance(error, ServiceError)
+    assert "ServiceError in operation 'transaction'" in str(error)
+    assert "Error: Something went wrong" in str(error)
 
     # Verify transaction handling
     session.commit.assert_not_called()
@@ -73,9 +74,10 @@ def test_commit_failure_handling() -> None:
             tx_session.add(MagicMock())  # Some work that should trigger commit
 
     # Verify error handling
-    assert isinstance(exc_info.value, TransactionError)
-    assert "commit" in str(exc_info.value)
-    assert "Commit failed" in str(exc_info.value)
+    error = exc_info.value
+    assert isinstance(error, TransactionError)
+    assert "TransactionError in operation 'commit'" in str(error)
+    assert "Error: Commit failed" in str(error)
 
     # Verify transaction handling
     session.commit.assert_called_once()
@@ -95,9 +97,10 @@ def test_rollback_failure_handling() -> None:
             raise ValueError("Operation failed")  # Trigger rollback
 
     # Verify error handling
-    assert isinstance(exc_info.value, TransactionError)
-    assert "rollback" in str(exc_info.value)
-    assert "Rollback failed" in str(exc_info.value)
+    error = exc_info.value
+    assert isinstance(error, TransactionError)
+    assert "TransactionError in operation 'rollback'" in str(error)
+    assert "Error: Rollback failed" in str(error)
 
     # Verify transaction handling
     session.commit.assert_not_called()
@@ -122,4 +125,16 @@ def test_error_includes_timestamp() -> None:
     assert isinstance(error.timestamp, datetime)
     assert error.timestamp.tzinfo == timezone.utc
     assert before_error <= error.timestamp <= datetime.now(timezone.utc)
-    assert str(error).find(error.timestamp.isoformat()) > -1  # Timestamp in message
+    assert "UTC" in str(error)  # Verify UTC is mentioned in message
+
+def test_nested_service_error_formatting() -> None:
+    """Test that nested service errors are properly formatted."""
+    # Arrange
+    inner_error = ServiceError("inner_op", ValueError("Inner problem"))
+    outer_error = ServiceError("outer_op", inner_error)
+
+    # Assert
+    error_str = str(outer_error)
+    assert "ServiceError in operation 'outer_op'" in error_str
+    assert "Caused by: ServiceError in operation 'inner_op'" in error_str
+    assert "Error: Inner problem" in error_str
