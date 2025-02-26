@@ -57,7 +57,20 @@ class ContactService(BaseService):
         """Create a new contact with associated tags.
 
         Requirements: [FR1.1.1, FR1.1.2, FR2.1.1, FR2.1.4]
+
+        Raises:
+            ValidationError: If contact_data is invalid
+            ServiceError: If creation fails
         """
+        self.log_operation("create_with_tags", contact_data=contact_data, tags=tags)
+        with self.in_transaction() as session:
+            try:
+                contact = Contact(**contact_data)
+                session.add(contact)
+                contact.set_hashtags(tags)
+                return contact
+            except Exception as e:
+                raise self.handle_error("create_with_tags", e)
 
     def update(
         self,
@@ -85,11 +98,20 @@ class ContactService(BaseService):
         """Get a contact by ID.
 
         Requirements: [FR1.3.1]
-        - Must return complete contact information
-        - Must include all associated tags
-        - Must include last interaction date
-        - Must handle non-existent contacts gracefully
+
+        Raises:
+            ValidationError: If contact_id is invalid
+            NotFoundError: If contact doesn't exist
         """
+        self.log_operation("get_by_id", contact_id=contact_id)
+        with self.in_transaction() as session:
+            try:
+                contact = session.get(Contact, contact_id)
+                if not contact:
+                    raise NotFoundError(f"Contact {contact_id} not found")
+                return contact
+            except Exception as e:
+                raise self.handle_error("get_by_id", e)
 
     def search(
         self,
@@ -101,19 +123,25 @@ class ContactService(BaseService):
 
         Requirements: [FR1.3.3]
 
-        Search Criteria:
-        - Name (exact and partial match)
-        - Tags (single and multiple)
-        - Last interaction date range
-        - Custom field values
-        - Staleness status per tag
-
-        Behavior:
-        - Supports combining multiple criteria
-        - Handles empty result sets gracefully
-        - Supports pagination
-        - Preserves timezone information in date-based searches
+        Raises:
+            ValidationError: If criteria or pagination params are invalid
         """
+        self.log_operation("search", criteria=criteria, page=page, page_size=page_size)
+        with self.in_transaction() as session:
+            try:
+                # Validate criteria
+                if not isinstance(criteria.get('name', ''), str):
+                    raise ValidationError("Name criteria must be a string")
+                if page is not None and page < 1:
+                    raise ValidationError("Page number must be positive")
+
+                # Build query
+                query = session.query(Contact)
+                # ... query building logic ...
+
+                return query.all()
+            except Exception as e:
+                raise self.handle_error("search", e)
 
     def add_tags(
         self,
@@ -230,53 +258,49 @@ def create_with_tags(
 ## Error Handling
 
 ### Core Error Types
-1. **NotFoundError**
-   - Contact doesn't exist
-   - Referenced entity missing
-
-2. **ValidationError**
-   - Invalid contact data
+1. **ValidationError**
+   - Invalid contact data format
    - Invalid tag format
-   - Future dates in interactions
+   - Invalid search criteria
+   - Invalid pagination parameters
+
+2. **NotFoundError**
+   - Contact doesn't exist
+   - Referenced tag doesn't exist
 
 3. **TransactionError**
    - Database operation failed
    - Rollback failed
 
+4. **ServiceError**
+   - Base error for unexpected issues
+   - Wraps lower-level exceptions
+
 ### Error Scenarios
-✅ Planned:
 ```python
-# Not Found [FR1.3.1, FR1.3.2]
-contact = service.get_by_id(uuid4())
-if not contact:
-    raise NotFoundError("Contact not found")
+# Validation
+def validate_contact_data(self, data: Dict[str, Any]) -> None:
+    """Validate contact data before creation/update."""
+    if not data.get('name'):
+        raise ValidationError("Contact name is required")
+    if 'tags' in data and not isinstance(data['tags'], list):
+        raise ValidationError("Tags must be a list")
 
-# Validation [FR1.3.3]
-if not isinstance(criteria.get('name'), str):
-    raise ValidationError("Name criteria must be a string")
-if criteria.get('page', 1) < 1:
-    raise ValidationError("Page number must be positive")
-
-# Delete Cascade [FR1.3.2]
-try:
-    with self.in_transaction() as session:
-        # Delete contact and related data
-        contact.delete_cascade()
-except IntegrityError as e:
-    raise ServiceError("delete_cascade", e)
-
-# Search Criteria [FR1.3.3]
-try:
-    criteria.validate_date_ranges()
-except ValueError as e:
-    raise ValidationError(f"Invalid date range: {e}")
+# Not Found
+def get_or_404(self, contact_id: UUID) -> Contact:
+    """Get contact or raise NotFoundError."""
+    contact = self.get_by_id(contact_id)
+    if not contact:
+        raise NotFoundError(f"Contact {contact_id} not found")
+    return contact
 
 # Transaction
 try:
     with self.in_transaction() as session:
-        # ... operations ...
-except Exception as e:
-    raise ServiceError("operation_name", e)
+        contact.delete_cascade()
+except TransactionError as e:
+    self.logger.error("Failed to delete contact", exc_info=True)
+    raise ServiceError("delete_cascade", e)
 ```
 
 ## Testing Strategy
