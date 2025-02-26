@@ -9,9 +9,9 @@ Provides business operations for managing contacts and their associated data (ta
 ✅ Planned:
 - Create contact with tags [FR1.1.1, FR1.1.2]
 - Update contact details [FR1.1.3]
-- Delete contact (with associated data)
-- Get contact by ID
-- Search contacts by criteria
+- Delete contact (with associated data) [FR1.3.2]
+- Get contact by ID [FR1.3.1]
+- Search contacts by criteria [FR1.3.3]
 - Validate sub-information against template [FR1.2.1, FR1.2.2]
 
 ⏸️ Future Considerations:
@@ -24,8 +24,8 @@ Provides business operations for managing contacts and their associated data (ta
 - Add tags to contact [FR2.1.1, FR2.1.4]
 - Remove tags from contact [FR2.1.3]
 - Update tag frequencies [FR2.2.1, FR2.2.4]
-- Get contacts by tag
-- Manage tag frequencies [FR2.2.1, FR2.2.2, FR2.2.3]
+- Search contacts by tag [FR1.3.3]
+- Track tag frequencies [FR2.2.2, FR2.2.3]
 
 ⏸️ Future Considerations:
 - Tag statistics
@@ -70,10 +70,50 @@ class ContactService(BaseService):
         """
 
     def delete(self, contact_id: UUID) -> None:
-        """Delete a contact and associated data."""
+        """Delete a contact and associated data.
+
+        Requirements: [FR1.3.2]
+        - Must remove all contact information
+        - Must remove all tag associations
+        - Must remove all interaction records
+        - Must remove all notes
+        - Must preserve tag definitions if used by other contacts
+        - Must handle non-existent contacts gracefully
+        """
 
     def get_by_id(self, contact_id: UUID) -> Optional[Contact]:
-        """Get a contact by ID."""
+        """Get a contact by ID.
+
+        Requirements: [FR1.3.1]
+        - Must return complete contact information
+        - Must include all associated tags
+        - Must include last interaction date
+        - Must handle non-existent contacts gracefully
+        """
+
+    def search(
+        self,
+        criteria: Dict[str, Any],
+        page: Optional[int] = None,
+        page_size: Optional[int] = None
+    ) -> List[Contact]:
+        """Search contacts by criteria.
+
+        Requirements: [FR1.3.3]
+
+        Search Criteria:
+        - Name (exact and partial match)
+        - Tags (single and multiple)
+        - Last interaction date range
+        - Custom field values
+        - Staleness status per tag
+
+        Behavior:
+        - Supports combining multiple criteria
+        - Handles empty result sets gracefully
+        - Supports pagination
+        - Preserves timezone information in date-based searches
+        """
 
     def add_tags(
         self,
@@ -83,6 +123,9 @@ class ContactService(BaseService):
         """Add tags to a contact.
 
         Requirements: [FR2.1.1, FR2.1.3, FR2.1.4]
+        - Must normalize tags to lowercase
+        - Must prevent duplicate tags
+        - Must handle non-existent contacts gracefully
         """
 
     def remove_tags(
@@ -155,8 +198,23 @@ def update(self, contact_id: UUID, data: Dict[str, Any]) -> Contact:
 - Consistent error handling
 - Clear transaction boundaries
 
-Example:
+Examples:
 ```python
+def delete(self, contact_id: UUID) -> None:
+    """Example of cascade delete with proper cleanup."""
+    with self.in_transaction() as session:
+        contact = session.get(Contact, contact_id)
+        if not contact:
+            raise NotFoundError(f"Contact {contact_id} not found")
+
+        # Clean up related entities
+        session.query(Interaction).filter_by(contact_id=contact_id).delete()
+        session.query(Note).filter_by(contact_id=contact_id).delete()
+
+        # Remove tag associations but preserve tags
+        contact.tags.clear()
+        session.delete(contact)
+
 def create_with_tags(
     self,
     contact_data: Dict[str, Any],
@@ -188,14 +246,30 @@ def create_with_tags(
 ### Error Scenarios
 ✅ Planned:
 ```python
-# Not Found
+# Not Found [FR1.3.1, FR1.3.2]
 contact = service.get_by_id(uuid4())
 if not contact:
     raise NotFoundError("Contact not found")
 
-# Validation
-if interaction_date > datetime.now(UTC):
-    raise ValidationError("Cannot record future interactions")
+# Validation [FR1.3.3]
+if not isinstance(criteria.get('name'), str):
+    raise ValidationError("Name criteria must be a string")
+if criteria.get('page', 1) < 1:
+    raise ValidationError("Page number must be positive")
+
+# Delete Cascade [FR1.3.2]
+try:
+    with self.in_transaction() as session:
+        # Delete contact and related data
+        contact.delete_cascade()
+except IntegrityError as e:
+    raise ServiceError("delete_cascade", e)
+
+# Search Criteria [FR1.3.3]
+try:
+    criteria.validate_date_ranges()
+except ValueError as e:
+    raise ValidationError(f"Invalid date range: {e}")
 
 # Transaction
 try:
@@ -212,19 +286,63 @@ except Exception as e:
 1. **Basic Operations**
    - Create contact with valid data
    - Update existing contact
-   - Delete contact and verify cleanup
+   - Delete contact and verify cleanup [FR1.3.2]
+     - Verify all contact information removed
+     - Verify tag associations removed
+     - Verify interaction records removed
+     - Verify notes removed
+     - Verify tag definitions preserved if used by others
+     - Verify graceful handling of non-existent contacts
 
-2. **Tag Operations**
+2. **Retrieval Operations** [FR1.3.1]
+   - Get existing contact by ID
+     - Verify complete contact information
+     - Verify all associated tags included
+     - Verify last interaction date included
+   - Handle non-existent contact ID
+   - Handle invalid UUID format
+
+3. **Search Operations** [FR1.3.3]
+   - Search by name
+     - Exact match
+     - Partial match
+     - Case sensitivity
+   - Search by tags
+     - Single tag
+     - Multiple tags
+     - Non-existent tags
+   - Search by date range
+     - Last interaction date
+     - Timezone handling
+   - Search by custom fields
+     - Single field
+     - Multiple fields
+     - Non-existent fields
+   - Search by staleness
+     - Single tag staleness
+     - Multiple tag staleness
+   - Combined criteria
+     - Multiple field types
+     - Complex combinations
+   - Pagination
+     - Default page size
+     - Custom page size
+     - Page navigation
+   - Empty results handling
+     - No matches
+     - Invalid criteria
+
+4. **Tag Operations**
    - Add valid tags
    - Remove existing tags
    - Handle invalid tag formats
 
-3. **Interaction Recording**
+5. **Interaction Recording**
    - Record valid interaction
    - Handle future dates
    - Update last contact time
 
-4. **Error Cases**
+6. **Error Cases**
    - Not found scenarios
    - Validation failures
    - Transaction rollbacks
@@ -232,11 +350,40 @@ except Exception as e:
 ### Integration Tests
 ✅ Planned:
 1. **Data Persistence**
-   - Verify saves across sessions
-   - Check relationship handling
-   - Test cascade deletes
+   - Verify contact deletion cascades properly [FR1.3.2]
+   - Verify search results reflect database state [FR1.3.3]
+   - Verify retrieval includes all related data [FR1.3.1]
 
 2. **Transaction Integrity**
    - Verify atomic operations
    - Check rollback effectiveness
    - Test cleanup on errors
+
+3. **Search Performance** [FR1.3.3]
+   - Verify pagination efficiency
+   - Test complex criteria performance
+   - Measure large dataset behavior
+
+4. **Error Scenarios**
+   - Test non-existent ID handling [FR1.3.1]
+   - Verify deletion rollback [FR1.3.2]
+   - Test invalid search criteria [FR1.3.3]
+
+### Test Fixtures
+✅ Required:
+1. **Base Data**
+   - Sample contacts with various fields
+   - Contacts with multiple tags
+   - Contacts with interaction history
+   - Contacts with custom fields
+
+2. **Search Scenarios** [FR1.3.3]
+   - Contacts with similar names
+   - Contacts with overlapping tags
+   - Contacts with varied interaction dates
+   - Contacts with different staleness states
+
+3. **Relationship Data**
+   - Tags used by multiple contacts
+   - Contacts sharing tags
+   - Complex interaction histories
