@@ -246,14 +246,30 @@ def create_with_tags(
 ### Error Scenarios
 ✅ Planned:
 ```python
-# Not Found
+# Not Found [FR1.3.1, FR1.3.2]
 contact = service.get_by_id(uuid4())
 if not contact:
     raise NotFoundError("Contact not found")
 
-# Validation
-if interaction_date > datetime.now(UTC):
-    raise ValidationError("Cannot record future interactions")
+# Validation [FR1.3.3]
+if not isinstance(criteria.get('name'), str):
+    raise ValidationError("Name criteria must be a string")
+if criteria.get('page', 1) < 1:
+    raise ValidationError("Page number must be positive")
+
+# Delete Cascade [FR1.3.2]
+try:
+    with self.in_transaction() as session:
+        # Delete contact and related data
+        contact.delete_cascade()
+except IntegrityError as e:
+    raise ServiceError("delete_cascade", e)
+
+# Search Criteria [FR1.3.3]
+try:
+    criteria.validate_date_ranges()
+except ValueError as e:
+    raise ValidationError(f"Invalid date range: {e}")
 
 # Transaction
 try:
