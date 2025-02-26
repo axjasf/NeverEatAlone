@@ -30,36 +30,26 @@ Version: 2025.02.25-3-contact-service
 [ ] Error handling patterns
 
 ## Next Steps
-1. [ ] Review and validate design
-   - [ ] Wait for CR-48 completion before finalizing requirement IDs
-   - [ ] [SERVICE_CONTACT.md] Review core features
-   - [ ] [SERVICE_CONTACT.md] Validate interface patterns
-   - [ ] [SERVICE_CONTACT.md] Refine error scenarios
+1. [ ] Validate interface patterns
+   - [ ] [SERVICE_CONTACT.md] Review error handling scenarios
+   - [ ] [SERVICE_CONTACT.md] Verify transaction boundaries
+   - [ ] [SERVICE_CONTACT.md] Check BaseService pattern alignment
 
-2. [ ] Update core documentation
-   - [ ] [SERVICE_ARCHITECTURE.md] Update layer relationships
-   - [ ] [OVERVIEW.md] Update feature status
-   - [ ] [CR-2024.02-44.md] Document implementation progress
-   - [ ] [SERVICE_BASE.md] Review for pattern consistency
+2. [ ] Create test infrastructure
+   - [ ] Set up test directory structure
+   - [ ] Implement test fixtures from CR-48 plan
+   - [ ] Set up mock patterns for external dependencies
 
-3. [ ] Create test infrastructure
-   - [ ] Test file structure
-   - [ ] Common test fixtures
-   - [ ] Mock patterns
+3. [ ] Implement core operations (TDD)
+   - [ ] Create contact with tags [FR1.1.1, FR1.1.2]
+   - [ ] Update contact details [FR1.1.3]
+   - [ ] Delete contact [FR1.3.2]
+   - [ ] Search contacts [FR1.3.3]
 
-4. [ ] Implement core operations (TDD)
-   - [ ] Create contact with tags
-   - [ ] Update contact details
-   - [ ] Basic error handling
-
-5. [ ] Documentation updates (per workflow guide)
-   - On pattern discovery:
-     - [ ] [SERVICE_ARCHITECTURE.md] Layer interactions
-     - [ ] [SERVICE_CONTACT.md] Implementation patterns
-   - On component completion:
-     - [ ] [OVERVIEW.md] Feature status
-     - [ ] [CR-2024.02-44.md] Progress update
-     - [ ] [SERVICE_CONTACT.md] Final patterns
+4. [ ] Update service layer documentation
+   - [ ] [SERVICE_ARCHITECTURE.md] Document transaction patterns
+   - [ ] [OVERVIEW.md] Update implementation status
+   - [ ] [CR-2024.02-44.md] Document progress
 
 ## Technical Progress
 ### Implementation Status
