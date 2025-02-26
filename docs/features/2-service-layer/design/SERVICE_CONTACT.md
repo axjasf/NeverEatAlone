@@ -80,7 +80,23 @@ class ContactService(BaseService):
         """Update contact details.
 
         Requirements: [FR1.1.3]
+
+        Raises:
+            ValidationError: If data is invalid
+            NotFoundError: If contact doesn't exist
+            ServiceError: If update fails
         """
+        self.log_operation("update", contact_id=contact_id, data=data)
+        with self.in_transaction() as session:
+            try:
+                contact = session.get(Contact, contact_id)
+                if not contact:
+                    raise NotFoundError(f"Contact {contact_id} not found")
+                for key, value in data.items():
+                    setattr(contact, key, value)
+                return contact
+            except Exception as e:
+                raise self.handle_error("update", e)
 
     def delete(self, contact_id: UUID) -> None:
         """Delete a contact and associated data.
@@ -92,7 +108,27 @@ class ContactService(BaseService):
         - Must remove all notes
         - Must preserve tag definitions if used by other contacts
         - Must handle non-existent contacts gracefully
+
+        Raises:
+            NotFoundError: If contact doesn't exist
+            ServiceError: If deletion fails
         """
+        self.log_operation("delete", contact_id=contact_id)
+        with self.in_transaction() as session:
+            try:
+                contact = session.get(Contact, contact_id)
+                if not contact:
+                    raise NotFoundError(f"Contact {contact_id} not found")
+
+                # Clean up related entities
+                session.query(Interaction).filter_by(contact_id=contact_id).delete()
+                session.query(Note).filter_by(contact_id=contact_id).delete()
+
+                # Remove tag associations but preserve tags
+                contact.tags.clear()
+                session.delete(contact)
+            except Exception as e:
+                raise self.handle_error("delete", e)
 
     def get_by_id(self, contact_id: UUID) -> Optional[Contact]:
         """Get a contact by ID.
@@ -154,7 +190,28 @@ class ContactService(BaseService):
         - Must normalize tags to lowercase
         - Must prevent duplicate tags
         - Must handle non-existent contacts gracefully
+
+        Raises:
+            ValidationError: If tags format is invalid
+            NotFoundError: If contact doesn't exist
+            ServiceError: If tag operation fails
         """
+        self.log_operation("add_tags", contact_id=contact_id, tags=tags)
+        with self.in_transaction() as session:
+            try:
+                contact = session.get(Contact, contact_id)
+                if not contact:
+                    raise NotFoundError(f"Contact {contact_id} not found")
+
+                # Validate and normalize tags
+                if not isinstance(tags, list):
+                    raise ValidationError("Tags must be a list")
+                normalized_tags = [tag.lower() for tag in tags]
+
+                contact.add_hashtags(normalized_tags)
+                return contact
+            except Exception as e:
+                raise self.handle_error("add_tags", e)
 
     def remove_tags(
         self,
@@ -164,7 +221,27 @@ class ContactService(BaseService):
         """Remove tags from a contact.
 
         Requirements: [FR2.1.3]
+
+        Raises:
+            ValidationError: If tags format is invalid
+            NotFoundError: If contact doesn't exist
+            ServiceError: If tag removal fails
         """
+        self.log_operation("remove_tags", contact_id=contact_id, tags=tags)
+        with self.in_transaction() as session:
+            try:
+                contact = session.get(Contact, contact_id)
+                if not contact:
+                    raise NotFoundError(f"Contact {contact_id} not found")
+
+                # Validate tags
+                if not isinstance(tags, list):
+                    raise ValidationError("Tags must be a list")
+
+                contact.remove_hashtags(tags)
+                return contact
+            except Exception as e:
+                raise self.handle_error("remove_tags", e)
 
     def record_interaction(
         self,
@@ -176,7 +253,34 @@ class ContactService(BaseService):
         """Record an interaction with a contact.
 
         Requirements: [FR1.1.4, FR1.1.5, FR2.2.2, FR2.2.5, FR2.2.6]
+
+        Raises:
+            ValidationError: If date is invalid or in future
+            NotFoundError: If contact doesn't exist
+            ServiceError: If interaction recording fails
         """
+        self.log_operation("record_interaction", contact_id=contact_id, date=date, note=note, tags=tags)
+        with self.in_transaction() as session:
+            try:
+                contact = session.get(Contact, contact_id)
+                if not contact:
+                    raise NotFoundError(f"Contact {contact_id} not found")
+
+                # Validate date
+                if date > datetime.now(date.tzinfo):
+                    raise ValidationError("Interaction date cannot be in the future")
+
+                interaction = Interaction(
+                    contact_id=contact_id,
+                    date=date,
+                    note=note,
+                    tags=tags or []
+                )
+                session.add(interaction)
+                contact.update_last_interaction(date, tags)
+                return contact
+            except Exception as e:
+                raise self.handle_error("record_interaction", e)
 
     def update_tag_frequency(
         self,
@@ -187,7 +291,27 @@ class ContactService(BaseService):
         """Update contact-tag frequency settings.
 
         Requirements: [FR2.2.1, FR2.2.4]
+
+        Raises:
+            ValidationError: If frequency_days is negative
+            NotFoundError: If contact or tag doesn't exist
+            ServiceError: If frequency update fails
         """
+        self.log_operation("update_tag_frequency", contact_id=contact_id, tag_name=tag_name, frequency_days=frequency_days)
+        with self.in_transaction() as session:
+            try:
+                contact = session.get(Contact, contact_id)
+                if not contact:
+                    raise NotFoundError(f"Contact {contact_id} not found")
+
+                # Validate frequency
+                if frequency_days is not None and frequency_days < 0:
+                    raise ValidationError("Frequency days cannot be negative")
+
+                contact.set_tag_frequency(tag_name, frequency_days)
+                return contact
+            except Exception as e:
+                raise self.handle_error("update_tag_frequency", e)
 
     def validate_sub_information(
         self,
@@ -197,7 +321,26 @@ class ContactService(BaseService):
         """Validate sub_information against current template.
 
         Requirements: [FR1.2.1, FR1.2.2]
+
+        Raises:
+            ValidationError: If sub_information format is invalid
+            NotFoundError: If contact doesn't exist
+            ServiceError: If validation fails
         """
+        self.log_operation("validate_sub_information", contact_id=contact_id, sub_information=sub_information)
+        with self.in_transaction() as session:
+            try:
+                contact = session.get(Contact, contact_id)
+                if not contact:
+                    raise NotFoundError(f"Contact {contact_id} not found")
+
+                # Get current template
+                template = self.get_current_template()
+
+                # Validate against template
+                return template.validate(sub_information)
+            except Exception as e:
+                raise self.handle_error("validate_sub_information", e)
 ```
 
 ## Transaction Boundaries
