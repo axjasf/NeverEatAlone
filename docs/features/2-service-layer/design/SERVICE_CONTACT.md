@@ -401,49 +401,91 @@ def create_with_tags(
 ## Error Handling
 
 ### Core Error Types
-1. **ValidationError**
+1. **ServiceError**
+   - Base error for all service operations
+   - Includes operation name and timestamp
+   - Preserves original error in chain
+   - Example: `ServiceError in operation 'create_contact' at 2025-02-25 10:30:00 UTC`
+
+2. **ValidationError**
    - Invalid contact data format
    - Invalid tag format
    - Invalid search criteria
    - Invalid pagination parameters
+   - Example: `ValidationError in operation 'add_tags' at 2025-02-25 10:30:00 UTC`
 
-2. **NotFoundError**
+3. **NotFoundError**
    - Contact doesn't exist
    - Referenced tag doesn't exist
+   - Example: `NotFoundError in operation 'get_by_id' at 2025-02-25 10:30:00 UTC`
 
-3. **TransactionError**
+4. **TransactionError**
    - Database operation failed
    - Rollback failed
+   - Example: `TransactionError in operation 'commit' at 2025-02-25 10:30:00 UTC`
 
-4. **ServiceError**
-   - Base error for unexpected issues
-   - Wraps lower-level exceptions
+### Error Handling Principles
+1. **Clear Context**
+   - All errors include operation name
+   - All errors include UTC timestamp
+   - Original error preserved in chain
+   - Stack traces logged automatically
+
+2. **Error Categories**
+   - Service layer errors inherit from ServiceError
+   - Specific error types for common scenarios
+   - Consistent error hierarchy
+
+3. **Error Message Format**
+   ```
+   {ErrorType} in operation '{operation}' at {YYYY-MM-DD HH:MM:SS UTC}
+   [Caused by: {nested_service_error} | Error: {original_error}]
+   ```
+
+4. **Logging Strategy**
+   - Error details logged automatically
+   - Stack traces preserved
+   - Operation context included
+   - UTC timestamps for consistency
 
 ### Error Scenarios
 ```python
-# Validation
-def validate_contact_data(self, data: Dict[str, Any]) -> None:
-    """Validate contact data before creation/update."""
-    if not data.get('name'):
-        raise ValidationError("Contact name is required")
-    if 'tags' in data and not isinstance(data['tags'], list):
-        raise ValidationError("Tags must be a list")
+# Validation with Context
+def validate_contact_data(self, operation: str, data: Dict[str, Any]) -> None:
+    """Validate contact data with operation context."""
+    try:
+        if not data.get('name'):
+            raise ValueError("Contact name is required")
+        if 'tags' in data and not isinstance(data['tags'], list):
+            raise ValueError("Tags must be a list")
+    except ValueError as e:
+        raise ValidationError(operation, e)
 
-# Not Found
-def get_or_404(self, contact_id: UUID) -> Contact:
-    """Get contact or raise NotFoundError."""
+# Not Found with Context
+def get_or_404(self, operation: str, contact_id: UUID) -> Contact:
+    """Get contact with operation context."""
     contact = self.get_by_id(contact_id)
     if not contact:
-        raise NotFoundError(f"Contact {contact_id} not found")
+        raise NotFoundError(operation, ValueError(f"Contact {contact_id} not found"))
     return contact
 
-# Transaction
-try:
+# Transaction with Error Chain
+def delete_with_cleanup(self, contact_id: UUID) -> None:
+    """Example of transaction with error chain."""
     with self.in_transaction() as session:
-        contact.delete_cascade()
-except TransactionError as e:
-    self.logger.error("Failed to delete contact", exc_info=True)
-    raise ServiceError("delete_cascade", e)
+        try:
+            contact = self.get_or_404("delete", contact_id)
+            try:
+                session.query(Interaction).filter_by(contact_id=contact_id).delete()
+                session.query(Note).filter_by(contact_id=contact_id).delete()
+                contact.tags.clear()
+                session.delete(contact)
+            except Exception as e:
+                raise ServiceError("delete_cleanup", e)
+        except Exception as e:
+            if not isinstance(e, ServiceError):
+                raise ServiceError("delete", e)
+            raise
 ```
 
 ## Testing Strategy
