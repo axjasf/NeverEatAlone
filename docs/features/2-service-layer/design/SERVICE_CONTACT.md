@@ -9,9 +9,9 @@ Provides business operations for managing contacts and their associated data (ta
 ✅ Planned:
 - Create contact with tags [FR1.1.1, FR1.1.2]
 - Update contact details [FR1.1.3]
-- Delete contact (with associated data)
-- Get contact by ID
-- Search contacts by criteria
+- Delete contact (with associated data) [FR1.3.2]
+- Get contact by ID [FR1.3.1]
+- Search contacts by criteria [FR1.3.3]
 - Validate sub-information against template [FR1.2.1, FR1.2.2]
 
 ⏸️ Future Considerations:
@@ -70,10 +70,49 @@ class ContactService(BaseService):
         """
 
     def delete(self, contact_id: UUID) -> None:
-        """Delete a contact and associated data."""
+        """Delete a contact and associated data.
+
+        Requirements: [FR1.3.2]
+        - Must remove all contact information
+        - Must remove all tag associations
+        - Must remove all interaction records
+        - Must remove all notes
+        - Must preserve tag definitions if used by other contacts
+        - Must handle non-existent contacts gracefully
+        """
 
     def get_by_id(self, contact_id: UUID) -> Optional[Contact]:
-        """Get a contact by ID."""
+        """Get a contact by ID.
+
+        Requirements: [FR1.3.1]
+        - Must return complete contact information
+        - Must include all associated tags
+        - Must include last interaction date
+        - Must handle non-existent contacts gracefully
+        """
+
+    def search(
+        self,
+        criteria: Dict[str, Any],
+        page: Optional[int] = None,
+        page_size: Optional[int] = None
+    ) -> List[Contact]:
+        """Search contacts by criteria.
+
+        Requirements: [FR1.3.3]
+        Supports searching by:
+        - Name (exact and partial match)
+        - Tags (single and multiple)
+        - Last interaction date range
+        - Custom field values
+        - Staleness status per tag
+
+        Features:
+        - Supports combining multiple criteria
+        - Handles empty result sets gracefully
+        - Supports pagination
+        - Preserves timezone information in date-based searches
+        """
 
     def add_tags(
         self,
