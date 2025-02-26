@@ -24,6 +24,32 @@
   - Data validation rules
 - FR1.2.7: System MUST allow creating independent reminders from any field with optional use of template text
 
+### 1.3 Core Operations
+- FR1.3.1: System MUST support retrieving contacts by unique identifier
+  - Must return complete contact information
+  - Must include all associated tags
+  - Must include last interaction date
+  - Must handle non-existent contacts gracefully
+
+- FR1.3.2: System MUST support deleting contacts with all associated data
+  - Must remove all contact information
+  - Must remove all tag associations
+  - Must remove all interaction records
+  - Must remove all notes
+  - Must preserve tag definitions if used by other contacts
+  - Must handle non-existent contacts gracefully
+
+- FR1.3.3: System MUST support searching contacts by:
+  - Name (exact and partial match)
+  - Tags (single and multiple)
+  - Last interaction date range
+  - Custom field values
+  - Staleness status per tag
+  - Must support combining multiple criteria
+  - Must handle empty result sets gracefully
+  - Must support pagination of results
+  - Must preserve timezone information in date-based searches
+
 ## 2. Tag System
 
 ### 2.1 Basic Tag Functionality
