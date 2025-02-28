@@ -2,24 +2,63 @@
 
 import pytest
 from datetime import datetime, UTC, timedelta
-from uuid import UUID, uuid4
+from uuid import UUID
 from sqlalchemy.orm import Session
 from sqlalchemy.engine import Engine
 from sqlalchemy import select, and_
 from zoneinfo import ZoneInfo
 import time
+from unittest.mock import MagicMock
 
 from backend.app.models.domain.tag_model import Tag, EntityType
 from backend.app.models.orm.tag_orm import TagORM
 from backend.app.repositories.sqlalchemy_tag_repository import (
     SQLAlchemyTagRepository,
 )
+from backend.app.repositories.interfaces import TagRepository
 from backend.app.models.orm.contact_orm import ContactORM
 
 
 TEST_UUID = UUID("11111111-1111-1111-1111-111111111111")
 TEST_UUID_2 = UUID("22222222-2222-2222-2222-222222222222")
 TEST_DATETIME = datetime(2024, 1, 1, tzinfo=UTC)
+
+
+def test_tag_repository_implements_interface(db_session: Session) -> None:
+    """Test that SQLAlchemyTagRepository implements TagRepository interface.
+
+    This test verifies architectural compliance with CR-2025.02-50.
+    """
+    repo = SQLAlchemyTagRepository(db_session)
+    assert isinstance(repo, TagRepository), "SQLAlchemyTagRepository must implement TagRepository interface"
+
+
+def test_tag_delete_doesnt_commit() -> None:
+    """Test that delete method doesn't commit directly.
+
+    This test verifies architectural compliance with CR-2025.02-50.
+    Transaction management should be handled by the service layer, not repositories.
+    """
+    # Create a mock session
+    mock_session = MagicMock()
+
+    # Create repository with mock session
+    repo = SQLAlchemyTagRepository(mock_session)
+
+    # Create a tag to delete
+    tag = Tag(
+        entity_id=TEST_UUID,
+        entity_type=EntityType.CONTACT,
+        name="#testtag"  # Using valid tag name format (only letters, numbers, and underscores)
+    )
+    tag.id = TEST_UUID
+
+    # Call delete method
+    repo.delete(tag)
+
+    # Verify get and delete were called but commit was not
+    mock_session.get.assert_called_once()
+    mock_session.commit.assert_not_called()
 
 
 @pytest.fixture

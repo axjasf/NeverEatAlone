@@ -131,7 +131,8 @@ class SQLAlchemyTagRepository(TagRepository):
         tag_orm = self.session.get(TagORM, tag.id)
         if tag_orm:
             self.session.delete(tag_orm)
-            self.session.commit()
+            # Removed commit as per CR-2025.02-50
+            # Transaction management should be handled by the service layer
 
     def _to_domain(self, tag_orm: TagORM) -> Tag:
         """Convert ORM model to domain model.

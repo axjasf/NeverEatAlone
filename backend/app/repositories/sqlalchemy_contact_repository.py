@@ -13,7 +13,7 @@ from ..models.orm.contact_orm import ContactORM
 from ..models.orm.tag_orm import TagORM
 
 
-class SQLAlchemyContactRepository:
+class SQLAlchemyContactRepository(ContactRepository):
     """SQLAlchemy implementation of Contact repository.
 
     All datetime fields are handled in UTC timezone:

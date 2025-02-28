@@ -16,12 +16,40 @@ from backend.app.models.domain.note_model import Note
 from backend.app.repositories.sqlalchemy_note_repository import (
     SQLAlchemyNoteRepository,
 )
+from unittest.mock import MagicMock
 
 
 TEST_UUID = uuid4()
 
 
 # region Basic Tests (Common)
+
+def test_note_delete_doesnt_commit(db_session: Session) -> None:
+    """Test that delete method doesn't commit directly.
+
+    This test verifies architectural compliance with CR-2025.02-50.
+    Transaction management should be handled by the service layer, not repositories.
+    """
+    # Create a mock session
+    mock_session = MagicMock()
+
+    # Create repository with mock session
+    repo = SQLAlchemyNoteRepository(mock_session)
+
+    # Create a note to delete
+    note = Note(
+        contact_id=TEST_UUID,
+        content="Test note"
+    )
+    note.id = TEST_UUID
+
+    # Call delete method
+    repo.delete(note)
+
+    # Verify delete was called but commit was not
+    mock_session.delete.assert_called_once()
+    mock_session.commit.assert_not_called()
+
 
 def test_note_save_and_find(db_session: Session) -> None:
     """Test basic CRUD operations.

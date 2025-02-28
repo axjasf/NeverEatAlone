@@ -221,7 +221,8 @@ class SQLAlchemyNoteRepository(NoteRepository):
         note_orm = self._session.execute(stmt).unique().scalar_one_or_none()
         if note_orm:
             self._session.delete(note_orm)
-            self._session.commit()
+            # Removed commit as per CR-2025.02-50
+            # Transaction management should be handled by the service layer
 
     def _to_domain(self, note_orm: NoteORM) -> Note:
         """Convert ORM model to domain model.

@@ -18,6 +18,16 @@ from backend.app.models.domain.template_model import (
 from backend.app.repositories.sqlalchemy_template_repository import (
     SQLAlchemyTemplateRepository,
 )
+from backend.app.repositories.interfaces import TemplateRepository
+
+
+def test_template_repository_implements_interface(db_session: Session) -> None:
+    """Test that SQLAlchemyTemplateRepository implements TemplateRepository interface.
+
+    This test verifies architectural compliance with CR-2025.02-50.
+    """
+    repo = SQLAlchemyTemplateRepository(db_session)
+    assert isinstance(repo, TemplateRepository), "SQLAlchemyTemplateRepository must implement TemplateRepository interface"
 
 
 def create_test_template() -> Template:
@@ -356,3 +366,34 @@ def test_template_timezone_handling(db_session: Session) -> None:
 
 
 # endregion
+
+
+def test_template_get_latest_template(db_session: Session) -> None:
+    """Test getting the latest template version.
+
+    This test verifies the get_latest_template method added for CR-2025.02-50.
+    """
+    # Create repository
+    repo = SQLAlchemyTemplateRepository(db_session)
+
+    # Create multiple template versions
+    template1 = create_test_template()
+    template1.version = 1
+    repo.save(template1)
+
+    template2 = create_test_template()
+    template2.id = template1.id  # Same ID, different version
+    template2.version = 2
+    repo.save(template2)
+
+    template3 = create_test_template()  # Different template
+    template3.version = 1
+    repo.save(template3)
+
+    # Get latest template
+    latest = repo.get_latest_template()
+
+    # Verify it's the latest version
+    assert latest is not None
+    assert latest.version == 2
+    assert latest.id == template1.id

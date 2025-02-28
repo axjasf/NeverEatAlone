@@ -11,11 +11,9 @@ from datetime import datetime
 from typing import Dict, List, Any, Optional, Callable
 from uuid import UUID
 from sqlalchemy.orm import Session
-from sqlalchemy import select, desc
 
 from ..models.domain.contact_model import Contact
 from ..models.domain.template_model import Template
-from ..models.orm.template_orm import TemplateVersionORM
 from .base_service import BaseService, ServiceError, ValidationError, NotFoundError
 
 class ContactService(BaseService):
@@ -37,14 +35,27 @@ class ContactService(BaseService):
 
         Raises:
             ServiceError: If no active template exists
+
+        Note:
+            This method follows the architectural pattern of accessing data through repositories,
+            not directly through ORM, as required by CR-2025.02-50.
         """
         with self.in_transaction() as session:
             try:
-                stmt = select(TemplateVersionORM).order_by(desc(TemplateVersionORM.version))
-                template = session.execute(stmt).scalars().first()
+                # Use repository to get the latest template
+                from ..repositories.sqlalchemy_template_repository import SQLAlchemyTemplateRepository
+                from ..repositories.interfaces import TemplateRepository
+
+                # Create repository instance that implements the interface
+                template_repo: TemplateRepository = SQLAlchemyTemplateRepository(session)
+
+                # Use the interface method to get the latest template
+                template = template_repo.get_latest_template()
+
                 if not template:
                     raise ServiceError("get_current_template", ValueError("No active template found"))
-                return Template.model_validate(template)
+
+                return template
             except Exception as e:
                 if not isinstance(e, ServiceError):
                     raise ServiceError("get_current_template", e)
