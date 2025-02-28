@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..models.domain.template_model import Template, CategoryDefinition, FieldDefinition
 from ..models.orm.template_orm import TemplateVersionORM
+from .interfaces import TemplateRepository
 
 
 class FieldDict(TypedDict):
@@ -24,7 +25,7 @@ class CategoryDict(TypedDict):
     fields: Dict[str, FieldDict]
 
 
-class SQLAlchemyTemplateRepository:
+class SQLAlchemyTemplateRepository(TemplateRepository):
     """SQLAlchemy implementation of template repository."""
 
     def __init__(self, session: Session) -> None:
@@ -231,3 +232,30 @@ class SQLAlchemyTemplateRepository:
             )
             for orm in template_orms
         ]
+
+    def get_latest_template(self) -> Optional[Template]:
+        """Get the latest template version.
+
+        Returns:
+            The latest template version if any exists, None otherwise
+        """
+        # Get the latest version of any template
+        stmt = (
+            select(TemplateVersionORM)
+            .order_by(TemplateVersionORM.version.desc())
+            .limit(1)
+        )
+        template_orm = self._session.execute(stmt).scalar_one_or_none()
+
+        if template_orm is None:
+            return None
+
+        # Convert to domain model
+        return Template(
+            id=template_orm.id,
+            version=template_orm.version,
+            categories=self._from_json_dict(template_orm.categories),
+            created_at=template_orm.created_at,
+            updated_at=template_orm.updated_at,
+            removed_fields=self._from_json_removed_fields(template_orm.removed_fields),
+        )
