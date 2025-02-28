@@ -6,7 +6,7 @@
 - Last activity: ✅ Base Service Implementation Complete
 
 ## Overview
-The Service Layer Implementation represents a critical architectural milestone in our application's evolution. As outlined in [CR-44](crs/CR-2024.02-44.md), this layer addresses the need for coordinating complex business operations that span multiple domain models and repositories.
+The Service Layer Implementation represents a critical architectural milestone in our application's evolution. As outlined in [CR-44](crs/CR-2025.02-44.md), this layer addresses the need for coordinating complex business operations that span multiple domain models and repositories.
 
 ### Purpose and Scope
 Currently, our domain models contain business rules but lack a way to coordinate operations like "create a contact with tags" or "update a note and its statements". The service layer will:
@@ -14,7 +14,7 @@ Currently, our domain models contain business rules but lack a way to coordinate
 2. Ensure data isn't partially updated if something fails
 3. Provide clear error messages for debugging
 
-See [CR-44 Executive Summary](crs/CR-2024.02-44.md#2-executive-summary) for detailed rationale.
+See [CR-44 Executive Summary](crs/CR-2025.02-44.md#2-executive-summary) for detailed rationale.
 
 ### Design Philosophy
 Following the single-user context of our application, we're adopting a pragmatic approach that provides:
@@ -83,7 +83,7 @@ For detailed architectural decisions, see [SERVICE_ARCHITECTURE.md](design/SERVI
      - Error translation
 
 ## Architecture Layers
-As defined in [CR-44 Impact Analysis](crs/CR-2024.02-44.md#33-impact-analysis):
+As defined in [CR-44 Impact Analysis](crs/CR-2025.02-44.md#33-impact-analysis):
 
 1. **Service Layer** (Highest)
    - Coordinates business operations
@@ -112,7 +112,7 @@ As defined in [CR-44 Impact Analysis](crs/CR-2024.02-44.md#33-impact-analysis):
   - See [DevJournal_45-base-service-implementation.md](../../dev-journal/sprint-2025-02/2%20-%20Service%20and%20API%20Layer/DevJournal_45-base-service-implementation.md) for details
 
 ## Implementation Approach
-Following Test-Driven Development (TDD) as outlined in [CR-44 Implementation Plan](crs/CR-2024.02-44.md#52-tdd-implementation-steps):
+Following Test-Driven Development (TDD) as outlined in [CR-44 Implementation Plan](crs/CR-2025.02-44.md#52-tdd-implementation-steps):
 1. ✅ Base Service implementation with transaction management
 2. ✅ Error handling patterns with UTC timestamps
 3. [ ] Example Contact Service implementation
@@ -128,4 +128,4 @@ Following Test-Driven Development (TDD) as outlined in [CR-44 Implementation Pla
 ## Progress Tracking
 For detailed progress updates, see:
 - [DevJournal_44-service-layer-foundation.md](../../dev-journal/sprint-2025-02/2%20-%20Service%20and%20API%20Layer/DevJournal_44-service-layer-foundation.md)
-- [CR-44 Technical Progress](crs/CR-2024.02-44.md#5-implementation-plan)
+- [CR-44 Technical Progress](crs/CR-2025.02-44.md#5-implementation-plan)
