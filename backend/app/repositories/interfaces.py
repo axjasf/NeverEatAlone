@@ -1,6 +1,6 @@
 """Repository interfaces for the application."""
 
-from typing import Protocol, Optional, List
+from typing import Protocol, Optional, List, runtime_checkable
 from uuid import UUID
 from ..models.domain.note_model import Note
 from ..models.domain.tag_model import Tag, EntityType
@@ -9,6 +9,7 @@ from ..models.domain.template_model import Template
 from ..models.domain.contact_model import Contact
 
 
+@runtime_checkable
 class NoteRepository(Protocol):
     """Interface for note persistence operations."""
 
@@ -87,6 +88,7 @@ class NoteRepository(Protocol):
         ...
 
 
+@runtime_checkable
 class TagRepository(Protocol):
     """Interface for tag persistence operations."""
 
@@ -152,6 +154,7 @@ class TagRepository(Protocol):
         ...
 
 
+@runtime_checkable
 class ReminderRepository(Protocol):
     """Interface for reminder persistence operations."""
 
@@ -224,6 +227,7 @@ class ReminderRepository(Protocol):
         ...
 
 
+@runtime_checkable
 class ContactRepository(Protocol):
     """Interface for contact persistence."""
 
@@ -252,6 +256,7 @@ class ContactRepository(Protocol):
         ...
 
 
+@runtime_checkable
 class TemplateRepository(Protocol):
     """Interface for template persistence."""
 
@@ -303,5 +308,13 @@ class TemplateRepository(Protocol):
 
         Raises:
             ValueError: If template_id is invalid
+        """
+        ...
+
+    def get_latest_template(self) -> Optional[Template]:
+        """Get the latest template version.
+
+        Returns:
+            The latest template version if any exists, None otherwise
         """
         ...

@@ -13,7 +13,17 @@ from backend.app.models.domain.contact_model import Contact
 from backend.app.repositories.sqlalchemy_contact_repository import (
     SQLAlchemyContactRepository,
 )
+from backend.app.repositories.interfaces import ContactRepository
 from zoneinfo import ZoneInfo
+
+
+def test_contact_repository_implements_interface(db_session: Session) -> None:
+    """Test that SQLAlchemyContactRepository implements ContactRepository interface.
+
+    This test verifies architectural compliance with CR-2025.02-50.
+    """
+    repo = SQLAlchemyContactRepository(db_session)
+    assert isinstance(repo, ContactRepository), "SQLAlchemyContactRepository must implement ContactRepository interface"
 
 
 # region Basic Tests (Common)
