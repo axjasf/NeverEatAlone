@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.services.contact_service import ContactService
 from app.models.domain.contact_model import Contact
 from app.models.domain.note_model import Note
-from app.models.domain.tag_model import Tag
+from app.models.domain.tag_model import Tag, EntityType
 from app.models.domain.template_model import Template, CategoryDefinition, FieldDefinition
 from app.services.base_service import ServiceError, ValidationError, NotFoundError
 from app.repositories.interfaces import ContactRepository, TemplateRepository
@@ -62,8 +62,35 @@ class TestBasicOperations:
         assert contact.tags == []
 
     def test_create_contact_with_tags(self, contact_service: ContactService, sample_contact_data: Dict[str, Any], sample_tags: List[str]):
-        """Test creating contact with tags [FR1.1.1, FR1.1.2, FR2.1.1, FR2.1.4]."""
-        pass
+        """Test creating contact with tags [FR1.1.1, FR1.1.2, FR2.1.1, FR2.1.4].
+
+        This test verifies that:
+        1. Contact can be created with initial tags
+        2. Tags are properly normalized and stored
+        3. No duplicate tags are created
+        4. Tags are associated with the contact correctly
+        """
+        # Given: Sample contact data and tags with some duplicates and variations
+        tags_with_duplicates = sample_tags + ["#Test", "#unittest", "#newTag"]  # Mixed case and duplicate
+
+        # When: Creating a contact with tags
+        contact = contact_service.create_with_tags(sample_contact_data, tags_with_duplicates)
+
+        # Then: Contact should be created with correct data and normalized tags
+        assert contact.name == sample_contact_data["name"]
+        assert contact.briefing_text == sample_contact_data["briefing_text"]
+
+        # Verify tags are normalized and deduplicated
+        expected_tags = {"#test", "#unittest", "#contact", "#newtag"}  # All lowercase, no duplicates
+        actual_tags = {tag.name for tag in contact.tags}
+        assert actual_tags == expected_tags
+
+        # Verify each tag is properly initialized
+        for tag in contact.tags:
+            assert tag.created_at is not None
+            assert tag.entity_type == EntityType.CONTACT.value
+            assert tag.entity_id == contact.id
+            assert tag.frequency_days is None  # No frequency set by default
 
     def test_update_contact_details(self, contact_service: ContactService, sample_contact_data: Dict[str, Any]):
         """Test updating contact details [FR1.1.3]."""
@@ -250,9 +277,13 @@ class TestRepositoryDependencies:
         # When: Creating service without repository dependencies
         service = ContactService(session_factory)
 
-        # Then: Service should be created without errors
+        # Then: Default repositories should be None initially
         assert service._contact_repository is None
         assert service._template_repository is None
+
+        # And: Should create repositories on demand in methods
+        template = service.get_current_template()
+        assert isinstance(template, Template)
 
     def test_get_current_template_uses_injected_repository(
         self,
