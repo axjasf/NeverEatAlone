@@ -27,6 +27,7 @@ from app.models.domain.tag_model import Tag, EntityType
 from app.models.domain.template_model import Template, CategoryDefinition, FieldDefinition
 from app.services.base_service import ServiceError, ValidationError, NotFoundError
 from app.repositories.interfaces import ContactRepository, TemplateRepository
+from app.models.orm.template_orm import TemplateVersionORM
 
 # Test Fixtures
 @pytest.fixture
@@ -46,6 +47,42 @@ def sample_contact_data() -> Dict[str, Any]:
 def sample_tags() -> List[str]:
     """Create sample tags for testing."""
     return ["#test", "#unittest", "#contact"]
+
+@pytest.fixture
+def default_template(session_factory: Callable[[], Session], sample_template_data: Dict[str, Any]) -> Template:
+    """Create a default template in the database."""
+    with session_factory() as session:
+        template = Template(**sample_template_data)
+        # Convert CategoryDefinition objects to dictionaries
+        categories_dict = {
+            name: {
+                'name': cat.name,
+                'description': cat.description,
+                'fields': {
+                    field_name: {
+                        'name': field.name,
+                        'type': field.type,
+                        'description': field.description,
+                        'display_format': field.display_format,
+                        'reminder_template': field.reminder_template,
+                        'validators': field.validators
+                    }
+                    for field_name, field in cat.fields.items()
+                }
+            }
+            for name, cat in template.categories.items()
+        }
+
+        template_orm = TemplateVersionORM(
+            id=template.id,
+            version=template.version,
+            categories=categories_dict,
+            created_at=template.created_at,
+            updated_at=template.updated_at
+        )
+        session.add(template_orm)
+        session.commit()
+        return template
 
 # Basic Operations Tests [FR1.1.*, FR1.3.*]
 class TestBasicOperations:
@@ -301,7 +338,8 @@ class TestRepositoryDependencies:
 
     def test_service_works_without_repository_dependencies(
         self,
-        session_factory: Callable[[], Session]
+        session_factory: Callable[[], Session],
+        default_template: Template
     ):
         """Test that service works without explicit repository dependencies."""
         # When: Creating service without repository dependencies
@@ -314,6 +352,8 @@ class TestRepositoryDependencies:
         # And: Should create repositories on demand in methods
         template = service.get_current_template()
         assert isinstance(template, Template)
+        assert template.version == default_template.version
+        assert template.categories == default_template.categories
 
     def test_get_current_template_uses_injected_repository(
         self,
