@@ -125,11 +125,19 @@ class ContactService(BaseService):
         self.logger.info("Updating contact", extra={"contact_id": contact_id, "data": data})
         with self.in_transaction() as session:
             try:
-                contact = session.get(Contact, contact_id)
+                # Use injected repository if available, otherwise create a new one
+                contact_repo = self._contact_repository or SQLAlchemyContactRepository(session)
+                contact = contact_repo.find_by_id(contact_id)
+
                 if not contact:
                     raise NotFoundError("update", ValueError(f"Contact {contact_id} not found"))
+
+                # Update contact fields
                 for key, value in data.items():
                     setattr(contact, key, value)
+
+                # Save updated contact
+                contact = contact_repo.save(contact)
                 return contact
             except Exception as e:
                 if not isinstance(e, ServiceError):

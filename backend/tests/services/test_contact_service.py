@@ -93,8 +93,38 @@ class TestBasicOperations:
             assert tag.frequency_days is None  # No frequency set by default
 
     def test_update_contact_details(self, contact_service: ContactService, sample_contact_data: Dict[str, Any]):
-        """Test updating contact details [FR1.1.3]."""
-        pass
+        """Test updating contact details [FR1.1.3].
+
+        This test verifies that:
+        1. Contact details can be updated
+        2. Only specified fields are updated
+        3. Updates are persisted correctly
+        4. Non-existent contacts are handled properly
+        """
+        # Given: An existing contact
+        contact = contact_service.create_with_tags(sample_contact_data, [])
+
+        # When: Updating contact details
+        update_data = {
+            "name": "Updated Name",
+            "briefing_text": "Updated briefing text"
+        }
+        updated_contact = contact_service.update(contact.id, update_data)
+
+        # Then: Contact should be updated with new data
+        assert updated_contact.name == update_data["name"]
+        assert updated_contact.briefing_text == update_data["briefing_text"]
+
+        # And: Updates should persist
+        retrieved_contact = contact_service.get_by_id(contact.id)
+        assert retrieved_contact.name == update_data["name"]
+        assert retrieved_contact.briefing_text == update_data["briefing_text"]
+
+        # When: Trying to update a non-existent contact
+        non_existent_id = UUID("00000000-0000-0000-0000-000000000000")
+        with pytest.raises(NotFoundError) as exc_info:
+            contact_service.update(non_existent_id, update_data)
+        assert str(exc_info.value).endswith(f"Contact {non_existent_id} not found")
 
     def test_delete_contact_with_cleanup(self, contact_service: ContactService, sample_contact_data: Dict[str, Any]):
         """Test contact deletion with proper cleanup [FR1.3.2]."""
