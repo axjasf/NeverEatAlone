@@ -15,17 +15,29 @@ from sqlalchemy.orm import Session
 from ..models.domain.contact_model import Contact
 from ..models.domain.template_model import Template
 from .base_service import BaseService, ServiceError, ValidationError, NotFoundError
+from ..repositories.interfaces import ContactRepository, TemplateRepository
+from ..repositories.sqlalchemy_contact_repository import SQLAlchemyContactRepository
+from ..repositories.sqlalchemy_template_repository import SQLAlchemyTemplateRepository
 
 class ContactService(BaseService):
     """Contact Service implementation following BaseService patterns."""
 
-    def __init__(self, session_factory: Callable[[], Session]) -> None:
+    def __init__(
+        self,
+        session_factory: Callable[[], Session],
+        contact_repository: Optional[ContactRepository] = None,
+        template_repository: Optional[TemplateRepository] = None
+    ) -> None:
         """Initialize the contact service.
 
         Args:
             session_factory: Factory function that creates database sessions
+            contact_repository: Optional ContactRepository implementation
+            template_repository: Optional TemplateRepository implementation
         """
         super().__init__(session_factory)
+        self._contact_repository = contact_repository
+        self._template_repository = template_repository
 
     def get_current_template(self) -> Template:
         """Get the current active template.
@@ -42,14 +54,8 @@ class ContactService(BaseService):
         """
         with self.in_transaction() as session:
             try:
-                # Use repository to get the latest template
-                from ..repositories.sqlalchemy_template_repository import SQLAlchemyTemplateRepository
-                from ..repositories.interfaces import TemplateRepository
-
-                # Create repository instance that implements the interface
-                template_repo: TemplateRepository = SQLAlchemyTemplateRepository(session)
-
-                # Use the interface method to get the latest template
+                # Use injected repository if available, otherwise create a new one
+                template_repo = self._template_repository or SQLAlchemyTemplateRepository(session)
                 template = template_repo.get_latest_template()
 
                 if not template:
@@ -84,9 +90,13 @@ class ContactService(BaseService):
         self.logger.info("Creating contact with tags", extra={"contact_data": contact_data, "tags": tags})
         with self.in_transaction() as session:
             try:
+                # Create domain model
                 contact = Contact(**contact_data)
-                session.add(contact)
                 contact.set_hashtags(tags)
+
+                # Use repository to save
+                contact_repo = self._contact_repository or SQLAlchemyContactRepository(session)
+                contact = contact_repo.save(contact)
                 return contact
             except Exception as e:
                 raise ServiceError("create_with_tags", e)
@@ -182,7 +192,10 @@ class ContactService(BaseService):
         self.logger.info("Getting contact by ID", extra={"contact_id": contact_id})
         with self.in_transaction() as session:
             try:
-                contact = session.get(Contact, contact_id)
+                # Use injected repository if available, otherwise create a new one
+                contact_repo = self._contact_repository or SQLAlchemyContactRepository(session)
+                contact = contact_repo.find_by_id(contact_id)
+
                 if not contact:
                     raise NotFoundError("get_by_id", ValueError(f"Contact {contact_id} not found"))
                 return contact

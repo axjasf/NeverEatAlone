@@ -19,23 +19,19 @@ def engine() -> Generator[Engine, None, None]:
     Base.metadata.drop_all(engine)
 
 @pytest.fixture(scope="session")
-def session_factory(engine: Engine) -> Callable[[], Generator[Session, None, None]]:
+def session_factory(engine: Engine) -> Callable[[], Session]:
     """Create a session factory for tests."""
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-    def get_session() -> Generator[Session, None, None]:
-        session = SessionLocal()
-        try:
-            yield session
-        finally:
-            session.close()
+    def get_session() -> Session:
+        return SessionLocal()
 
     return get_session
 
 @pytest.fixture(scope="function")
-def db_session(session_factory: Callable[[], Generator[Session, None, None]]) -> Generator[Session, None, None]:
+def db_session(session_factory: Callable[[], Session]) -> Generator[Session, None, None]:
     """Create a new database session for a test."""
-    session = next(session_factory())
+    session = session_factory()
     try:
         yield session
     finally:

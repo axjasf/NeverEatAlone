@@ -10,19 +10,23 @@ Test Categories:
 4. Search Operations (FR1.3.3)
 5. Error Handling
 6. Transaction Boundaries
+7. Repository Dependencies
 """
 
 import pytest
 from datetime import datetime, timezone
 from typing import Dict, List, Any, Callable
 from uuid import UUID
+from unittest.mock import Mock, create_autospec
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.services.contact_service import ContactService
 from app.models.domain.contact_model import Contact
 from app.models.domain.note_model import Note
 from app.models.domain.tag_model import Tag
+from app.models.domain.template_model import Template, CategoryDefinition, FieldDefinition
 from app.services.base_service import ServiceError, ValidationError, NotFoundError
+from app.repositories.interfaces import ContactRepository, TemplateRepository
 
 # Test Fixtures
 @pytest.fixture
@@ -32,12 +36,10 @@ def contact_service(session_factory: Callable[[], Session]) -> ContactService:
 
 @pytest.fixture
 def sample_contact_data() -> Dict[str, Any]:
-    """Create sample contact data for testing."""
+    """Sample contact data for testing."""
     return {
         "name": "Test Contact",
-        "briefing": "Test contact for unit tests",
-        "created_at": datetime.now(timezone.utc),
-        "updated_at": datetime.now(timezone.utc)
+        "briefing_text": "Test contact for unit tests"
     }
 
 @pytest.fixture
@@ -51,7 +53,13 @@ class TestBasicOperations:
 
     def test_create_contact_with_valid_data(self, contact_service: ContactService, sample_contact_data: Dict[str, Any]):
         """Test creating contact with valid data [FR1.1.1, FR1.1.2]."""
-        pass
+        # When: Creating a contact with valid data
+        contact = contact_service.create_with_tags(sample_contact_data, [])
+
+        # Then: Contact should be created with correct data
+        assert contact.name == sample_contact_data["name"]
+        assert contact.briefing_text == sample_contact_data["briefing_text"]
+        assert contact.tags == []
 
     def test_create_contact_with_tags(self, contact_service: ContactService, sample_contact_data: Dict[str, Any], sample_tags: List[str]):
         """Test creating contact with tags [FR1.1.1, FR1.1.2, FR2.1.1, FR2.1.4]."""
@@ -164,3 +172,125 @@ class TestTransactionBoundaries:
     def test_delete_rollback_on_error(self, contact_service: ContactService, sample_contact_data: Dict[str, Any]):
         """Test transaction rollback on delete failure."""
         pass
+
+# Repository Dependency Tests
+class TestRepositoryDependencies:
+    """Test repository dependency injection and usage."""
+
+    @pytest.fixture
+    def mock_contact_repo(self) -> Mock:
+        """Create a mock contact repository."""
+        return create_autospec(ContactRepository, instance=True)
+
+    @pytest.fixture
+    def mock_template_repo(self) -> Mock:
+        """Create a mock template repository."""
+        return create_autospec(TemplateRepository, instance=True)
+
+    @pytest.fixture
+    def sample_template_data(self) -> Dict[str, Any]:
+        """Create sample template data for testing."""
+        now = datetime.now(timezone.utc)
+        personal_category = CategoryDefinition(
+            name="personal",
+            description="Personal information",
+            fields={
+                "email": FieldDefinition(
+                    name="email",
+                    type="email",
+                    description="Email address"
+                )
+            }
+        )
+        work_category = CategoryDefinition(
+            name="work",
+            description="Work information",
+            fields={
+                "company": FieldDefinition(
+                    name="company",
+                    type="string",
+                    description="Company name"
+                )
+            }
+        )
+        return {
+            "id": UUID("12345678-1234-5678-1234-567812345678"),
+            "categories": {
+                "personal": personal_category,
+                "work": work_category
+            },
+            "version": 1,
+            "created_at": now,
+            "updated_at": now
+        }
+
+    def test_service_accepts_repository_dependencies(
+        self,
+        session_factory: Callable[[], Session],
+        mock_contact_repo: Mock,
+        mock_template_repo: Mock
+    ):
+        """Test that service accepts repository dependencies in constructor."""
+        # When: Creating service with repository dependencies
+        service = ContactService(
+            session_factory,
+            contact_repository=mock_contact_repo,
+            template_repository=mock_template_repo
+        )
+
+        # Then: Repositories should be properly set
+        assert service._contact_repository == mock_contact_repo
+        assert service._template_repository == mock_template_repo
+
+    def test_service_works_without_repository_dependencies(
+        self,
+        session_factory: Callable[[], Session]
+    ):
+        """Test that service works without explicit repository dependencies."""
+        # When: Creating service without repository dependencies
+        service = ContactService(session_factory)
+
+        # Then: Service should be created without errors
+        assert service._contact_repository is None
+        assert service._template_repository is None
+
+    def test_get_current_template_uses_injected_repository(
+        self,
+        session_factory: Callable[[], Session],
+        mock_template_repo: Mock,
+        sample_template_data: Dict[str, Any]
+    ):
+        """Test that get_current_template uses injected repository."""
+        # Given: A service with injected template repository
+        template = Template(**sample_template_data)
+        mock_template_repo.get_latest_template.return_value = template
+        service = ContactService(session_factory, template_repository=mock_template_repo)
+
+        # When: Getting current template
+        result = service.get_current_template()
+
+        # Then: Should use injected repository
+        assert result == template
+        mock_template_repo.get_latest_template.assert_called_once()
+
+    def test_get_by_id_uses_injected_repository(
+        self,
+        session_factory: Callable[[], Session],
+        mock_contact_repo: Mock,
+        sample_contact_data: Dict[str, Any]
+    ):
+        """Test that get_by_id uses injected repository."""
+        # Given: A service with injected contact repository
+        contact = Contact(
+            name=sample_contact_data["name"],
+            briefing_text=sample_contact_data["briefing_text"]
+        )
+        mock_contact_repo.find_by_id.return_value = contact
+        service = ContactService(session_factory, contact_repository=mock_contact_repo)
+
+        # When: Getting contact by ID
+        result = service.get_by_id(contact.id)
+
+        # Then: Should use injected repository
+        assert result == contact
+        mock_contact_repo.find_by_id.assert_called_once_with(contact.id)
